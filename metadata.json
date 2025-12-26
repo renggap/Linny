@@ -1,5 +1,5 @@
 {
-  "name": "Linear Clone (Gemini Enhanced)",
-  "description": "A high-fidelity clone of the Linear issue tracking app, featuring AI-powered issue description generation and status automation using the Gemini 2.5 Flash model.",
+  "name": "Linear Clone",
+  "description": "A high-fidelity clone of the Linear issue tracking app with modern React and TypeScript.",
   "requestFramePermissions": []
 }

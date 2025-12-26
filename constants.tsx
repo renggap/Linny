@@ -67,8 +67,8 @@ export const INITIAL_ISSUES: Issue[] = [
   {
     id: '4',
     identifier: 'MOB-104',
-    title: 'Optimize Gemini API queries',
-    description: 'Reduce token usage by optimizing system instructions.',
+    title: 'Optimize API queries',
+    description: 'Reduce response time by optimizing database queries.',
     status: Status.Done,
     priority: Priority.Urgent,
     assigneeId: 'u3',
