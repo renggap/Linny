@@ -23,6 +23,7 @@ interface SidebarProps {
   assigneeFilter: string | null;
   onSelectAssigneeFilter: (userId: string | null) => void;
   onOpenUserProfile: () => void;
+  onOpenProjectSettings: (project: Project) => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -43,7 +44,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSelectStatusFilter,
   assigneeFilter,
   onSelectAssigneeFilter,
-  onOpenUserProfile
+  onOpenUserProfile,
+  onOpenProjectSettings
 }) => {
   const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -165,10 +167,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Projects */}
         <div>
-          <div className="px-2 mb-1 text-[11px] font-semibold opacity-50 uppercase tracking-wider flex items-center justify-between group">
+          <div className="px-2 mb-1 text-[11px] font-semibold opacity-50 uppercase tracking-wider flex items-center justify-between">
             Projects
             {canCreateContent && (
-              <Plus onClick={onCreateProject} className="w-3 h-3 opacity-0 group-hover:opacity-50 cursor-pointer hover:text-white" />
+              <button
+                onClick={onCreateProject}
+                className="flex items-center space-x-1 px-1.5 py-0.5 bg-[#5E6AD2]/20 hover:bg-[#5E6AD2]/40 text-[#5E6AD2] rounded text-[10px] font-medium transition-colors"
+              >
+                <Plus className="w-3 h-3" />
+                <span>New</span>
+              </button>
             )}
           </div>
           <div className="space-y-0.5">
@@ -179,7 +187,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className={`flex items-center px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${selectedProjectId === project.id ? 'bg-[#2E3036] text-white' : 'hover:bg-[#2E3036]'}`}
               >
                 <span className="mr-2.5 text-sm w-4 text-center">{project.icon}</span>
-                <span className="truncate">{project.name}</span>
+                <span className="truncate flex-1">{project.name}</span>
+                {project.isPublic && (
+                  <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded mr-1">Public</span>
+                )}
+                <Settings
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenProjectSettings(project);
+                  }}
+                  className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-pointer text-gray-400 hover:text-white transition-opacity"
+                />
               </div>
             ))}
             {filteredProjects.length === 0 && (

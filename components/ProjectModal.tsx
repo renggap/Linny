@@ -19,18 +19,18 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, tea
   if (!isOpen) return null;
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newName = e.target.value;
-      setName(newName);
-      // Auto-generate identifier if empty
-      if (!identifier && newName.length >= 3) {
-          setIdentifier(newName.substring(0, 3).toUpperCase());
-      }
+    const newName = e.target.value;
+    setName(newName);
+    // Auto-generate identifier if empty
+    if (!identifier && newName.length >= 3) {
+      setIdentifier(newName.substring(0, 3).toUpperCase());
+    }
   };
 
   const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      // Enforce 3 uppercase letters
-      const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
-      setIdentifier(val);
+    // Enforce 3 uppercase letters
+    const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    setIdentifier(val);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -59,24 +59,24 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, tea
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-             <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Team</label>
-             <select 
-               value={teamId} 
-               onChange={e => setTeamId(e.target.value)}
-               className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2]"
-             >
-               {teams.map(t => (
-                   <option key={t.id} value={t.id} className="bg-[#25262B] text-white">
-                       {t.name}
-                   </option>
-               ))}
-             </select>
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Team</label>
+            <select
+              value={teamId}
+              onChange={e => setTeamId(e.target.value)}
+              className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2]"
+            >
+              {teams.map(t => (
+                <option key={t.id} value={t.id} className="bg-[#25262B] text-white">
+                  {t.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Project Name</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={name}
               onChange={handleNameChange}
               className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2]"
@@ -87,8 +87,8 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, tea
 
           <div>
             <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Identifier (3 Letters)</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={identifier}
               onChange={handleIdentifierChange}
               className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2] font-mono tracking-wider"
@@ -97,25 +97,37 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, tea
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Icon (Emoji)</label>
-            <input 
-              type="text" 
-              value={icon}
-              onChange={e => setIcon(e.target.value)}
-              className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2]"
-              placeholder="⚡"
-              maxLength={2}
-            />
+            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Icon</label>
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-[#191A1F] border border-[#363840] rounded-lg flex items-center justify-center text-2xl">
+                {icon}
+              </div>
+              <div className="flex-1 grid grid-cols-8 gap-1 p-2 bg-[#191A1F] border border-[#363840] rounded-lg max-h-24 overflow-y-auto">
+                {['⚡', '🚀', '💡', '🎯', '📦', '🔧', '🎨', '📱',
+                  '💻', '🌐', '📊', '📈', '🔒', '🛡️', '⚙️', '🔨',
+                  '📁', '📂', '💼', '🗂️', '📋', '✅', '🎉', '⭐',
+                  '💎', '🔥', '❤️', '💚', '💙', '💜', '🧡', '💛'].map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setIcon(emoji)}
+                      className={`w-7 h-7 flex items-center justify-center rounded hover:bg-[#363840] transition-colors text-base ${icon === emoji ? 'bg-[#5E6AD2]/30 ring-1 ring-[#5E6AD2]' : ''}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+              </div>
+            </div>
           </div>
 
           <div className="pt-2 flex justify-end space-x-2">
             <button type="button" onClick={onClose} className="px-3 py-2 text-xs font-medium text-gray-400 hover:text-white">Cancel</button>
-            <button 
-                type="submit" 
-                disabled={!name || identifier.length !== 3}
-                className={`px-3 py-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-xs font-semibold rounded transition-colors ${(!name || identifier.length !== 3) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            <button
+              type="submit"
+              disabled={!name || identifier.length !== 3}
+              className={`px-3 py-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-xs font-semibold rounded transition-colors ${(!name || identifier.length !== 3) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-                Create Project
+              Create Project
             </button>
           </div>
         </form>

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { Sidebar } from './components/Sidebar';
 import { IssueList } from './components/IssueList';
 import { IssueModal } from './components/IssueModal';
@@ -8,7 +9,8 @@ import { TimelineView } from './components/TimelineView';
 import { Auth } from './components/Auth';
 import { ProjectModal } from './components/ProjectModal';
 import { TeamModal } from './components/TeamModal';
-
+import { PublicProjectView } from './components/PublicProjectView';
+import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationPopover } from './components/NotificationPopover';
@@ -34,6 +36,8 @@ const App: React.FC = () => {
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [settingsProject, setSettingsProject] = useState<Project | null>(null);
   const [editingIssue, setEditingIssue] = useState<Issue | undefined>(undefined);
   const [currentTeamId, setCurrentTeamId] = useState<string>(MOCK_TEAMS[0].id);
 
@@ -44,6 +48,10 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<'list' | 'board' | 'timeline'>('list');
   const [pendingInvites, setPendingInvites] = useState<{ email: string, role: UserRole }[]>([]);
+
+  // Router hooks
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // --- COMPUTED ---
   const currentTeam = teams.find(t => t.id === currentTeamId);
@@ -120,7 +128,66 @@ const App: React.FC = () => {
   // --- HANDLERS ---
 
   // Auth
-  const handleLogin = (user: User) => setCurrentUser(user);
+  // --- EFFECT: Auth Persistence ---
+  // --- EFFECT: Data Persistence ---
+
+  // Helper to revive dates from JSON
+  const dateReviver = (key: string, value: any) => {
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
+      return new Date(value);
+    }
+    return value;
+  };
+
+  useEffect(() => {
+    // Load User
+    const storedUser = localStorage.getItem('linear_clone_user');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser, dateReviver);
+        setCurrentUser(user);
+      } catch (e) {
+        console.error("Failed to parse stored user", e);
+        localStorage.removeItem('linear_clone_user');
+      }
+    }
+
+    // Load Data (Users, Teams, Projects, Issues)
+    const loadData = (key: string, setter: (data: any) => void) => {
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        try { setter(JSON.parse(stored, dateReviver)); } catch (e) { console.error(e); }
+      }
+    };
+
+    loadData('linear_clone_users', setUsers);
+    loadData('linear_clone_teams', setTeams);
+    loadData('linear_clone_projects', setProjects);
+    loadData('linear_clone_issues', setIssues);
+    loadData('linear_clone_comments', setComments);
+    loadData('linear_clone_notifications', setNotifications);
+
+  }, []);
+
+  // Save Data on Changes
+  useEffect(() => {
+    if (currentUser) localStorage.setItem('linear_clone_user', JSON.stringify(currentUser));
+  }, [currentUser]);
+
+  useEffect(() => { localStorage.setItem('linear_clone_users', JSON.stringify(users)); }, [users]);
+  useEffect(() => { localStorage.setItem('linear_clone_teams', JSON.stringify(teams)); }, [teams]);
+  useEffect(() => { localStorage.setItem('linear_clone_projects', JSON.stringify(projects)); }, [projects]);
+  useEffect(() => { localStorage.setItem('linear_clone_issues', JSON.stringify(issues)); }, [issues]);
+  useEffect(() => { localStorage.setItem('linear_clone_comments', JSON.stringify(comments)); }, [comments]);
+  useEffect(() => { localStorage.setItem('linear_clone_notifications', JSON.stringify(notifications)); }, [notifications]);
+
+  // --- HANDLERS ---
+
+  // Auth
+  const handleLogin = (user: User) => {
+    setCurrentUser(user);
+    localStorage.setItem('linear_clone_user', JSON.stringify(user));
+  };
 
   const handleSignup = (name: string, email: string, pass: string) => {
     const params = new URLSearchParams(window.location.search);
@@ -136,24 +203,25 @@ const App: React.FC = () => {
       role: inviteRole || UserRole.Member
     };
 
-    setUsers(prev => [...prev, newUser]);
+    setUsers(prev => {
+      const newUsers = [...prev, newUser];
+      localStorage.setItem('linear_clone_users', JSON.stringify(newUsers));
+      return newUsers;
+    });
 
     if (inviteTeamId) {
-      setTeams(prevTeams => prevTeams.map(team => {
-        if (team.id === inviteTeamId) {
-          if (team.members.includes(newUser.id)) return team;
-          return { ...team, members: [...team.members, newUser.id] };
-        }
-        return team;
-      }));
-      setCurrentTeamId(inviteTeamId);
+      setTeams(prev => prev.map(t => t.id === inviteTeamId ? { ...t, members: [...t.members, newUser.id] } : t));
     }
 
     setCurrentUser(newUser);
+    localStorage.setItem('linear_clone_user', JSON.stringify(newUser));
     window.history.replaceState({}, document.title, window.location.pathname);
   };
 
-  const handleLogout = () => setCurrentUser(null);
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('linear_clone_user');
+  };
 
   // User Management
   const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
@@ -316,6 +384,15 @@ const App: React.FC = () => {
     setCurrentTeamId(teamId);
   };
 
+  const handleUpdateProject = (projectId: string, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+  };
+
+  const handleOpenProjectSettings = (project: Project) => {
+    setSettingsProject(project);
+    setIsProjectSettingsOpen(true);
+  };
+
   const handleCreateTeam = (name: string, icon: string) => {
     if (!currentUser) return;
     const newTeam: Team = {
@@ -388,7 +465,93 @@ const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [canCreateContent]);
 
+  // --- URL SYNC: Parse URL on load ---
+  useEffect(() => {
+    const path = location.pathname;
+
+    // Skip public routes - handled separately
+    if (path.startsWith('/public/')) return;
+
+    // Parse: /team/:teamId/project/:projectId/issue/:issueId
+    const teamMatch = path.match(/^\/team\/([^/]+)/);
+    const projectMatch = path.match(/^\/team\/[^/]+\/project\/([^/]+)/);
+    const issueMatch = path.match(/^\/team\/[^/]+\/project\/[^/]+\/issue\/([^/]+)/);
+
+    if (teamMatch) {
+      const team = teams.find(t => t.id === teamMatch[1] || t.name.toLowerCase().replace(/\s+/g, '-') === teamMatch[1]);
+      if (team) setCurrentTeamId(team.id);
+    }
+
+    if (projectMatch) {
+      const project = projects.find(p => p.id === projectMatch[1] || p.identifier.toLowerCase() === projectMatch[1].toLowerCase());
+      if (project) setSelectedProjectId(project.id);
+    }
+
+    if (issueMatch && currentUser) {
+      const issue = issues.find(i => i.id === issueMatch[1] || i.identifier.toLowerCase() === issueMatch[1].toLowerCase());
+      if (issue) {
+        setEditingIssue(issue);
+        setIsIssueModalOpen(true);
+      }
+    }
+  }, [location.pathname, teams, projects, issues]);
+
+  // --- URL SYNC: Update URL when navigation changes ---
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const team = teams.find(t => t.id === currentTeamId);
+    if (!team) return;
+
+    const teamSlug = team.name.toLowerCase().replace(/\s+/g, '-');
+    let newPath = `/team/${teamSlug}`;
+
+    if (selectedProjectId) {
+      const project = projects.find(p => p.id === selectedProjectId);
+      if (project) {
+        newPath += `/project/${project.identifier.toLowerCase()}`;
+      }
+    }
+
+    if (editingIssue && isIssueModalOpen) {
+      const project = projects.find(p => p.id === editingIssue.projectId);
+      if (project) {
+        newPath = `/team/${teamSlug}/project/${project.identifier.toLowerCase()}/issue/${editingIssue.identifier.toLowerCase()}`;
+      }
+    }
+
+    if (location.pathname !== newPath && !location.pathname.startsWith('/public/')) {
+      navigate(newPath, { replace: true });
+    }
+  }, [currentTeamId, selectedProjectId, editingIssue, isIssueModalOpen, currentUser, teams, projects]);
+
   // --- RENDER ---
+
+  // Handle public project view (no auth required)
+  if (location.pathname.startsWith('/public/')) {
+    const publicSlug = location.pathname.replace('/public/', '').split('/')[0].toLowerCase();
+    const publicProject = projects.find(p =>
+      p.isPublic && (
+        p.publicSlug?.toLowerCase() === publicSlug ||
+        p.id === publicSlug ||
+        p.identifier.toLowerCase() === publicSlug
+      )
+    );
+
+    return (
+      <PublicProjectView
+        project={publicProject || null}
+        issues={issues}
+        users={users}
+        onViewIssue={(issue) => {
+          // For public view, we could show a read-only issue modal
+          // For now, just navigate to the issue detail
+          setEditingIssue(issue);
+          setIsIssueModalOpen(true);
+        }}
+      />
+    );
+  }
 
   if (!currentUser) {
     return <Auth users={users} onLogin={handleLogin} onSignup={handleSignup} />;
@@ -424,6 +587,7 @@ const App: React.FC = () => {
         onLogout={handleLogout}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
+        onOpenProjectSettings={handleOpenProjectSettings}
         assigneeFilter={assigneeFilter}
         onSelectAssigneeFilter={handleSelectAssigneeFilter}
       />
@@ -592,6 +756,13 @@ const App: React.FC = () => {
         currentUser={currentUser}
         onSave={handleUpdateProfile}
         currentTeam={currentTeam}
+      />
+
+      <ProjectSettingsModal
+        isOpen={isProjectSettingsOpen}
+        onClose={() => setIsProjectSettingsOpen(false)}
+        project={settingsProject}
+        onUpdate={handleUpdateProject}
       />
 
     </div>

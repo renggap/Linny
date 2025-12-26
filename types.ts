@@ -45,6 +45,8 @@ export interface Project {
   icon: string;
   teamId: string;
   description?: string;
+  isPublic?: boolean;
+  publicSlug?: string; // URL-friendly slug for public access
 }
 
 export interface Issue {
@@ -56,11 +58,11 @@ export interface Issue {
   priority: Priority;
   assigneeId?: string;
   projectId: string;
-  
+
   // Timeline fields
   startDate?: Date;
   dueDate?: Date;
-  
+
   // Hierarchy & Dependencies
   parentId?: string; // For subtasks
   blockedBy?: string[]; // Array of Issue IDs blocking this one

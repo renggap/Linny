@@ -1,17 +1,17 @@
 
 import React from 'react';
-import { 
-  CheckCircle2, 
-  Circle, 
-  HelpCircle, 
-  Layout, 
-  List, 
-  MoreHorizontal, 
-  Plus, 
-  Search, 
-  SignalHigh, 
-  SignalLow, 
-  SignalMedium, 
+import {
+  CheckCircle2,
+  Circle,
+  HelpCircle,
+  Layout,
+  List,
+  MoreHorizontal,
+  Plus,
+  Search,
+  SignalHigh,
+  SignalLow,
+  SignalMedium,
   X,
   Inbox,
   Layers,
@@ -38,7 +38,8 @@ import {
   GitMerge,
   Lock,
   Link2,
-  ArrowUpRight
+  ArrowUpRight,
+  GripVertical
 } from 'lucide-react';
 import { Priority, Status } from '../types';
 
@@ -64,15 +65,15 @@ export const PriorityIcon: React.FC<{ priority: Priority; className?: string }> 
   }
 };
 
-export { 
-  Plus, 
-  Search, 
-  X, 
-  Inbox, 
-  Layers, 
-  Users, 
-  Bell, 
-  Sidebar, 
+export {
+  Plus,
+  Search,
+  X,
+  Inbox,
+  Layers,
+  Users,
+  Bell,
+  Sidebar,
   Sparkles,
   Layout,
   List,
@@ -95,5 +96,6 @@ export {
   GitMerge,
   Lock,
   Link2,
-  ArrowUpRight
+  ArrowUpRight,
+  GripVertical
 };
