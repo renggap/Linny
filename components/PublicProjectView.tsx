@@ -35,7 +35,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
         );
     }
 
-    const projectIssues = issues.filter(i => i.projectId === project.id && !i.parentId);
+    const projectIssues = issues.filter(i => i.projectId === project.id);
 
     return (
         <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE]">
@@ -64,7 +64,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
 
                 <div className="mb-4 flex items-center justify-between">
                     <h2 className="text-sm font-semibold text-gray-400">
-                        Issues ({projectIssues.length})
+                        Issues ({issues.filter(i => i.projectId === project.id && !i.parentId).length})
                     </h2>
                 </div>
 
@@ -76,6 +76,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                             onEdit={onViewIssue}
                             onDelete={() => { }} // No-op for public view
                             onStatusChange={() => { }} // No-op for public view
+                            isPublicView={true}
                         />
                     </div>
                 ) : (

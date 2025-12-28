@@ -18,6 +18,7 @@ export enum Priority {
 
 export enum UserRole {
   Admin = 'Admin',
+  TeamLead = 'Team Lead',
   Member = 'Member',
   Viewer = 'Viewer'
 }
@@ -38,6 +39,12 @@ export interface Team {
   members: string[]; // User IDs
 }
 
+export interface ResourceLink {
+  id: string;
+  title: string;
+  url: string;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -47,6 +54,10 @@ export interface Project {
   description?: string;
   isPublic?: boolean;
   publicSlug?: string; // URL-friendly slug for public access
+  leadId?: string;
+  startDate?: Date;
+  targetDate?: Date; // "End Date" - using targetDate to match Linear terminology or just endDate
+  links?: ResourceLink[];
 }
 
 export interface Issue {
@@ -56,7 +67,8 @@ export interface Issue {
   description: string;
   status: Status;
   priority: Priority;
-  assigneeId?: string;
+  assigneeIds?: string[];
+  assigneeId?: string; // @deprecated use assigneeIds
   projectId: string;
 
   // Timeline fields
@@ -93,4 +105,15 @@ export interface Notification {
   isRead: boolean;
   createdAt: Date;
   actorId?: string; // The person who triggered it (e.g. who tagged you)
+}
+
+export interface Activity {
+  id: string;
+  userId: string;
+  type: 'issue_created' | 'status_change' | 'comment' | 'project_update' | 'issue_update';
+  projectId?: string;
+  issueId?: string;
+  entityTitle?: string;
+  description?: string;
+  createdAt: Date;
 }

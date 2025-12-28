@@ -3,7 +3,8 @@ import { X, Maximize2, Calendar, Send, MessageSquare, GitMerge, Lock, Plus, Tras
 import { Issue, Priority, Status, User, Project, Comment } from '../types';
 import { PriorityIcon, StatusIcon } from './Icons';
 import { DatePicker } from './DatePicker';
-
+import { UserSelect } from './UserSelect';
+import { PrioritySelect } from './PrioritySelect';
 
 interface IssueModalProps {
     isOpen: boolean;
@@ -19,6 +20,7 @@ interface IssueModalProps {
     onCreateSubtask?: (parentId: string, title: string) => void;
     onOpenIssue?: (issueId: string) => void;
     defaultProjectId?: string | null;
+    isPublicView?: boolean;
 }
 
 // Better Renderer
@@ -68,12 +70,13 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     issues = [],
     onCreateSubtask,
     onOpenIssue,
-    defaultProjectId
+    defaultProjectId,
+    isPublicView
 }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<Priority>(Priority.NoPriority);
-    const [assigneeId, setAssigneeId] = useState<string>('');
+    const [assigneeIds, setAssigneeIds] = useState<string[]>([]); // Multi-select
     const [projectId, setProjectId] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
@@ -107,6 +110,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
     // Derived Data
     const parentIssue = existingIssue?.parentId ? issues.find(i => i.id === existingIssue.parentId) : null;
+    const isSubtask = !!existingIssue?.parentId;
     const subtasks = existingIssue ? issues.filter(i => i.parentId === existingIssue.id) : [];
     const blockingIssues = existingIssue ? issues.filter(i => (existingIssue.blockedBy || []).includes(i.id)) : [];
     // For new blocking selection (exclude self, existing blocks, parent, and different projects)
@@ -125,7 +129,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                 setTitle(existingIssue.title);
                 setDescription(existingIssue.description);
                 setPriority(existingIssue.priority);
-                setAssigneeId(existingIssue.assigneeId || '');
+                // Handle both new array and old single ID for backward compat
+                setAssigneeIds(existingIssue.assigneeIds || (existingIssue.assigneeId ? [existingIssue.assigneeId] : []));
                 setProjectId(existingIssue.projectId);
                 // Use local date formatting to avoid timezone shift
                 if (existingIssue.startDate) {
@@ -145,7 +150,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                 setTitle('');
                 setDescription('');
                 setPriority(Priority.NoPriority);
-                setAssigneeId('');
+                setAssigneeIds([]);
                 // Use defaultProjectId if available, otherwise first project
                 setProjectId(defaultProjectId || projects[0]?.id || '');
                 setStartDate('');
@@ -198,7 +203,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
             title,
             description,
             priority,
-            assigneeId: assigneeId || undefined,
+            assigneeIds,
             projectId,
             startDate: startDate ? new Date(startDate) : undefined,
             dueDate: dueDate ? new Date(dueDate) : undefined,
@@ -343,12 +348,21 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 <ArrowUpRight className="w-3 h-3 ml-1" />
                             </button>
                         )}
-                        <span className="bg-[#363840] px-1.5 py-0.5 rounded text-gray-300">{existingIssue ? existingIssue.identifier : 'New Issue'}</span>
+                        <span className="text-gray-300 font-semibold mr-2">{projectId && projects.find(p => p.id === projectId)?.name}</span>
+                        <span className="text-gray-500">
+                            {existingIssue ? (
+                                isSubtask && parentIssue ?
+                                    `${parentIssue.identifier} ← ${existingIssue.identifier}` :
+                                    existingIssue.identifier
+                            ) : 'New Issue'}
+                        </span>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <button className="p-1 hover:bg-[#363840] rounded text-gray-500 hover:text-gray-300">
-                            <Maximize2 className="w-4 h-4" />
-                        </button>
+                        {!isPublicView && (
+                            <button className="p-1 hover:bg-[#363840] rounded text-gray-500 hover:text-gray-300">
+                                <Maximize2 className="w-4 h-4" />
+                            </button>
+                        )}
                         <button onClick={onClose} className="p-1 hover:bg-[#363840] rounded text-gray-500 hover:text-gray-300">
                             <X className="w-4 h-4" />
                         </button>
@@ -364,17 +378,18 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                             <input
                                 type="text"
                                 placeholder="Issue title"
-                                className="w-full bg-transparent text-xl font-semibold text-white placeholder-gray-600 focus:outline-none"
+                                className={`w-full bg-transparent text-xl font-semibold text-white placeholder-gray-600 focus:outline-none ${isPublicView ? 'cursor-default' : ''}`}
                                 value={title}
-                                onChange={(e) => setTitle(e.target.value)}
+                                onChange={(e) => !isPublicView && setTitle(e.target.value)}
                                 onBlur={handleTitleBlur}
                                 onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                autoFocus={!existingIssue}
+                                autoFocus={!existingIssue && !isPublicView}
+                                readOnly={isPublicView}
                             />
 
                             {/* Description Area */}
                             <div className="relative group">
-                                {isEditingDescription ? (
+                                {isEditingDescription && !isPublicView ? (
                                     <div className="space-y-2">
                                         <textarea
                                             ref={descRef}
@@ -413,13 +428,15 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                 <div className="text-sm text-gray-300">
                                                     <SmartText text={description} users={users} />
                                                 </div>
-                                                <button
-                                                    onClick={() => setIsEditingDescription(true)}
-                                                    className="absolute top-0 right-0 p-1.5 text-gray-500 hover:text-white bg-[#25262B]/50 hover:bg-[#25262B] rounded opacity-0 group-hover/desc:opacity-100 transition-all"
-                                                    title="Edit Description"
-                                                >
-                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                </button>
+                                                {!isPublicView && (
+                                                    <button
+                                                        onClick={() => setIsEditingDescription(true)}
+                                                        className="absolute top-0 right-0 p-1.5 text-gray-500 hover:text-white bg-[#25262B]/50 hover:bg-[#25262B] rounded opacity-0 group-hover/desc:opacity-100 transition-all"
+                                                        title="Edit Description"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                    </button>
+                                                )}
                                             </>
                                         ) : (
                                             <textarea
@@ -434,110 +451,110 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
                                 {/* Meta Controls (Moved from Footer) */}
                                 <div className="mt-8 flex items-center space-x-2 overflow-x-auto no-scrollbar max-w-full">
-
-                                    {/* Project Selector - Always Read-Only */}
-                                    <div className="relative group">
-                                        <div className="flex items-center space-x-2 px-2 py-1 rounded text-xs text-gray-400 border border-transparent whitespace-nowrap">
-                                            <span>{projectId ? projects.find(p => p.id === projectId)?.icon : '📂'}</span>
-                                            <span>{projectId ? projects.find(p => p.id === projectId)?.name : 'Project'}</span>
-                                        </div>
-                                    </div>
-
                                     {/* Priority Selector */}
                                     <div className="relative group">
-                                        <select
+                                        <PrioritySelect
                                             value={priority}
-                                            onChange={(e) => {
-                                                setPriority(e.target.value as Priority);
-                                                if (existingIssue) saveField('priority', e.target.value);
+                                            onChange={(p) => {
+                                                if (!isPublicView) {
+                                                    setPriority(p);
+                                                    if (existingIssue) saveField('priority', p);
+                                                }
                                             }}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        >
-                                            {Object.values(Priority).map(p => (
-                                                <option key={p} value={p} className="bg-[#25262B] text-white">{p}</option>
-                                            ))}
-                                        </select>
-                                        <div className="flex items-center space-x-2 px-2 py-1 rounded hover:bg-[#363840] cursor-pointer text-xs text-gray-400 border border-transparent hover:border-[#464852] transition-all whitespace-nowrap">
-                                            <PriorityIcon priority={priority} className="w-3.5 h-3.5" />
-                                            <span>{priority}</span>
-                                        </div>
+                                            disabled={isPublicView}
+                                        />
                                     </div>
 
                                     {/* Assignee Selector */}
-                                    <div className="relative group">
-                                        <select
-                                            value={assigneeId}
-                                            onChange={(e) => {
-                                                setAssigneeId(e.target.value);
-                                                if (existingIssue) saveField('assigneeId', e.target.value);
+                                    <div className="relative group min-w-[200px]">
+                                        <UserSelect
+                                            users={users}
+                                            selectedUserIds={assigneeIds}
+                                            onSelect={(id) => {
+                                                if (!isPublicView) {
+                                                    let newIds;
+                                                    if (assigneeIds.includes(id)) {
+                                                        newIds = assigneeIds.filter(userId => userId !== id);
+                                                    } else {
+                                                        newIds = [...assigneeIds, id];
+                                                    }
+                                                    setAssigneeIds(newIds);
+                                                    if (existingIssue) saveField('assigneeIds', newIds);
+                                                }
                                             }}
-                                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                        >
-                                            <option value="" className="bg-[#25262B] text-white">Unassigned</option>
-                                            {users.map(u => (
-                                                <option key={u.id} value={u.id} className="bg-[#25262B] text-white">{u.name}</option>
-                                            ))}
-                                        </select>
-                                        <div className="flex items-center space-x-2 px-2 py-1 rounded hover:bg-[#363840] cursor-pointer text-xs text-gray-400 border border-transparent hover:border-[#464852] transition-all whitespace-nowrap">
-                                            <span className="w-4 h-4 rounded-full bg-gray-700 flex items-center justify-center text-[8px]">
-                                                {assigneeId ? users.find(u => u.id === assigneeId)?.name[0] : '?'}
-                                            </span>
-                                            <span>{assigneeId ? users.find(u => u.id === assigneeId)?.name : 'Assignee'}</span>
-                                        </div>
+                                            placeholder="Assignees"
+                                            disabled={isPublicView}
+                                        />
                                     </div>
 
                                     {/* Start Date */}
                                     <div className="relative group flex items-center">
                                         <span className="text-[9px] text-gray-500 absolute left-2 pointer-events-none z-10 hidden">Start</span>
-                                        <DatePicker
-                                            value={startDate}
-                                            onChange={(date) => {
-                                                // Use local date formatting to avoid timezone shift
-                                                const year = date.getFullYear();
-                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                const day = String(date.getDate()).padStart(2, '0');
-                                                const dateStr = `${year}-${month}-${day}`;
-                                                setStartDate(dateStr);
-                                                if (existingIssue) saveField('startDate', date);
-                                            }}
-                                            placeholder="Start Date"
-                                        />
+                                        {isPublicView ? (
+                                            <div className="px-3 py-1.5 text-sm text-gray-300 bg-[#1E1F24] border border-[#363840] rounded min-w-[120px]">
+                                                {startDate ? new Date(startDate).toLocaleDateString() : 'No start date'}
+                                            </div>
+                                        ) : (
+                                            <DatePicker
+                                                value={startDate}
+                                                onChange={(date) => {
+                                                    // Use local date formatting to avoid timezone shift
+                                                    const year = date.getFullYear();
+                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(date.getDate()).padStart(2, '0');
+                                                    const dateStr = `${year}-${month}-${day}`;
+                                                    setStartDate(dateStr);
+                                                    if (existingIssue) saveField('startDate', date);
+                                                }}
+                                                placeholder="Start Date"
+                                                disabled={isPublicView}
+                                            />
+                                        )}
                                     </div>
 
                                     {/* Due Date */}
                                     <div className="relative group flex items-center">
                                         <span className="text-[9px] text-gray-500 absolute left-2 pointer-events-none z-10 hidden">Due</span>
-                                        <DatePicker
-                                            value={dueDate}
-                                            onChange={(date) => {
-                                                // Use local date formatting to avoid timezone shift
-                                                const year = date.getFullYear();
-                                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                const day = String(date.getDate()).padStart(2, '0');
-                                                const dateStr = `${year}-${month}-${day}`;
-                                                setDueDate(dateStr);
-                                                if (existingIssue) saveField('dueDate', date);
-                                            }}
-                                            placeholder="Due Date"
-                                        />
+                                        {isPublicView ? (
+                                            <div className="px-3 py-1.5 text-sm text-gray-300 bg-[#1E1F24] border border-[#363840] rounded min-w-[120px]">
+                                                {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+                                            </div>
+                                        ) : (
+                                            <DatePicker
+                                                value={dueDate}
+                                                onChange={(date) => {
+                                                    // Use local date formatting to avoid timezone shift
+                                                    const year = date.getFullYear();
+                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                                    const day = String(date.getDate()).padStart(2, '0');
+                                                    const dateStr = `${year}-${month}-${day}`;
+                                                    setDueDate(dateStr);
+                                                    if (existingIssue) saveField('dueDate', date);
+                                                }}
+                                                placeholder="Due Date"
+                                                disabled={isPublicView}
+                                            />
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Global Save Button - Only for NEW issues */}
-                                {!existingIssue && (
-                                    <button
-                                        onClick={handleCreateIssue}
-                                        disabled={!title || !projectId}
-                                        className={`absolute bottom-2 right-0 px-3 py-1.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-xs font-semibold rounded shadow-lg shadow-purple-900/20 transition-all whitespace-nowrap ${(!title || !projectId) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                    >
-                                        Create Issue
-                                    </button>
+                                {!existingIssue && !isPublicView && (
+                                    <div className="flex justify-end mt-4 pt-4 border-t border-[#363840]">
+                                        <button
+                                            onClick={handleCreateIssue}
+                                            disabled={!title || !projectId}
+                                            className={`px-4 py-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-sm font-semibold rounded shadow-lg shadow-purple-900/20 transition-all ${(!title || !projectId) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            Create Issue
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </div>
 
                         {/* --- Subtasks Section --- */}
-                        {existingIssue && (
+                        {existingIssue && !existingIssue.parentId && (
                             <div className="pt-6 border-t border-[#363840]">
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
                                     <GitMerge className="w-3.5 h-3.5 mr-2" />
@@ -545,7 +562,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 </h3>
                                 <div className="space-y-1 mb-3">
                                     {subtasks.map(subtask => {
-                                        const subAssignee = users.find(u => u.id === subtask.assigneeId);
+                                        const subAssignee = users.find(u => u.id === (subtask.assigneeIds?.[0] || subtask.assigneeId));
                                         return (
                                             <div
                                                 key={subtask.id}
@@ -562,24 +579,26 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         )
                                     })}
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <Plus className="w-4 h-4 text-gray-500" />
-                                    <input
-                                        type="text"
-                                        placeholder="Add subtask..."
-                                        value={newSubtaskTitle}
-                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && handleCreateSubtaskLocal()}
-                                        className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
-                                    />
-                                    <button
-                                        onClick={handleCreateSubtaskLocal}
-                                        disabled={!newSubtaskTitle.trim()}
-                                        className="text-xs text-[#5E6AD2] hover:text-white disabled:opacity-50"
-                                    >
-                                        Create
-                                    </button>
-                                </div>
+                                {!isPublicView && (
+                                    <div className="flex items-center space-x-2">
+                                        <Plus className="w-4 h-4 text-gray-500" />
+                                        <input
+                                            type="text"
+                                            placeholder="Add subtask..."
+                                            value={newSubtaskTitle}
+                                            onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && handleCreateSubtaskLocal()}
+                                            className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
+                                        />
+                                        <button
+                                            onClick={handleCreateSubtaskLocal}
+                                            disabled={!newSubtaskTitle.trim()}
+                                            className="text-xs text-[#5E6AD2] hover:text-white disabled:opacity-50"
+                                        >
+                                            Create
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -591,12 +610,14 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         <Lock className="w-3.5 h-3.5 mr-2" />
                                         Blocking
                                     </h3>
-                                    <button
-                                        onClick={() => setShowDependencySelect(!showDependencySelect)}
-                                        className="text-xs text-gray-500 hover:text-white flex items-center"
-                                    >
-                                        <Plus className="w-3 h-3 mr-1" /> Add Dependency
-                                    </button>
+                                    {!isPublicView && (
+                                        <button
+                                            onClick={() => setShowDependencySelect(!showDependencySelect)}
+                                            className="text-xs text-gray-500 hover:text-white flex items-center"
+                                        >
+                                            <Plus className="w-3 h-3 mr-1" /> Add Dependency
+                                        </button>
+                                    )}
                                 </div>
 
                                 {showDependencySelect && (
@@ -628,12 +649,14 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                 <span className="text-xs text-gray-500 font-mono mr-3">{issue.identifier}</span>
                                                 <span className="text-sm text-gray-300 truncate">{issue.title}</span>
                                             </div>
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); removeDependency(issue.id); }}
-                                                className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
+                                            {!isPublicView && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); removeDependency(issue.id); }}
+                                                    className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
                                         </div>
                                     ))}
                                     {blockingIssues.length === 0 && !showDependencySelect && (
@@ -644,7 +667,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                         )}
 
                         {/* Comments Section */}
-                        {existingIssue && (
+                        {existingIssue && !isPublicView && (
                             <div className="pt-6 border-t border-[#363840]">
                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Activity</h3>
 
@@ -709,7 +732,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                     )}
 
                     {/* New Comment Input */}
-                    {existingIssue && onAddComment && (
+                    {existingIssue && onAddComment && !isPublicView && (
                         <div className="p-4 bg-[#25262B] border-t border-[#363840] shrink-0">
                             <div className="flex space-x-3">
                                 <div className="flex-shrink-0 pt-1">

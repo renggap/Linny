@@ -39,7 +39,9 @@ import {
   Lock,
   Link2,
   ArrowUpRight,
-  GripVertical
+  GripVertical,
+  AlertCircle,
+  CornerDownRight
 } from 'lucide-react';
 import { Priority, Status } from '../types';
 
@@ -57,7 +59,7 @@ export const StatusIcon: React.FC<{ status: Status; className?: string }> = ({ s
 
 export const PriorityIcon: React.FC<{ priority: Priority; className?: string }> = ({ priority, className = "w-4 h-4" }) => {
   switch (priority) {
-    case Priority.Urgent: return <HelpCircle className={`${className} text-red-500 fill-red-500/20`} />;
+    case Priority.Urgent: return <div className={`${className} bg-red-500/10 rounded flex items-center justify-center`}><AlertCircle className="w-3.5 h-3.5 text-red-500" /></div>;
     case Priority.High: return <SignalHigh className={`${className} text-orange-500`} />;
     case Priority.Medium: return <SignalMedium className={`${className} text-yellow-500`} />;
     case Priority.Low: return <SignalLow className={`${className} text-gray-500`} />;
@@ -97,5 +99,6 @@ export {
   Lock,
   Link2,
   ArrowUpRight,
-  GripVertical
+  GripVertical,
+  CornerDownRight
 };

@@ -14,8 +14,10 @@ import { ProjectSettingsModal } from './components/ProjectSettingsModal';
 import { UserManagementModal } from './components/UserManagementModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationPopover } from './components/NotificationPopover';
+import { ProjectRightSidebar } from './components/ProjectRightSidebar';
+import { ProjectOverviewHeader } from './components/ProjectOverviewHeader';
 import { INITIAL_ISSUES, MOCK_USERS, MOCK_PROJECTS, MOCK_TEAMS, MOCK_COMMENTS, MOCK_NOTIFICATIONS } from './constants';
-import { Issue, Status, Priority, User, Team, Project, UserRole, Comment, Notification, NotificationType } from './types';
+import { Issue, Status, Priority, User, Team, Project, UserRole, Comment, Notification, NotificationType, Activity } from './types';
 import { List, Layout, Bell, Plus, GanttChart } from './components/Icons';
 
 const App: React.FC = () => {
@@ -27,6 +29,45 @@ const App: React.FC = () => {
   const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
   const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
   const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+
+  // Add Activity State
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  // ... other states ...
+
+  const logActivity = (
+    type: Activity['type'],
+    entityTitle: string,
+    description: string,
+    projectId?: string,
+    issueId?: string
+  ) => {
+    if (!currentUser) return;
+
+    const newActivity: Activity = {
+      id: `act_${Date.now()}`,
+      userId: currentUser.id,
+      type,
+      entityTitle,
+      description,
+      projectId,
+      issueId,
+      createdAt: new Date()
+    };
+
+    setActivities(prev => {
+      const updated = [newActivity, ...prev];
+      // Keep persistent history but limit in memory if needed (though requirement says limit view, not storage necessarily)
+      // We'll cap storage at 500 to be safe
+      return updated.slice(0, 500);
+    });
+  };
+
+
+
+  // ... (inside save data effect)
+  useEffect(() => { localStorage.setItem('linear_clone_activities', JSON.stringify(activities)); }, [activities]);
+
 
   // UI State
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
@@ -40,6 +81,7 @@ const App: React.FC = () => {
   const [settingsProject, setSettingsProject] = useState<Project | null>(null);
   const [editingIssue, setEditingIssue] = useState<Issue | undefined>(undefined);
   const [currentTeamId, setCurrentTeamId] = useState<string>(MOCK_TEAMS[0].id);
+  const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   // Navigation State
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -48,6 +90,7 @@ const App: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<'list' | 'board' | 'timeline'>('list');
   const [pendingInvites, setPendingInvites] = useState<{ email: string, role: UserRole }[]>([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
 
   // Router hooks
   const navigate = useNavigate();
@@ -57,6 +100,8 @@ const App: React.FC = () => {
   const currentTeam = teams.find(t => t.id === currentTeamId);
   // Filter projects by team
   const teamProjects = projects.filter(p => p.teamId === currentTeamId);
+
+  const currentProject = projects.find(p => p.id === selectedProjectId);
 
   // Filter issues by team projects
   const visibleIssues = issues.filter(i => {
@@ -166,6 +211,7 @@ const App: React.FC = () => {
     loadData('linear_clone_issues', setIssues);
     loadData('linear_clone_comments', setComments);
     loadData('linear_clone_notifications', setNotifications);
+    loadData('linear_clone_activities', setActivities);
 
   }, []);
 
@@ -298,6 +344,10 @@ const App: React.FC = () => {
       // Check for mentions in description update
       if (issueData.description) {
         processMentions(issueData.description, issueData.id, 'description');
+        const issue = issues.find(i => i.id === issueData.id);
+        if (issue && issue.description !== issueData.description) {
+          logActivity('issue_update', issue.title, 'updated the description', issue.projectId, issue.id);
+        }
       }
     } else {
       // Create
@@ -328,6 +378,8 @@ const App: React.FC = () => {
 
       // Only clear editing issue after CREATING a new issue
       setEditingIssue(undefined);
+
+      logActivity('issue_created', newIssue.title, 'created the issue', newIssue.projectId, newIssue.id);
     }
   };
 
@@ -368,7 +420,12 @@ const App: React.FC = () => {
 
   const handleStatusChange = (id: string, status: Status) => {
     if (!canCreateContent) return;
+    const issue = issues.find(i => i.id === id);
     setIssues(prev => prev.map(i => i.id === id ? { ...i, status, updatedAt: new Date() } : i));
+
+    if (issue) {
+      logActivity('status_change', issue.title, `changed status to ${status}`, issue.projectId, issue.id);
+    }
   };
 
   const handleCreateProject = (name: string, identifier: string, icon: string, teamId: string) => {
@@ -382,10 +439,17 @@ const App: React.FC = () => {
     };
     setProjects([...projects, newProject]);
     setCurrentTeamId(teamId);
+    logActivity('project_update', newProject.name, 'created the project', newProject.id);
   };
 
   const handleUpdateProject = (projectId: string, updates: Partial<Project>) => {
     setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
+    if (updates.description) {
+      const project = projects.find(p => p.id === projectId);
+      if (project) {
+        logActivity('project_update', project.name, 'updated project description', projectId);
+      }
+    }
   };
 
   const handleOpenProjectSettings = (project: Project) => {
@@ -416,6 +480,11 @@ const App: React.FC = () => {
     };
     setComments([...comments, newComment]);
     processMentions(content, issueId, 'comment');
+
+    const issue = issues.find(i => i.id === issueId); // find issue for logging
+    if (issue) {
+      logActivity('comment', issue.title, 'commented on the issue', issue.projectId, issueId);
+    }
   };
 
   // Notification Actions
@@ -435,20 +504,12 @@ const App: React.FC = () => {
   // Navigation Handlers
   const handleSelectProject = (projectId: string | null) => {
     setSelectedProjectId(projectId);
-    setStatusFilter(null);
-    setAssigneeFilter(null);
-  };
-
-  const handleSelectStatusFilter = (status: Status | null) => {
-    setStatusFilter(status);
-    setSelectedProjectId(null);
     setAssigneeFilter(null);
   };
 
   const handleSelectAssigneeFilter = (userId: string | null) => {
     setAssigneeFilter(userId);
     setSelectedProjectId(null);
-    setStatusFilter(null);
   };
 
   // --- EFFECT ---
@@ -539,17 +600,37 @@ const App: React.FC = () => {
     );
 
     return (
-      <PublicProjectView
-        project={publicProject || null}
-        issues={issues}
-        users={users}
-        onViewIssue={(issue) => {
-          // For public view, we could show a read-only issue modal
-          // For now, just navigate to the issue detail
-          setEditingIssue(issue);
-          setIsIssueModalOpen(true);
-        }}
-      />
+      <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE] font-sans">
+        <PublicProjectView
+          project={publicProject || null}
+          issues={issues}
+          users={users}
+          onViewIssue={(issue) => {
+            // For public view, we show a read-only issue modal
+            setEditingIssue(issue);
+            setIsIssueModalOpen(true);
+          }}
+        />
+        <IssueModal
+          isOpen={isIssueModalOpen}
+          onClose={() => setIsIssueModalOpen(false)}
+          onSave={() => { }} // No-op for public view
+          users={users}
+          projects={[]} // No projects for public view
+          existingIssue={editingIssue}
+          comments={[]} // No comments for public view
+          currentUser={null} // No current user for public view
+          onAddComment={() => { }} // No-op
+          issues={issues}
+          onCreateSubtask={() => { }} // No-op
+          onOpenIssue={(issueId) => {
+            const issue = issues.find(i => i.id === issueId);
+            if (issue) setEditingIssue(issue);
+          }}
+          defaultProjectId={null}
+          isPublicView={true}
+        />
+      </div>
     );
   }
 
@@ -581,23 +662,42 @@ const App: React.FC = () => {
         onCreateProject={() => setIsProjectModalOpen(true)}
         onCreateTeam={() => setIsTeamModalOpen(true)}
         onSelectProject={handleSelectProject}
-        onSelectStatusFilter={handleSelectStatusFilter}
         selectedProjectId={selectedProjectId}
-        currentStatusFilter={statusFilter}
         onLogout={handleLogout}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
         onOpenProjectSettings={handleOpenProjectSettings}
         assigneeFilter={assigneeFilter}
         onSelectAssigneeFilter={handleSelectAssigneeFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        isSidebarCollapsed={isSidebarCollapsed}
+        setIsSidebarCollapsed={setIsSidebarCollapsed}
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#1E1F24]">
 
         {/* Header */}
-        <header className="h-14 border-b border-[#363840] flex items-center justify-between px-6 bg-[#1E1F24] z-10 shrink-0">
-          <div className="flex items-center space-x-2 text-sm text-gray-500">
-            <span className="hover:text-gray-300 cursor-pointer transition-colors">{currentTeam?.name}</span>
+        <header className="border-b border-[#363840] flex flex-col md:flex-row md:items-center md:justify-between px-4 md:px-6 py-3 md:py-0 pb-6 md:pb-0 bg-[#1E1F24] z-10 shrink-0 min-h-[4rem] md:h-14">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2 md:mb-0">
+            <button
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="md:hidden mr-2 p-1.5 bg-[#2E3036] hover:bg-[#3E4049] rounded text-gray-400 hover:text-white transition-colors"
+            >
+              ☰
+            </button>
+            <span
+              className="hover:text-gray-300 cursor-pointer transition-colors"
+              onClick={() => {
+                // Navigate to team view
+                const teamSlug = currentTeam?.name.toLowerCase().replace(/\s+/g, '-');
+                if (teamSlug) {
+                  navigate(`/team/${teamSlug}`);
+                }
+              }}
+            >
+              {currentTeam?.name}
+            </span>
             <span>/</span>
             <span className="font-medium text-[#E5E7EB] flex items-center">
               <span className={`w-1.5 h-1.5 rounded-full mr-2 ${statusFilter ? 'bg-blue-500' : 'bg-orange-500'}`}></span>
@@ -605,7 +705,7 @@ const App: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center space-x-2 relative">
+          <div className="flex items-center justify-between md:justify-end space-x-2 relative">
             <div className="flex items-center bg-[#2E3036] rounded-md p-0.5 border border-[#363840]">
               <button
                 onClick={() => setCurrentView('list')}
@@ -630,7 +730,7 @@ const App: React.FC = () => {
               </button>
             </div>
 
-            <div className="relative">
+            <div className="hidden md:block relative">
               <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 className="p-2 hover:bg-[#2E3036] rounded text-gray-400 hover:text-gray-200 transition-colors relative"
@@ -653,56 +753,108 @@ const App: React.FC = () => {
             <button
               onClick={() => { setEditingIssue(undefined); setIsIssueModalOpen(true); }}
               disabled={!canCreateContent}
-              className={`ml-2 bg-[#5E6AD2] text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center shadow-lg shadow-purple-900/20 ${canCreateContent ? 'hover:bg-[#4b55aa]' : 'opacity-50 cursor-not-allowed grayscale'}`}
+              className={`bg-[#5E6AD2] text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center shadow-lg shadow-purple-900/20 ${canCreateContent ? 'hover:bg-[#4b55aa]' : 'opacity-50 cursor-not-allowed grayscale'}`}
             >
               <Plus className="w-3 h-3 mr-1.5" />
-              New Issue
+              <span className="hidden sm:inline">New Issue</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
         </header>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-hidden relative flex flex-col pt-6">
-          {currentView === 'list' ? (
-            <IssueList
-              issues={visibleIssues}
-              users={users}
-              onEdit={(issue) => {
-                if (canCreateContent) {
-                  setEditingIssue(issue);
-                  setIsIssueModalOpen(true);
-                }
-              }}
-              onDelete={handleDeleteIssue}
-              onStatusChange={handleStatusChange}
-            />
-          ) : currentView === 'board' ? (
-            <BoardView
-              issues={visibleIssues}
-              users={users}
-              onEdit={(issue) => {
-                if (canCreateContent) {
-                  setEditingIssue(issue);
-                  setIsIssueModalOpen(true);
-                }
-              }}
-              onDelete={handleDeleteIssue}
-              onStatusChange={handleStatusChange}
-            />
-          ) : (
-            <TimelineView
-              issues={visibleIssues}
-              users={users}
-              onEdit={(issue) => {
-                if (canCreateContent) {
-                  setEditingIssue(issue);
-                  setIsIssueModalOpen(true);
-                }
-              }}
-            />
+        {/* Content Area with optional Sidebar */}
+        <div className="flex-1 flex flex-row overflow-hidden relative">
+
+          <div className="flex-1 overflow-hidden relative flex flex-col pt-6">
+
+            {/* Project Overview Header */}
+            {currentProject && selectedProjectId && (
+              <ProjectOverviewHeader
+                project={currentProject}
+                onUpdate={(p) => handleUpdateProject(p.id, p)}
+              />
+            )}
+
+            {currentView === 'list' ? (
+              <IssueList
+                issues={visibleIssues}
+                users={users}
+                onEdit={(issue) => {
+                  if (canCreateContent) {
+                    setEditingIssue(issue);
+                    setIsIssueModalOpen(true);
+                  }
+                }}
+                onDelete={handleDeleteIssue}
+                onStatusChange={handleStatusChange}
+                isPublicView={false}
+              />
+            ) : currentView === 'board' ? (
+              <BoardView
+                issues={visibleIssues}
+                users={users}
+                onEdit={(issue) => {
+                  if (canCreateContent) {
+                    setEditingIssue(issue);
+                    setIsIssueModalOpen(true);
+                  }
+                }}
+                onDelete={handleDeleteIssue}
+                onStatusChange={handleStatusChange}
+                onCreateIssue={(status) => {
+                  if (canCreateContent) {
+                    setEditingIssue({ status } as any); // Hacky way to pass initial status
+                    setIsIssueModalOpen(true);
+                  }
+                }}
+                isPublicView={false}
+              />
+            ) : (
+              <TimelineView
+                issues={visibleIssues}
+                users={users}
+                onEdit={(issue) => {
+                  if (canCreateContent) {
+                    setEditingIssue(issue);
+                    setIsIssueModalOpen(true);
+                  }
+                }}
+              />
+            )}
+
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1E1F24] to-transparent pointer-events-none"></div>
+          </div>
+
+          {/* Right Sidebar Toggle Button - Bottom Right */}
+          <button
+            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+            className={`hidden md:flex absolute bottom-4 right-4 p-2 bg-[#2E3036] hover:bg-[#3E4049] rounded-full text-gray-400 hover:text-white transition-all shadow-lg border border-[#363840] ${isRightSidebarOpen ? 'bg-[#3E4049] text-white' : ''}`}
+            title="Toggle Sidebar"
+          >
+            <div className="flex items-center space-x-2">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 3l4 4-4 4"></path>
+                <path d="M16 3l-4 4 4 4"></path>
+                <path d="M4 11v2"></path>
+                <path d="M20 11v2"></path>
+              </svg>
+              <span className="text-xs font-medium">Toggle</span>
+            </div>
+          </button>
+
+          {/* Project Right Sidebar */}
+          {currentProject && selectedProjectId && isRightSidebarOpen && (
+            <div className="hidden md:block">
+              <ProjectRightSidebar
+                project={currentProject}
+                issues={issues}
+                users={users}
+                activities={activities}
+                onUpdate={(p) => handleUpdateProject(p.id, p)}
+              />
+            </div>
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1E1F24] to-transparent pointer-events-none"></div>
         </div>
 
       </main>
@@ -724,6 +876,7 @@ const App: React.FC = () => {
           if (issue) setEditingIssue(issue);
         }}
         defaultProjectId={selectedProjectId || teamProjects[0]?.id}
+        isPublicView={location.pathname.startsWith('/public/')}
       />
 
       <ProjectModal
