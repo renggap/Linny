@@ -88,13 +88,26 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
                         <div className="flex -space-x-1.5">
                             {selectedUsers.slice(0, 3).map((user, i) => (
-                                <img
+                                <div
                                     key={user.id}
-                                    src={user.avatarUrl}
-                                    alt={user.name}
-                                    className="w-5 h-5 rounded-full border border-[#25262B] ring-1 ring-[#363840]"
+                                    className="w-5 h-5 rounded-full border border-[#25262B] ring-1 ring-[#363840] bg-[#5E6AD2] flex items-center justify-center text-[8px] font-semibold text-white"
                                     style={{ zIndex: selectedUsers.length - i }}
-                                />
+                                    title={user.name}
+                                >
+                                    {user.avatarUrl ? (
+                                        <img
+                                            src={user.avatarUrl}
+                                            alt={user.name}
+                                            className="w-full h-full rounded-full"
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.style.display = 'none';
+                                            }}
+                                        />
+                                    ) : (
+                                        user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+                                    )}
+                                </div>
                             ))}
                             {selectedUsers.length > 3 && (
                                 <div className="w-5 h-5 rounded-full bg-[#363840] border border-[#25262B] flex items-center justify-center text-[8px] text-gray-300">

@@ -1,6 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
-import { X, Settings, Globe, Lock, Copy, Check, ExternalLink } from 'lucide-react';
+import { X, Globe, Lock, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Layout } from 'lucide-react';
 import { Project } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface ProjectSettingsModalProps {
     isOpen: boolean;
@@ -18,11 +26,14 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     const [isPublic, setIsPublic] = useState(false);
     const [publicSlug, setPublicSlug] = useState('');
     const [copied, setCopied] = useState(false);
+    const [localDescription, setLocalDescription] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     useEffect(() => {
         if (project) {
             setIsPublic(project.isPublic || false);
             setPublicSlug(project.publicSlug || project.identifier.toLowerCase());
+            setLocalDescription(project.description || '');
         }
     }, [project]);
 
@@ -33,12 +44,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     const handleTogglePublic = () => {
         const newIsPublic = !isPublic;
         setIsPublic(newIsPublic);
-
-        // Generate slug if enabling public access
-        if (newIsPublic && !publicSlug) {
-            setPublicSlug(project.identifier.toLowerCase());
-        }
-
+        if (newIsPublic && !publicSlug) setPublicSlug(project.identifier.toLowerCase());
         onUpdate(project.id, {
             isPublic: newIsPublic,
             publicSlug: newIsPublic ? (publicSlug || project.identifier.toLowerCase()) : undefined
@@ -46,14 +52,11 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     };
 
     const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const slug = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-        setPublicSlug(slug);
+        setPublicSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''));
     };
 
     const handleSlugBlur = () => {
-        if (isPublic && publicSlug) {
-            onUpdate(project.id, { publicSlug });
-        }
+        if (isPublic && publicSlug) onUpdate(project.id, { publicSlug });
     };
 
     const handleCopyLink = () => {
@@ -62,125 +65,174 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleSaveDescription = () => {
+        if (localDescription !== project.description) {
+            onUpdate(project.id, { description: localDescription });
+        }
+    };
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="bg-[#25262B] w-[450px] rounded-xl shadow-2xl border border-[#363840] p-6 animate-in zoom-in-95">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-semibold text-white flex items-center">
-                        <Settings className="w-4 h-4 mr-2 text-gray-400" />
-                        Project Settings
-                    </h2>
-                    <button onClick={onClose} className="text-gray-500 hover:text-gray-300">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
+        <AnimatePresence>
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-[#070809]/80 backdrop-blur-sm"
+                />
 
-                {/* Project Info */}
-                <div className="mb-6 p-3 bg-[#1E1F24] rounded-lg border border-[#363840]">
-                    <div className="flex items-center space-x-3">
-                        <span className="text-2xl">{project.icon}</span>
-                        <div>
-                            <h3 className="font-medium text-white">{project.name}</h3>
-                            <p className="text-xs text-gray-500">{project.identifier}</p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Public Sharing Section */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="bg-[#0F1014] w-full max-w-[580px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
+                >
+                    {/* Header Bar */}
+                    <div className="flex items-center justify-between px-8 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
                         <div className="flex items-center space-x-3">
-                            {isPublic ? (
-                                <Globe className="w-5 h-5 text-green-400" />
-                            ) : (
-                                <Lock className="w-5 h-5 text-gray-500" />
-                            )}
-                            <div>
-                                <h4 className="text-sm font-medium text-white">Public Access</h4>
-                                <p className="text-xs text-gray-500">
-                                    {isPublic
-                                        ? 'Anyone with the link can view'
-                                        : 'Only team members can access'}
-                                </p>
-                            </div>
+                            <Settings className="w-4 h-4 text-[#5E6AD2]" />
+                            <h2 className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.3em]">Unit Configuration • {project.identifier}</h2>
                         </div>
-                        <button
-                            onClick={handleTogglePublic}
-                            className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? 'bg-green-500' : 'bg-[#363840]'
-                                }`}
-                        >
-                            <span
-                                className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-transform ${isPublic ? 'left-6' : 'left-1'
-                                    }`}
-                            />
+                        <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
+                            <X className="w-5 h-5" />
                         </button>
                     </div>
 
-                    {isPublic && (
-                        <div className="pl-8 space-y-3 animate-in fade-in duration-200">
-                            {/* Custom Slug */}
+                    <div className="p-8 space-y-12 overflow-y-auto no-scrollbar max-h-[75vh]">
+                        {/* Identity Section */}
+                        <div className="flex items-center space-x-6 pb-12 border-b border-[#1A1C23]">
+                            <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl shadow-inner relative group">
+                                {project.icon}
+                                <div className="absolute inset-x-2 bottom-[-1px] h-px bg-[#5E6AD2] opacity-30" />
+                            </div>
                             <div>
-                                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">
-                                    Public URL Slug
-                                </label>
-                                <input
-                                    type="text"
-                                    value={publicSlug}
-                                    onChange={handleSlugChange}
-                                    onBlur={handleSlugBlur}
-                                    className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2] font-mono"
-                                    placeholder={project.identifier.toLowerCase()}
-                                />
+                                <h3 className="text-2xl font-bold text-[#E8E8E8] tracking-tight leading-none mb-2">{project.name}</h3>
+                                <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.4em]">Segmental Objective Root</p>
+                            </div>
+                        </div>
+
+                        {/* Description Editor */}
+                        <div className="space-y-4">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
+                                    <FileText className="w-3 h-3 text-[#5E6AD2]" />
+                                </div>
+                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Deployment Manifesto</label>
+                            </div>
+                            <textarea
+                                value={localDescription}
+                                onChange={(e) => setLocalDescription(e.target.value)}
+                                onBlur={handleSaveDescription}
+                                className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
+                                placeholder="Formalize operational objectives..."
+                            />
+                        </div>
+
+                        {/* Access Control & Registry */}
+                        <div className="space-y-6">
+                            <div className="flex items-center space-x-3">
+                                <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
+                                    <Globe className="w-3 h-3 text-[#5E6AD2]" />
+                                </div>
+                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Registry Access Protocol</label>
                             </div>
 
-                            {/* Shareable Link */}
-                            <div>
-                                <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">
-                                    Shareable Link
-                                </label>
-                                <div className="flex items-center space-x-2">
-                                    <div className="flex-1 bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-gray-300 font-mono truncate">
-                                        {publicUrl}
+                            <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-6 space-y-8 relative overflow-hidden">
+                                <div className="flex items-center justify-between relative z-10">
+                                    <div className="space-y-1">
+                                        <h4 className="text-sm font-bold text-[#E8E8E8]">Broadcast Visibility</h4>
+                                        <div className="flex items-center space-x-2">
+                                            <div className={cn("w-1.5 h-1.5 rounded-full", isPublic ? "bg-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.6)]" : "bg-[#3A3C46]")} />
+                                            <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-wider">
+                                                {isPublic ? 'Public Relay Active' : 'Restricted Internal Loop'}
+                                            </p>
+                                        </div>
                                     </div>
                                     <button
-                                        onClick={handleCopyLink}
-                                        className={`p-2 rounded-md border transition-all ${copied
-                                                ? 'bg-green-500/20 border-green-500 text-green-400'
-                                                : 'bg-[#363840] border-[#464852] text-gray-400 hover:text-white'
-                                            }`}
-                                        title="Copy link"
+                                        onClick={handleTogglePublic}
+                                        className={cn(
+                                            "relative w-11 h-6 rounded-full transition-all duration-300 border",
+                                            isPublic ? "bg-[#5E6AD2] border-[#5E6AD2]" : "bg-[#0F1014] border-[#22242A]"
+                                        )}
                                     >
-                                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                                        <motion.div
+                                            animate={{ x: isPublic ? 20 : 0 }}
+                                            className="absolute top-0.5 left-0.5 w-4.5 h-4.5 rounded-full bg-white shadow-sm"
+                                        />
                                     </button>
-                                    <a
-                                        href={publicUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-2 bg-[#363840] border border-[#464852] rounded-md text-gray-400 hover:text-white transition-colors"
-                                        title="Open in new tab"
-                                    >
-                                        <ExternalLink className="w-4 h-4" />
-                                    </a>
                                 </div>
+
+                                <AnimatePresence>
+                                    {isPublic && (
+                                        <motion.div
+                                            initial={{ opacity: 0, height: 0 }}
+                                            animate={{ opacity: 1, height: 'auto' }}
+                                            exit={{ opacity: 0, height: 0 }}
+                                            className="pt-6 border-t border-[#1A1C23] space-y-6 overflow-hidden"
+                                        >
+                                            <div className="space-y-2">
+                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">Universal Segment Address</span>
+                                                <div className="relative group">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3A3C46] text-xs font-mono font-bold select-none">/public/</div>
+                                                    <input
+                                                        type="text"
+                                                        value={publicSlug}
+                                                        onChange={handleSlugChange}
+                                                        onBlur={handleSlugBlur}
+                                                        className="w-full bg-[#0F1014] border border-[#22242A] rounded-xl pl-[72px] pr-4 py-3 text-sm font-mono text-[#5E6AD2] font-bold focus:outline-none focus:border-[#5E6AD2]/30 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">End-Point Signal</span>
+                                                <div className="flex items-center space-x-2 bg-[#0F1014] border border-[#22242A] rounded-xl px-4 py-3 group">
+                                                    <div className="flex-1 text-[11px] text-[#5E6068] font-mono truncate">{publicUrl}</div>
+                                                    <div className="flex items-center space-x-3">
+                                                        <button
+                                                            onClick={handleCopyLink}
+                                                            className={cn(
+                                                                "p-1.5 rounded-lg transition-all",
+                                                                copied ? "bg-green-500/10 text-green-500" : "hover:bg-[#1A1C23] text-[#3A3C46] hover:text-[#E8E8E8]"
+                                                            )}
+                                                        >
+                                                            {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                                        </button>
+                                                        <a
+                                                            href={publicUrl}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="p-1.5 rounded-lg hover:bg-[#1A1C23] text-[#3A3C46] hover:text-[#5E6AD2] transition-all"
+                                                        >
+                                                            <ExternalLink className="w-3.5 h-3.5" />
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
                             </div>
-
-                            <p className="text-xs text-yellow-500/80 flex items-center">
-                                ⚠️ Public projects are visible to anyone with the link
-                            </p>
                         </div>
-                    )}
-                </div>
+                    </div>
 
-                {/* Close Button */}
-                <div className="mt-6 pt-4 border-t border-[#363840] flex justify-end">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-[#363840] hover:bg-[#464852] text-white text-sm font-medium rounded transition-colors"
-                    >
-                        Done
-                    </button>
-                </div>
+                    {/* Footer / Success Sync */}
+                    <div className="h-20 px-10 border-t border-[#1A1C23] flex items-center justify-between bg-[#14151A]/20 shrink-0">
+                        <div className="flex items-center space-x-2">
+                            <Activity className="w-3 h-3 text-[#5E6AD2]" />
+                            <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Awaiting Command Synchrony</span>
+                        </div>
+                        <button
+                            onClick={onClose}
+                            className="px-10 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center group"
+                        >
+                            <span>Finalize</span>
+                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                        </button>
+                    </div>
+                </motion.div>
             </div>
-        </div>
+        </AnimatePresence>
     );
 };

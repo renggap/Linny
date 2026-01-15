@@ -2,6 +2,15 @@
 import React, { useMemo } from 'react';
 import { Issue, User } from '../types';
 import { StatusIcon } from './Icons';
+import { UserCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Utility
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface TimelineViewProps {
   issues: Issue[];
@@ -9,52 +18,43 @@ interface TimelineViewProps {
   onEdit: (issue: Issue) => void;
 }
 
-const CELL_WIDTH = 50; // Pixels per day
-const HEADER_HEIGHT = 40;
-const ROW_HEIGHT = 44;
-const SIDEBAR_WIDTH = 250;
+const CELL_WIDTH = 56;
+const HEADER_HEIGHT = 56;
+const ROW_HEIGHT = 48;
+const SIDEBAR_WIDTH = 280;
 
 export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdit }) => {
-  
-  // 1. Calculate Date Range
+
   const { startDate, totalDays, dates } = useMemo(() => {
     if (issues.length === 0) {
-        const now = new Date();
-        const dates = Array.from({ length: 14 }, (_, i) => {
-            const d = new Date(now);
-            d.setDate(d.getDate() + i - 2);
-            return d;
-        });
-        return { startDate: dates[0], endDate: dates[dates.length-1], totalDays: 14, dates };
+      const now = new Date();
+      const dates = Array.from({ length: 20 }, (_, i) => {
+        const d = new Date(now);
+        d.setDate(d.getDate() + i - 5);
+        return d;
+      });
+      return { startDate: dates[0], endDate: dates[dates.length - 1], totalDays: dates.length, dates };
     }
 
-    // Initialize with extreme values
-    let min = new Date(8640000000000000); 
+    let min = new Date(8640000000000000);
     let max = new Date(-8640000000000000);
 
     issues.forEach(i => {
-      // Determine effective start date (StartDate -> CreatedAt)
       let start = i.startDate ? new Date(i.startDate) : new Date(i.createdAt);
-      if (isNaN(start.getTime())) start = new Date(); // Fallback
-
-      // Determine effective end date (DueDate -> Start + 1 day)
+      if (isNaN(start.getTime())) start = new Date();
       let end = i.dueDate ? new Date(i.dueDate) : new Date(start.getTime() + 86400000);
-      if (isNaN(end.getTime())) end = new Date(start.getTime() + 86400000); // Fallback
+      if (isNaN(end.getTime())) end = new Date(start.getTime() + 86400000);
 
       if (start < min) min = new Date(start);
       if (end > max) max = new Date(end);
     });
 
-    // Add padding (2 days before, 7 days after)
-    min.setDate(min.getDate() - 2);
-    max.setDate(max.getDate() + 7);
-
-    // Normalize to start of day
+    min.setDate(min.getDate() - 4);
+    max.setDate(max.getDate() + 14);
     min.setHours(0, 0, 0, 0);
     max.setHours(0, 0, 0, 0);
 
-    const dayCount = Math.max(7, Math.ceil((max.getTime() - min.getTime()) / (1000 * 60 * 60 * 24)));
-    
+    const dayCount = Math.max(20, Math.ceil((max.getTime() - min.getTime()) / (1000 * 60 * 60 * 24)));
     const dateArray = Array.from({ length: dayCount }, (_, i) => {
       const d = new Date(min);
       d.setDate(d.getDate() + i);
@@ -64,19 +64,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
     return { startDate: min, endDate: max, totalDays: dayCount, dates: dateArray };
   }, [issues]);
 
-  // 2. Organize Issues (Hierarchy)
   const sortedIssues = useMemo(() => {
     const issueMap = new Map(issues.map(i => [i.id, i]));
     const organized: { issue: Issue; level: number }[] = [];
-
-    // Identify "Roots" for the current view:
-    // 1. Issues with no parent
-    // 2. Issues whose parent is NOT in the current visible list (Orphaned in view)
     const visibleRoots = issues.filter(i => !i.parentId || !issueMap.has(i.parentId));
 
     visibleRoots.forEach(root => {
       organized.push({ issue: root, level: 0 });
-      // Find direct children that ARE in the visible list
       const children = issues.filter(i => i.parentId === root.id);
       children.forEach(child => organized.push({ issue: child, level: 1 }));
     });
@@ -84,129 +78,164 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
     return organized;
   }, [issues]);
 
-  // Helper to get position
   const getPosition = (date: Date) => {
-    // Normalize date to start of day for comparison
     const d = new Date(date);
-    d.setHours(0,0,0,0);
+    d.setHours(0, 0, 0, 0);
     const s = new Date(startDate);
-    s.setHours(0,0,0,0);
-
-    const diffTime = d.getTime() - s.getTime();
-    const diffDays = diffTime / (1000 * 60 * 60 * 24);
-    return diffDays * CELL_WIDTH;
+    s.setHours(0, 0, 0, 0);
+    return Math.floor((d.getTime() - s.getTime()) / (1000 * 60 * 60 * 24)) * CELL_WIDTH;
   };
 
-  // Helper to get bar style
   const getBarStyle = (issue: Issue) => {
     let start = issue.startDate ? new Date(issue.startDate) : new Date(issue.createdAt);
     if (isNaN(start.getTime())) start = new Date();
-    
-    let end = issue.dueDate ? new Date(issue.dueDate) : new Date(start.getTime() + 86400000); 
+    let end = issue.dueDate ? new Date(issue.dueDate) : new Date(start.getTime() + 86400000);
     if (isNaN(end.getTime())) end = new Date(start.getTime() + 86400000);
 
     const left = getPosition(start);
     const right = getPosition(end);
     let width = right - left;
-    
-    // Minimum width of half a cell for visibility
-    if (width < CELL_WIDTH / 2) width = CELL_WIDTH / 2;
+    if (width < CELL_WIDTH) width = CELL_WIDTH;
 
-    return {
-      left: `${left}px`,
-      width: `${width}px`,
-    };
+    return { left: `${left}px`, width: `${width}px` };
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#1E1F24] overflow-hidden text-sm">
-      
-      <div className="flex-1 overflow-auto relative custom-scrollbar">
-        <div className="flex relative min-h-full">
-          
-          {/* 1. Sidebar (Fixed Left) */}
-          <div 
-             className="sticky left-0 z-20 bg-[#1E1F24] border-r border-[#363840] flex-shrink-0"
-             style={{ width: SIDEBAR_WIDTH, marginTop: HEADER_HEIGHT }}
+    <div className="flex-1 flex flex-col h-full bg-[#0F1014] overflow-hidden border-t border-[#22242A]">
+      <div className="flex-1 overflow-auto scroll-smooth">
+        <div className="flex relative min-h-full" style={{ width: SIDEBAR_WIDTH + (totalDays * CELL_WIDTH) }}>
+
+          {/* Locked Sidebar Column */}
+          <div
+            className="sticky left-0 z-30 bg-[#0F1014] border-r border-[#22242A] flex-shrink-0 shadow-[10px_0_20px_rgba(0,0,0,0.3)]"
+            style={{ width: SIDEBAR_WIDTH }}
           >
+            {/* Corner header element */}
+            <div className="bg-[#14151A] border-b border-[#22242A] flex items-center px-6" style={{ height: HEADER_HEIGHT }}>
+              <span className="text-[11px] font-semibold text-[#5E6068] uppercase tracking-wider">Issue Description</span>
+            </div>
             {sortedIssues.map(({ issue, level }) => (
-              <div 
-                key={issue.id} 
+              <div
+                key={issue.id}
                 onClick={() => onEdit(issue)}
-                className="flex items-center px-4 border-b border-[#2E3036] hover:bg-[#2E3036] cursor-pointer transition-colors text-gray-300 group"
-                style={{ height: ROW_HEIGHT, paddingLeft: `${16 + level * 20}px` }}
+                className={cn(
+                  "flex items-center px-6 border-b border-[#1A1C23] hover:bg-[#1A1C23] cursor-pointer transition-all group",
+                  level > 0 && "bg-[#101114]/50"
+                )}
+                style={{ height: ROW_HEIGHT, paddingLeft: `${24 + level * 20}px` }}
               >
-                <StatusIcon status={issue.status} className="w-3.5 h-3.5 mr-2 flex-shrink-0" />
-                <span className={`truncate text-xs ${level === 0 ? 'font-medium group-hover:text-white' : 'text-gray-400 group-hover:text-gray-200'}`}>
-                   {issue.identifier} {issue.title}
-                </span>
+                <div className="p-0.5 rounded bg-[#1A1C23] border border-[#2C2D35] mr-3 group-hover:border-[#5E6AD2]/50 transition-colors">
+                  <StatusIcon status={issue.status} className="w-2.5 h-2.5" />
+                </div>
+                <div className="flex flex-col min-w-0 flex-1">
+                  <span className="truncate text-[12px] font-medium text-[#C0C4CC] group-hover:text-[#E8E8E8]">
+                    {issue.title}
+                  </span>
+                  <span className="text-[9px] font-mono text-[#5E6068] tracking-widest">{issue.identifier}</span>
+                </div>
+
+                {/* Assignee Avatar */}
+                <div className="ml-2 flex-shrink-0">
+                  {issue.assigneeIds.length > 0 ? (
+                    <div className="flex -space-x-1">
+                      {users.filter(u => issue.assigneeIds.includes(u.id)).slice(0, 1).map(u => (
+                        <img
+                          key={u.id}
+                          src={u.avatarUrl}
+                          alt=""
+                          className="w-4 h-4 rounded-full ring-1 ring-[#22242A]"
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <UserCircle className="w-4 h-4 text-[#2C2D35]" />
+                  )}
+                </div>
               </div>
             ))}
           </div>
 
-          {/* 2. Timeline Grid */}
-          <div className="flex-1 relative">
-            
-            {/* Header Dates */}
-            <div 
-                className="flex sticky top-0 z-30 bg-[#1E1F24] border-b border-[#363840]"
-                style={{ height: HEADER_HEIGHT, width: `${totalDays * CELL_WIDTH}px` }}
+          {/* Timeline Grid Content */}
+          <div className="flex-1 flex flex-col min-w-0 overflow-visible relative">
+
+            {/* Sticky Timeline Header */}
+            <div
+              className="flex sticky top-0 z-20 bg-[#14151A] border-b border-[#22242A]"
+              style={{ height: HEADER_HEIGHT, width: totalDays * CELL_WIDTH }}
             >
               {dates.map(date => {
-                 const isToday = new Date().toDateString() === date.toDateString();
-                 return (
-                    <div 
-                        key={date.toISOString()} 
-                        className={`flex-shrink-0 border-r border-[#2E3036] flex flex-col items-center justify-center text-[10px] ${isToday ? 'bg-[#5E6AD2]/10' : ''}`}
-                        style={{ width: CELL_WIDTH }}
-                    >
-                        <span className={`font-semibold ${isToday ? 'text-[#5E6AD2]' : 'text-gray-400'}`}>{date.getDate()}</span>
-                        <span className="text-gray-600 uppercase">{date.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
-                    </div>
-                 );
+                const isToday = new Date().toDateString() === date.toDateString();
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                return (
+                  <div
+                    key={date.toISOString()}
+                    className={cn(
+                      "flex-shrink-0 border-r border-[#22242A]/50 flex flex-col items-center justify-center transition-colors",
+                      isToday ? "bg-[#5E6AD2]/10" : isWeekend ? "bg-[#101114]/30" : ""
+                    )}
+                    style={{ width: CELL_WIDTH }}
+                  >
+                    <span className={cn(
+                      "text-[12px] font-bold leading-none mb-1",
+                      isToday ? "text-[#5E6AD2]" : "text-[#E8E8E8]"
+                    )}>{date.getDate()}</span>
+                    <span className="text-[9px] text-[#5E6068] font-bold uppercase tracking-tighter">{date.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
+                  </div>
+                );
               })}
             </div>
 
-            {/* Rows & Bars */}
-            <div className="relative" style={{ width: `${totalDays * CELL_WIDTH}px` }}>
-              
-              {/* Vertical Grid Lines */}
+            {/* Grid Body */}
+            <div className="relative flex-1" style={{ width: totalDays * CELL_WIDTH }}>
+
+              {/* Background Vertical Guidelines */}
               <div className="absolute inset-0 flex pointer-events-none">
                 {dates.map((d, i) => (
-                  <div key={i} className="border-r border-[#2E3036]/50 h-full" style={{ width: CELL_WIDTH }}></div>
+                  <div key={i} className={cn("border-r border-[#22242A]/30 h-full", d.getDay() === 0 || d.getDay() === 6 ? "bg-[#101114]/10" : "")} style={{ width: CELL_WIDTH }}></div>
                 ))}
               </div>
 
-              {/* Task Bars */}
-              {sortedIssues.map(({ issue }, index) => {
-                 const style = getBarStyle(issue);
-                 const assignee = users.find(u => u.id === issue.assigneeId);
-                 
-                 // Color coding based on status
-                 let barColor = 'bg-[#5E6AD2] border-[#5E6AD2]'; // Default Blue
-                 if (issue.status === 'Done') barColor = 'bg-[#5E6AD2]/60 border-[#5E6AD2]/60';
-                 if (issue.status === 'Canceled') barColor = 'bg-gray-600 border-gray-600';
-                 if (issue.status === 'In Progress') barColor = 'bg-orange-500 border-orange-500';
-                 
-                 return (
-                   <div 
-                      key={issue.id} 
-                      className="relative border-b border-[#2E3036]/30 group"
-                      style={{ height: ROW_HEIGHT }}
-                   >
-                      <div 
-                        className={`absolute top-[10px] bottom-[10px] rounded-[4px] border shadow-sm flex items-center px-2 overflow-hidden transition-all whitespace-nowrap z-10 cursor-pointer hover:brightness-110 ${barColor}`}
-                        style={style}
-                        onClick={() => onEdit(issue)}
-                      >
-                         {issue.blockedBy && issue.blockedBy.length > 0 && (
-                             <span className="mr-1 text-white/80 text-[10px]" title="Blocked">🔒</span>
-                         )}
-                         <span className="text-[10px] font-medium text-white truncate drop-shadow-md">{issue.title}</span>
-                      </div>
-                   </div>
-                 );
+              {/* Row content (Bars) */}
+              {sortedIssues.map(({ issue }, idx) => {
+                const style = getBarStyle(issue);
+                const isDone = issue.status === 'Done' || issue.status === 'Canceled';
+
+                return (
+                  <div
+                    key={issue.id}
+                    className="relative border-b border-[#1A1C23] group"
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <motion.div
+                      layoutId={`timeline-bar-${issue.id}`}
+                      initial={{ opacity: 0, x: -50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: idx * 0.02 }}
+                      className={cn(
+                        "absolute top-[10px] bottom-[10px] rounded-lg border px-3 flex items-center overflow-hidden transition-all z-10 cursor-pointer shadow-lg hover:brightness-110",
+                        isDone
+                          ? "bg-[#1A1C23] border-[#2C2D35] text-[#5E6068]"
+                          : "bg-[#5E6AD2] border-[#727BE0] text-white shadow-[#5E6AD2]/10"
+                      )}
+                      style={style}
+                      onClick={() => onEdit(issue)}
+                    >
+                      <span className="text-[10px] font-bold uppercase tracking-wider truncate prose-invert">{issue.title}</span>
+
+                      {/* Gradient Shine */}
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent -translate-x-full group-hover:animate-[shine_1.5s_infinite] pointer-events-none" />
+                    </motion.div>
+                  </div>
+                );
               })}
+
+              {/* Today line indicator */}
+              <div
+                className="absolute top-0 bottom-0 w-[2px] bg-[#5E6AD2] z-20 pointer-events-none"
+                style={{ left: getPosition(new Date()) + (CELL_WIDTH / 2) }}
+              >
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#5E6AD2] shadow-[0_0_10px_#5E6AD2]" />
+              </div>
             </div>
           </div>
         </div>

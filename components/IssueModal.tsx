@@ -1,10 +1,25 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Maximize2, Calendar, Send, MessageSquare, GitMerge, Lock, Plus, Trash2, ArrowUpRight, Check, Edit2 } from 'lucide-react';
-import { Issue, Priority, Status, User, Project, Comment } from '../types';
-import { PriorityIcon, StatusIcon } from './Icons';
+import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, Eye, Trash2, Calendar, User as UserIcon } from 'lucide-react';
+import { Issue, Priority, Status, User, Project, Comment, PartialIssue } from '../types';
+import { StatusIcon, PriorityIcon } from './Icons';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
+
+function formatDateToInput(date: Date | string | undefined): string {
+    if (!date) return '';
+    if (typeof date === 'string') return date.startsWith('1970') ? '' : date;
+    const d = new Date(date);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 interface IssueModalProps {
     isOpen: boolean;
@@ -12,50 +27,20 @@ interface IssueModalProps {
     onSave: (issue: Partial<Issue>) => void;
     users: User[];
     projects: Project[];
-    existingIssue?: Issue; // If provided, we are editing
+    existingIssue?: Issue | PartialIssue;
     comments?: Comment[];
     currentUser?: User | null;
     onAddComment?: (issueId: string, content: string) => void;
-    issues?: Issue[]; // All issues needed for dependencies/subtasks
+    issues?: Issue[];
     onCreateSubtask?: (parentId: string, title: string) => void;
     onOpenIssue?: (issueId: string) => void;
     defaultProjectId?: string | null;
     isPublicView?: boolean;
 }
 
-// Better Renderer
-const SmartText: React.FC<{ text: string, users: User[] }> = ({ text, users }) => {
-    if (!text) return <span className="text-gray-600 italic">No description provided.</span>;
-
-    let content: any[] = [text];
-
-    users.forEach(user => {
-        const pattern = `@${user.name}`;
-        const newContent: any[] = [];
-
-        content.forEach((part) => {
-            if (typeof part === 'string') {
-                const split = part.split(pattern);
-                split.forEach((s, i) => {
-                    newContent.push(s);
-                    if (i < split.length - 1) {
-                        newContent.push(
-                            <span key={`${user.id}-${i}`} className="text-[#5E6AD2] bg-[#5E6AD2]/10 px-1 rounded font-medium inline-block mx-0.5">
-                                @{user.name}
-                            </span>
-                        );
-                    }
-                });
-            } else {
-                newContent.push(part);
-            }
-        });
-        content = newContent;
-    });
-
-    return <div className="whitespace-pre-wrap leading-relaxed">{content}</div>;
-};
-
+function isFullIssue(issue: Issue | PartialIssue | undefined): issue is Issue {
+    return !!issue && 'id' in issue;
+}
 
 export const IssueModal: React.FC<IssueModalProps> = ({
     isOpen,
@@ -65,199 +50,121 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     projects,
     existingIssue,
     comments = [],
-    currentUser,
     onAddComment,
     issues = [],
     onCreateSubtask,
     onOpenIssue,
-    defaultProjectId,
-    isPublicView
+    defaultProjectId
 }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<Priority>(Priority.NoPriority);
-    const [assigneeIds, setAssigneeIds] = useState<string[]>([]); // Multi-select
+    const [assigneeIds, setAssigneeIds] = useState<string[]>([]);
     const [projectId, setProjectId] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
-
-    // Dependency State
     const [blockedBy, setBlockedBy] = useState<string[]>([]);
-    const [showDependencySelect, setShowDependencySelect] = useState(false);
-
-    // Subtask State
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
-
-    // Comment State
     const [newComment, setNewComment] = useState('');
-    const issueComments = existingIssue ? comments.filter(c => c.issueId === existingIssue.id) : [];
-    const bottomRef = useRef<HTMLDivElement>(null);
-
-    // Mention State
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const [activeTextArea, setActiveTextArea] = useState<'desc' | 'comment' | null>(null);
-    const [selectedIndex, setSelectedIndex] = useState(0);
+
     const descRef = useRef<HTMLTextAreaElement>(null);
     const commentRef = useRef<HTMLTextAreaElement>(null);
+    const [isCreating, setIsCreating] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Mode state
-    const [isEditingDescription, setIsEditingDescription] = useState(false);
-
-    // Computed filtered users
     const filteredUsers = mentionQuery !== null
         ? users.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
         : [];
 
-    // Derived Data
-    const parentIssue = existingIssue?.parentId ? issues.find(i => i.id === existingIssue.parentId) : null;
-    const isSubtask = !!existingIssue?.parentId;
-    const subtasks = existingIssue ? issues.filter(i => i.parentId === existingIssue.id) : [];
-    const blockingIssues = existingIssue ? issues.filter(i => (existingIssue.blockedBy || []).includes(i.id)) : [];
-    // For new blocking selection (exclude self, existing blocks, parent, and different projects)
-    const availableDependencies = issues.filter(i =>
-        i.id !== existingIssue?.id &&
-        !(existingIssue?.blockedBy || []).includes(i.id) &&
-        i.id !== existingIssue?.parentId &&
-        i.projectId === existingIssue?.projectId
-    );
+    const hasExistingIssueId = isFullIssue(existingIssue);
+    const subtasks = hasExistingIssueId ? issues.filter(i => i.parentId === (existingIssue as Issue).id) : [];
 
-
-    // Reset or Load state
     useEffect(() => {
-        if (isOpen) {
-            if (existingIssue) {
-                setTitle(existingIssue.title);
-                setDescription(existingIssue.description);
-                setPriority(existingIssue.priority);
-                // Handle both new array and old single ID for backward compat
-                setAssigneeIds(existingIssue.assigneeIds || (existingIssue.assigneeId ? [existingIssue.assigneeId] : []));
-                setProjectId(existingIssue.projectId);
-                // Use local date formatting to avoid timezone shift
-                if (existingIssue.startDate) {
-                    const d = new Date(existingIssue.startDate);
-                    setStartDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-                } else {
-                    setStartDate('');
-                }
-                if (existingIssue.dueDate) {
-                    const d = new Date(existingIssue.dueDate);
-                    setDueDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
-                } else {
-                    setDueDate('');
-                }
-                setBlockedBy(existingIssue.blockedBy || []);
-            } else {
-                setTitle('');
-                setDescription('');
-                setPriority(Priority.NoPriority);
-                setAssigneeIds([]);
-                // Use defaultProjectId if available, otherwise first project
-                setProjectId(defaultProjectId || projects[0]?.id || '');
-                setStartDate('');
-                setDueDate('');
-                setBlockedBy([]);
-            }
-            setNewComment('');
-            setMentionQuery(null);
-            setNewSubtaskTitle('');
-            setShowDependencySelect(false);
-            setIsEditingDescription(false);
+        if (!isOpen) return;
+        if (existingIssue) {
+            const issueData = existingIssue as Partial<Issue>;
+            setTitle(issueData.title || '');
+            setDescription(issueData.description || '');
+            setPriority(issueData.priority || Priority.NoPriority);
+            setAssigneeIds(issueData.assigneeIds || []);
+            setProjectId(issueData.projectId || (defaultProjectId || projects[0]?.id || ''));
+            setStartDate(formatDateToInput(issueData.startDate));
+            setDueDate(formatDateToInput(issueData.dueDate));
+            setBlockedBy(issueData.blockedBy || []);
+        } else {
+            setTitle('');
+            setDescription('');
+            setPriority(Priority.NoPriority);
+            setAssigneeIds([]);
+            setProjectId(defaultProjectId || projects[0]?.id || '');
+            setStartDate('');
+            setDueDate('');
+            setBlockedBy([]);
         }
     }, [isOpen, existingIssue, projects, defaultProjectId]);
 
-    useEffect(() => {
-        if (isOpen && existingIssue) {
-            bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const saveField = async (field: keyof Issue, value: any) => {
+        if (!existingIssue || !('id' in existingIssue)) return;
+        setSaveStatus('saving');
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+        try {
+            await onSave({ id: (existingIssue as Issue).id, [field]: value });
+            setSaveStatus('saved');
+            saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
+        } catch (error) {
+            setSaveStatus('error');
+            saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 5000);
         }
-    }, [isOpen, issueComments.length, existingIssue]);
-
-    // Reset selection index when query changes
-    useEffect(() => {
-        setSelectedIndex(0);
-    }, [mentionQuery]);
-
-    // Helper to Auto-Save fields
-    const saveField = (field: keyof Issue, value: any) => {
-        if (!existingIssue) return;
-        onSave({ id: existingIssue.id, [field]: value });
     };
 
-    // Handle Title Save (onBlur or Enter)
     const handleTitleBlur = () => {
-        if (existingIssue && title !== existingIssue.title) {
+        if (existingIssue && isFullIssue(existingIssue) && title.trim() && title !== (existingIssue as Issue).title) {
             saveField('title', title);
         }
     };
 
     const handleDescriptionSave = () => {
-        if (existingIssue) {
+        if (existingIssue && isFullIssue(existingIssue) && description !== (existingIssue as Issue).description) {
             saveField('description', description);
         }
-        setIsEditingDescription(false);
     };
 
-    // "Create Issue" action for generic main button if NOT existingIssue
-    const handleCreateIssue = () => {
+    const handleCreateIssue = async () => {
         if (!title || !projectId) return;
-        onSave({
-            title,
-            description,
-            priority,
-            assigneeIds,
-            projectId,
-            startDate: startDate ? new Date(startDate) : undefined,
-            dueDate: dueDate ? new Date(dueDate) : undefined,
-            status: Status.Backlog,
-            blockedBy
-        });
-        onClose();
+        setIsCreating(true);
+        try {
+            await onSave({
+                title, description, priority, assigneeIds, projectId,
+                startDate: startDate ? new Date(startDate) : undefined,
+                dueDate: dueDate ? new Date(dueDate) : undefined,
+                status: existingIssue?.status ?? Status.Backlog, blockedBy
+            });
+            onClose();
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsCreating(false);
+        }
     };
-
 
     const submitComment = () => {
-        if (!newComment.trim() || !existingIssue || !onAddComment) return;
-        onAddComment(existingIssue.id, newComment);
+        if (!newComment.trim() || !existingIssue || !('id' in existingIssue) || !onAddComment) return;
+        onAddComment((existingIssue as Issue).id, newComment);
         setNewComment('');
     };
 
-    const handleCreateSubtaskLocal = () => {
-        if (!newSubtaskTitle.trim() || !existingIssue || !onCreateSubtask) return;
-        onCreateSubtask(existingIssue.id, newSubtaskTitle);
-        setNewSubtaskTitle('');
-    };
-
-    const addDependency = (dependencyId: string) => {
-        if (!dependencyId) return;
-        const newBlockedBy = [...blockedBy, dependencyId];
-        setBlockedBy(newBlockedBy);
-        if (existingIssue) {
-            saveField('blockedBy', newBlockedBy);
-        }
-        setShowDependencySelect(false);
-    };
-
-    const removeDependency = (depId: string) => {
-        const newBlockedBy = blockedBy.filter(id => id !== depId);
-        setBlockedBy(newBlockedBy);
-        if (existingIssue) {
-            saveField('blockedBy', newBlockedBy);
-        }
-    }
-
-
-    // --- MENTION LOGIC ---
     const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>, field: 'desc' | 'comment') => {
         const val = e.target.value;
         if (field === 'desc') setDescription(val);
         else setNewComment(val);
-
         const cursor = e.target.selectionStart;
         const textBeforeCursor = val.slice(0, cursor);
         const lastAt = textBeforeCursor.lastIndexOf('@');
-
         if (lastAt !== -1) {
             const query = textBeforeCursor.slice(lastAt + 1);
-            // Check if query contains newline or is too long (likely not a mention)
             if (!query.includes('\n') && query.length < 20) {
                 setMentionQuery(query);
                 setActiveTextArea(field);
@@ -271,502 +178,361 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         const isDesc = activeTextArea === 'desc';
         const text = isDesc ? description : newComment;
         const inputRef = isDesc ? descRef.current : commentRef.current;
-
         if (!inputRef) return;
-
         const cursor = inputRef.selectionStart;
         const textBeforeCursor = text.slice(0, cursor);
         const lastAt = textBeforeCursor.lastIndexOf('@');
         const textAfterCursor = text.slice(cursor);
-
         const newText = textBeforeCursor.slice(0, lastAt) + `@${userName} ` + textAfterCursor;
-
         if (isDesc) setDescription(newText);
         else setNewComment(newText);
-
         setMentionQuery(null);
         setActiveTextArea(null);
-
-        // Focus back
         setTimeout(() => {
             inputRef.focus();
-            const newCursorPos = lastAt + userName.length + 2; // @ + name + space
+            const newCursorPos = lastAt + userName.length + 2;
             inputRef.setSelectionRange(newCursorPos, newCursorPos);
         }, 10);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent, field: 'desc' | 'comment') => {
-        // Handle Mention Navigation
-        if (mentionQuery !== null && filteredUsers.length > 0) {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setSelectedIndex(prev => (prev + 1) % filteredUsers.length);
-                return;
-            }
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setSelectedIndex(prev => (prev - 1 + filteredUsers.length) % filteredUsers.length);
-                return;
-            }
-            if (e.key === 'Enter' || e.key === 'Tab') {
-                e.preventDefault();
-                insertMention(filteredUsers[selectedIndex].name);
-                return;
-            }
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                setMentionQuery(null);
-                return;
-            }
-        }
-
-        // Handle Comment Submit
-        if (field === 'comment') {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                submitComment();
-            }
-        }
     };
 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-[#25262B] w-[900px] h-[90vh] rounded-xl shadow-2xl border border-[#363840] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 relative">
+        <AnimatePresence>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={onClose}
+                    className="absolute inset-0 bg-[#070809]/80 backdrop-blur-sm"
+                />
 
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-[#363840] bg-[#25262B] shrink-0">
-                    <div className="flex items-center space-x-2 text-xs font-medium text-gray-400">
-                        {parentIssue && onOpenIssue && (
-                            <button
-                                onClick={() => onOpenIssue(parentIssue.id)}
-                                className="flex items-center hover:text-white transition-colors mr-2"
-                            >
-                                <GitMerge className="w-3.5 h-3.5 mr-1" />
-                                <span className="font-mono">{parentIssue.identifier}</span>
-                                <ArrowUpRight className="w-3 h-3 ml-1" />
-                            </button>
-                        )}
-                        <span className="text-gray-300 font-semibold mr-2">{projectId && projects.find(p => p.id === projectId)?.name}</span>
-                        <span className="text-gray-500">
-                            {existingIssue ? (
-                                isSubtask && parentIssue ?
-                                    `${parentIssue.identifier} ← ${existingIssue.identifier}` :
-                                    existingIssue.identifier
-                            ) : 'New Issue'}
-                        </span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        {!isPublicView && (
-                            <button className="p-1 hover:bg-[#363840] rounded text-gray-500 hover:text-gray-300">
-                                <Maximize2 className="w-4 h-4" />
-                            </button>
-                        )}
-                        <button onClick={onClose} className="p-1 hover:bg-[#363840] rounded text-gray-500 hover:text-gray-300">
-                            <X className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
-
-                {/* Content - Scrollable */}
-                <div className="flex-1 flex flex-col overflow-hidden relative">
-                    <div className="flex-1 overflow-y-auto p-6 space-y-8">
-
-                        {/* Main Issue Fields */}
-                        <div className="space-y-4">
-                            <input
-                                type="text"
-                                placeholder="Issue title"
-                                className={`w-full bg-transparent text-xl font-semibold text-white placeholder-gray-600 focus:outline-none ${isPublicView ? 'cursor-default' : ''}`}
-                                value={title}
-                                onChange={(e) => !isPublicView && setTitle(e.target.value)}
-                                onBlur={handleTitleBlur}
-                                onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                                autoFocus={!existingIssue && !isPublicView}
-                                readOnly={isPublicView}
-                            />
-
-                            {/* Description Area */}
-                            <div className="relative group">
-                                {isEditingDescription && !isPublicView ? (
-                                    <div className="space-y-2">
-                                        <textarea
-                                            ref={descRef}
-                                            placeholder="Add description... (Type @ to mention)"
-                                            className="w-full h-48 bg-[#1E1F24] border border-[#363840] rounded p-3 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#5E6AD2] resize-none leading-relaxed"
-                                            value={description}
-                                            onChange={(e) => handleInput(e, 'desc')}
-                                            onKeyDown={(e) => handleKeyDown(e, 'desc')}
-                                            autoFocus
-                                        />
-                                        <div className="flex items-center space-x-2">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.preventDefault();
-                                                    handleDescriptionSave();
-                                                }}
-                                                className="bg-[#5E6AD2] text-white px-3 py-1.5 rounded text-xs font-semibold hover:bg-[#4b55aa] transition-colors"
-                                            >
-                                                Save Description
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setIsEditingDescription(false);
-                                                    setDescription(existingIssue?.description || '');
-                                                }}
-                                                className="text-gray-400 px-3 py-1.5 rounded text-xs hover:text-gray-200 transition-colors"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="relative min-h-[100px] group/desc">
-                                        {existingIssue ? (
-                                            <>
-                                                <div className="text-sm text-gray-300">
-                                                    <SmartText text={description} users={users} />
-                                                </div>
-                                                {!isPublicView && (
-                                                    <button
-                                                        onClick={() => setIsEditingDescription(true)}
-                                                        className="absolute top-0 right-0 p-1.5 text-gray-500 hover:text-white bg-[#25262B]/50 hover:bg-[#25262B] rounded opacity-0 group-hover/desc:opacity-100 transition-all"
-                                                        title="Edit Description"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                )}
-                                            </>
-                                        ) : (
-                                            <textarea
-                                                placeholder="Add description..."
-                                                className="w-full h-32 bg-transparent text-sm text-gray-300 placeholder-gray-600 focus:outline-none resize-none leading-relaxed"
-                                                value={description}
-                                                onChange={(e) => setDescription(e.target.value)}
-                                            />
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Meta Controls (Moved from Footer) */}
-                                <div className="mt-8 flex items-center space-x-2 overflow-x-auto no-scrollbar max-w-full">
-                                    {/* Priority Selector */}
-                                    <div className="relative group">
-                                        <PrioritySelect
-                                            value={priority}
-                                            onChange={(p) => {
-                                                if (!isPublicView) {
-                                                    setPriority(p);
-                                                    if (existingIssue) saveField('priority', p);
-                                                }
-                                            }}
-                                            disabled={isPublicView}
-                                        />
-                                    </div>
-
-                                    {/* Assignee Selector */}
-                                    <div className="relative group min-w-[200px]">
-                                        <UserSelect
-                                            users={users}
-                                            selectedUserIds={assigneeIds}
-                                            onSelect={(id) => {
-                                                if (!isPublicView) {
-                                                    let newIds;
-                                                    if (assigneeIds.includes(id)) {
-                                                        newIds = assigneeIds.filter(userId => userId !== id);
-                                                    } else {
-                                                        newIds = [...assigneeIds, id];
-                                                    }
-                                                    setAssigneeIds(newIds);
-                                                    if (existingIssue) saveField('assigneeIds', newIds);
-                                                }
-                                            }}
-                                            placeholder="Assignees"
-                                            disabled={isPublicView}
-                                        />
-                                    </div>
-
-                                    {/* Start Date */}
-                                    <div className="relative group flex items-center">
-                                        <span className="text-[9px] text-gray-500 absolute left-2 pointer-events-none z-10 hidden">Start</span>
-                                        {isPublicView ? (
-                                            <div className="px-3 py-1.5 text-sm text-gray-300 bg-[#1E1F24] border border-[#363840] rounded min-w-[120px]">
-                                                {startDate ? new Date(startDate).toLocaleDateString() : 'No start date'}
-                                            </div>
-                                        ) : (
-                                            <DatePicker
-                                                value={startDate}
-                                                onChange={(date) => {
-                                                    // Use local date formatting to avoid timezone shift
-                                                    const year = date.getFullYear();
-                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                    const day = String(date.getDate()).padStart(2, '0');
-                                                    const dateStr = `${year}-${month}-${day}`;
-                                                    setStartDate(dateStr);
-                                                    if (existingIssue) saveField('startDate', date);
-                                                }}
-                                                placeholder="Start Date"
-                                                disabled={isPublicView}
-                                            />
-                                        )}
-                                    </div>
-
-                                    {/* Due Date */}
-                                    <div className="relative group flex items-center">
-                                        <span className="text-[9px] text-gray-500 absolute left-2 pointer-events-none z-10 hidden">Due</span>
-                                        {isPublicView ? (
-                                            <div className="px-3 py-1.5 text-sm text-gray-300 bg-[#1E1F24] border border-[#363840] rounded min-w-[120px]">
-                                                {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
-                                            </div>
-                                        ) : (
-                                            <DatePicker
-                                                value={dueDate}
-                                                onChange={(date) => {
-                                                    // Use local date formatting to avoid timezone shift
-                                                    const year = date.getFullYear();
-                                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                                    const day = String(date.getDate()).padStart(2, '0');
-                                                    const dateStr = `${year}-${month}-${day}`;
-                                                    setDueDate(dateStr);
-                                                    if (existingIssue) saveField('dueDate', date);
-                                                }}
-                                                placeholder="Due Date"
-                                                disabled={isPublicView}
-                                            />
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Global Save Button - Only for NEW issues */}
-                                {!existingIssue && !isPublicView && (
-                                    <div className="flex justify-end mt-4 pt-4 border-t border-[#363840]">
-                                        <button
-                                            onClick={handleCreateIssue}
-                                            disabled={!title || !projectId}
-                                            className={`px-4 py-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-sm font-semibold rounded shadow-lg shadow-purple-900/20 transition-all ${(!title || !projectId) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                        >
-                                            Create Issue
-                                        </button>
-                                    </div>
-                                )}
+                {/* Modal Container */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                    className="bg-[#0F1014] w-full max-w-[1000px] h-[85vh] rounded-2xl shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
+                >
+                    {/* Header Bar */}
+                    <div className="flex items-center justify-between px-6 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
+                        <div className="flex items-center space-x-4 text-[11px] font-bold uppercase tracking-widest text-[#5E6068]">
+                            <div className="flex items-center space-x-2">
+                                <span className="p-1 rounded bg-[#1A1C23] border border-[#2C2D35]">
+                                    <Hash className="w-2.5 h-2.5" />
+                                </span>
+                                <span className="font-mono text-[#8A8F98]">{hasExistingIssueId ? (existingIssue as Issue).identifier : 'Unassigned'}</span>
+                            </div>
+                            <span className="text-[#2C2D35]">/</span>
+                            <div className="flex items-center space-x-2">
+                                <Layout className="w-3 h-3" />
+                                <span className="text-[#C0C4CC]">
+                                    {projectId && projects.find(p => p.id === projectId)?.name}
+                                </span>
                             </div>
                         </div>
 
-                        {/* --- Subtasks Section --- */}
-                        {existingIssue && !existingIssue.parentId && (
-                            <div className="pt-6 border-t border-[#363840]">
-                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 flex items-center">
-                                    <GitMerge className="w-3.5 h-3.5 mr-2" />
-                                    Subtasks
-                                </h3>
-                                <div className="space-y-1 mb-3">
-                                    {subtasks.map(subtask => {
-                                        const subAssignee = users.find(u => u.id === (subtask.assigneeIds?.[0] || subtask.assigneeId));
-                                        return (
-                                            <div
-                                                key={subtask.id}
-                                                className="flex items-center px-3 py-2 bg-[#1E1F24] border border-[#363840] rounded hover:border-[#52545E] cursor-pointer group"
-                                                onClick={() => onOpenIssue && onOpenIssue(subtask.id)}
-                                            >
-                                                <StatusIcon status={subtask.status} className="w-3.5 h-3.5 mr-3" />
-                                                <span className="text-xs text-gray-500 font-mono mr-3">{subtask.identifier}</span>
-                                                <span className="text-sm text-gray-300 flex-1 truncate">{subtask.title}</span>
-                                                {subAssignee && (
-                                                    <img src={subAssignee.avatarUrl} className="w-4 h-4 rounded-full ml-2" />
-                                                )}
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                                {!isPublicView && (
-                                    <div className="flex items-center space-x-2">
-                                        <Plus className="w-4 h-4 text-gray-500" />
-                                        <input
-                                            type="text"
-                                            placeholder="Add subtask..."
-                                            value={newSubtaskTitle}
-                                            onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && handleCreateSubtaskLocal()}
-                                            className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
-                                        />
-                                        <button
-                                            onClick={handleCreateSubtaskLocal}
-                                            disabled={!newSubtaskTitle.trim()}
-                                            className="text-xs text-[#5E6AD2] hover:text-white disabled:opacity-50"
-                                        >
-                                            Create
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {/* --- Dependencies Section --- */}
-                        {existingIssue && (
-                            <div className="pt-6 border-t border-[#363840]">
-                                <div className="flex items-center justify-between mb-3">
-                                    <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center">
-                                        <Lock className="w-3.5 h-3.5 mr-2" />
-                                        Blocking
-                                    </h3>
-                                    {!isPublicView && (
-                                        <button
-                                            onClick={() => setShowDependencySelect(!showDependencySelect)}
-                                            className="text-xs text-gray-500 hover:text-white flex items-center"
-                                        >
-                                            <Plus className="w-3 h-3 mr-1" /> Add Dependency
-                                        </button>
+                        <div className="flex items-center space-x-4">
+                            {saveStatus !== 'idle' && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className={cn(
+                                        "flex items-center space-x-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border",
+                                        saveStatus === 'saving' ? "bg-[#5E6AD2]/5 border-[#5E6AD2]/20 text-[#5E6AD2]" : "bg-green-500/5 border-green-500/20 text-green-500"
                                     )}
-                                </div>
+                                >
+                                    <div className={cn("w-1 h-1 rounded-full", saveStatus === 'saving' ? "bg-[#5E6AD2] animate-pulse" : "bg-green-500")} />
+                                    <span>{saveStatus === 'saving' ? 'Syncing' : 'Synced'}</span>
+                                </motion.div>
+                            )}
+                            <button onClick={onClose} className="p-1.5 hover:bg-[#1C1D24] rounded-lg text-[#5E6068] hover:text-[#E8E8E8] transition-all">
+                                <X className="w-4.5 h-4.5" />
+                            </button>
+                        </div>
+                    </div>
 
-                                {showDependencySelect && (
-                                    <div className="mb-3">
-                                        <select
-                                            className="w-full bg-[#1E1F24] border border-[#363840] text-sm text-white rounded p-2 focus:outline-none focus:border-[#5E6AD2]"
-                                            onChange={(e) => addDependency(e.target.value)}
-                                            value=""
-                                        >
-                                            <option value="">Select issue blocking this one...</option>
-                                            {availableDependencies.map(i => (
-                                                <option key={i.id} value={i.id} className="bg-[#25262B] text-white">
-                                                    {i.identifier} {i.title}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                )}
-
-                                <div className="space-y-1">
-                                    {blockingIssues.map(issue => (
-                                        <div
-                                            key={issue.id}
-                                            className="flex items-center justify-between px-3 py-2 bg-[#1E1F24] border border-[#363840] rounded hover:border-[#52545E] cursor-pointer group"
-                                            onClick={() => onOpenIssue && onOpenIssue(issue.id)}
-                                        >
-                                            <div className="flex items-center flex-1 min-w-0">
-                                                <Lock className="w-3 h-3 text-red-400 mr-3" />
-                                                <span className="text-xs text-gray-500 font-mono mr-3">{issue.identifier}</span>
-                                                <span className="text-sm text-gray-300 truncate">{issue.title}</span>
-                                            </div>
-                                            {!isPublicView && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); removeDependency(issue.id); }}
-                                                    className="text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1"
-                                                >
-                                                    <X className="w-3.5 h-3.5" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ))}
-                                    {blockingIssues.length === 0 && !showDependencySelect && (
-                                        <div className="text-xs text-gray-600 italic">No dependencies.</div>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Comments Section */}
-                        {existingIssue && !isPublicView && (
-                            <div className="pt-6 border-t border-[#363840]">
-                                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Activity</h3>
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* Main Editor */}
+                        <div className="flex-1 flex flex-col overflow-hidden bg-[#0F1014]">
+                            <div className="flex-1 overflow-y-auto no-scrollbar py-10 px-12 space-y-10">
 
                                 <div className="space-y-6">
-                                    {issueComments.map(comment => {
-                                        const user = users.find(u => u.id === comment.userId);
-                                        return (
-                                            <div key={comment.id} className="flex space-x-3 group">
-                                                <div className="flex-shrink-0">
-                                                    {user ? (
-                                                        <img src={user.avatarUrl} alt={user.name} className="w-6 h-6 rounded-full" />
-                                                    ) : (
-                                                        <div className="w-6 h-6 rounded-full bg-gray-700" />
-                                                    )}
+                                    <input
+                                        type="text"
+                                        placeholder="Issue title"
+                                        className="w-full bg-transparent text-3xl font-bold text-[#E8E8E8] placeholder-[#2C2D35] focus:outline-none tracking-tight leading-tight"
+                                        value={title}
+                                        onChange={(e) => setTitle(e.target.value)}
+                                        onBlur={handleTitleBlur}
+                                        autoFocus={!hasExistingIssueId}
+                                    />
+                                    <textarea
+                                        ref={descRef}
+                                        placeholder="Describe the objective..."
+                                        className="w-full h-auto min-h-[160px] bg-transparent border-none p-0 text-[15px] text-[#C0C4CC] placeholder-[#2C2D35] focus:outline-none resize-none leading-relaxed"
+                                        value={description}
+                                        onChange={(e) => handleInput(e, 'desc')}
+                                        onBlur={handleDescriptionSave}
+                                    />
+                                </div>
+
+                                {/* Mention Dropdown Overlay Logic */}
+                                <AnimatePresence>
+                                    {mentionQuery !== null && filteredUsers.length > 0 && (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: 5 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="fixed z-50 bg-[#14151A] border border-[#22242A] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-2 w-64 overflow-hidden"
+                                        >
+                                            {filteredUsers.map((u) => (
+                                                <div
+                                                    key={u.id}
+                                                    onClick={() => insertMention(u.name)}
+                                                    className="px-4 py-2.5 text-xs text-[#C0C4CC] cursor-pointer hover:bg-[#5E6AD2] hover:text-white transition-colors flex items-center space-x-3"
+                                                >
+                                                    <img src={u.avatarUrl} className="w-5 h-5 rounded-full" alt="" />
+                                                    <span className="font-semibold">{u.name}</span>
                                                 </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-baseline space-x-2 mb-1">
-                                                        <span className="text-xs font-medium text-gray-200">{user?.name || 'Unknown User'}</span>
-                                                        <span className="text-xs text-gray-500 text-[10px]">{new Date(comment.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                                    </div>
-                                                    <div className="text-sm text-gray-300">
-                                                        <SmartText text={comment.content} users={users} />
-                                                    </div>
+                                            ))}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+
+                                {hasExistingIssueId && (
+                                    <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
+                                        {/* Subtasks Section */}
+                                        <section className="space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                                                    <GitMerge className="w-3.5 h-3.5 mr-2" /> Sub-objectives
+                                                </h4>
+                                                <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
+                                                    {subtasks.length} ENTRIES
+                                                </span>
+                                            </div>
+                                            <div className="grid gap-2">
+                                                {subtasks.map(s => (
+                                                    <motion.div
+                                                        key={s.id}
+                                                        whileHover={{ x: 4 }}
+                                                        onClick={() => onOpenIssue?.(s.id)}
+                                                        className="flex items-center justify-between px-4 py-3 rounded-xl bg-[#14151A]/30 border border-[#1A1C23] hover:border-[#2C2D35] transition-all cursor-pointer group"
+                                                    >
+                                                        <div className="flex items-center space-x-4">
+                                                            <div className="p-1 rounded bg-[#0F1014] border border-[#1A1C23]">
+                                                                <StatusIcon status={s.status} className="w-3 h-3" />
+                                                            </div>
+                                                            <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
+                                                            <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
+                                                        </div>
+                                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-[#5E6AD2] transition-colors" />
+                                                    </motion.div>
+                                                ))}
+                                                <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] rounded-xl hover:border-[#2C2D35] transition-colors">
+                                                    <Plus className="w-4 h-4 text-[#3A3C46]" />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Add sub-objective..."
+                                                        className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
+                                                        value={newSubtaskTitle}
+                                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                        onKeyDown={(e) => e.key === 'Enter' && onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle)}
+                                                    />
                                                 </div>
                                             </div>
-                                        );
-                                    })}
+                                        </section>
 
-                                    {issueComments.length === 0 && (
-                                        <div className="text-center py-6 text-gray-600 text-sm">
-                                            No comments yet. Start the conversation!
-                                        </div>
-                                    )}
-                                    <div ref={bottomRef}></div>
-                                </div>
+                                        {/* Activity/Comments Section */}
+                                        <section className="space-y-6">
+                                            <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                                                <MessageSquare className="w-3.5 h-3.5 mr-2" /> Communications
+                                            </h4>
+                                            <div className="space-y-8 pl-1 relative">
+                                                <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#1A1C23]" />
+                                                {comments.map((c, idx) => {
+                                                    const u = users.find(user => user.id === c.userId);
+                                                    return (
+                                                        <motion.div
+                                                            key={c.id}
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: idx * 0.05 }}
+                                                            className="relative pl-8"
+                                                        >
+                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
+                                                            <div className="flex items-center justify-between mb-2">
+                                                                <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name}</span>
+                                                                <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
+                                                            </div>
+                                                            <div className="bg-[#14151A]/40 border border-[#1A1C23] rounded-xl p-3.5">
+                                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">{c.content}</p>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </section>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
 
-                    {/* Mention Suggestion Popover */}
-                    {mentionQuery !== null && filteredUsers.length > 0 && (
-                        <div
-                            className="absolute z-50 w-64 bg-[#25262B] border border-[#363840] rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
-                            style={{
-                                bottom: activeTextArea === 'comment' ? '90px' : 'auto',
-                                top: activeTextArea === 'desc' ? '200px' : 'auto',
-                                left: '40px'
-                            }}
-                        >
-                            <div className="px-3 py-1.5 bg-[#202126] text-[10px] font-semibold text-gray-500 uppercase">Suggested Users</div>
-                            {filteredUsers.map((user, idx) => (
-                                <div
-                                    key={user.id}
-                                    onClick={() => insertMention(user.name)}
-                                    className={`flex items-center px-3 py-2 cursor-pointer transition-colors ${idx === selectedIndex ? 'bg-[#5E6AD2] text-white' : 'hover:bg-[#5E6AD2] hover:text-white text-gray-300'}`}
-                                >
-                                    <img src={user.avatarUrl} className="w-5 h-5 rounded-full mr-2" />
-                                    <span className="text-sm">{user.name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* New Comment Input */}
-                    {existingIssue && onAddComment && !isPublicView && (
-                        <div className="p-4 bg-[#25262B] border-t border-[#363840] shrink-0">
-                            <div className="flex space-x-3">
-                                <div className="flex-shrink-0 pt-1">
-                                    {currentUser ? (
-                                        <img src={currentUser.avatarUrl} alt={currentUser.name} className="w-6 h-6 rounded-full" />
-                                    ) : (
-                                        <div className="w-6 h-6 rounded-full bg-gray-700" />
-                                    )}
-                                </div>
-                                <div className="flex-1 relative">
-                                    <textarea
-                                        ref={commentRef}
-                                        value={newComment}
-                                        onChange={(e) => handleInput(e, 'comment')}
-                                        onKeyDown={(e) => handleKeyDown(e, 'comment')}
-                                        placeholder="Leave a comment... (Enter to send)"
-                                        className="w-full bg-[#1E1F24] border border-[#363840] rounded-md p-3 text-sm text-white focus:outline-none focus:border-[#5E6AD2] resize-none h-20 transition-colors"
-                                    />
-                                    <div className="absolute bottom-2 right-2 flex items-center space-x-2">
+                            {/* Comment Input Sticky */}
+                            {hasExistingIssueId && (
+                                <div className="p-6 bg-[#0F1014] border-t border-[#1A1C23] shrink-0">
+                                    <div className="flex items-center space-x-4 bg-[#14151A] border border-[#22242A] rounded-2xl p-2 focus-within:border-[#5E6AD2]/50 focus-within:ring-4 focus-within:ring-[#5E6AD2]/5 transition-all shadow-inner">
+                                        <div className="w-8 h-8 rounded-lg bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center shrink-0">
+                                            <UserCircle className="w-4 h-4 text-[#5E6068]" />
+                                        </div>
+                                        <input
+                                            placeholder="Transmit message..."
+                                            className="flex-1 bg-transparent text-sm text-[#E8E8E8] placeholder-[#3A3C46] focus:outline-none py-2"
+                                            value={newComment}
+                                            onChange={(e) => e.target.value.length < 2000 && setNewComment(e.target.value)}
+                                            onKeyDown={(e) => e.key === 'Enter' && submitComment()}
+                                        />
                                         <button
                                             onClick={submitComment}
                                             disabled={!newComment.trim()}
-                                            className={`p-1.5 rounded-md transition-all ${newComment.trim() ? 'bg-[#5E6AD2] text-white' : 'bg-[#363840] text-gray-500 cursor-not-allowed'}`}
+                                            className="w-8 h-8 flex items-center justify-center bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-20 disabled:grayscale text-white rounded-lg transition-all shadow-lg shadow-[#5E6AD2]/20 group"
                                         >
-                                            <Send className="w-3.5 h-3.5" />
+                                            <Send className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                         </button>
                                     </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
-                    )}
-                </div>
 
+                        {/* Metadata Panel */}
+                        <div className="w-72 bg-[#14151A]/40 border-l border-[#1A1C23] py-10 px-8 space-y-10 shrink-0 overflow-y-auto no-scrollbar">
+
+                            {!hasExistingIssueId && (
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
+                                        <Layout className="w-3 h-3 mr-2" /> Destination
+                                    </label>
+                                    <div className="relative">
+                                        <select
+                                            value={projectId}
+                                            onChange={(e) => setProjectId(e.target.value)}
+                                            className="w-full bg-[#0F1014] border border-[#22242A] rounded-xl px-4 py-2.5 text-xs text-[#C0C4CC] font-medium focus:outline-none hover:border-[#2C2D35] transition-all appearance-none cursor-pointer"
+                                        >
+                                            {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        </select>
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#3A3C46]">
+                                            <Plus className="w-3 h-3" />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
+                                    <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Criticality
+                                </label>
+                                <div className="bg-[#0F1014] rounded-xl border border-[#22242A] p-0.5">
+                                    <PrioritySelect
+                                        value={priority}
+                                        onChange={(p) => hasExistingIssueId ? saveField('priority', p) : setPriority(p)}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
+                                    <UserIcon className="w-3 h-3 mr-2" /> Personnel
+                                </label>
+                                <div className="bg-[#0F1014] rounded-xl border border-[#22242A] p-0.5">
+                                    <UserSelect
+                                        users={users}
+                                        selectedUserIds={assigneeIds}
+                                        onSelect={(id) => {
+                                            const next = assigneeIds.includes(id) ? assigneeIds.filter(x => x !== id) : [...assigneeIds, id];
+                                            setAssigneeIds(next);
+                                            if (hasExistingIssueId) saveField('assigneeIds', next);
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <h5 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center justify-between">
+                                    <span>Schedule</span>
+                                    <Clock className="w-3 h-3" />
+                                </h5>
+                                <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                        <span className="text-[9px] font-black uppercase text-[#3A3C46] ml-1">Activation</span>
+                                        <DatePicker
+                                            value={startDate}
+                                            onChange={(d) => {
+                                                const s = d.toISOString().split('T')[0];
+                                                setStartDate(s);
+                                                if (hasExistingIssueId) saveField('startDate', s);
+                                            }}
+                                            placeholder="Assign start"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <span className="text-[9px] font-black uppercase text-[#3A3C46] ml-1">Deadline</span>
+                                        <DatePicker
+                                            value={dueDate}
+                                            onChange={(d) => {
+                                                const s = d.toISOString().split('T')[0];
+                                                setDueDate(s);
+                                                if (hasExistingIssueId) saveField('dueDate', s);
+                                            }}
+                                            placeholder="Assign target"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {!hasExistingIssueId && (
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={handleCreateIssue}
+                                    disabled={isCreating || !title || !projectId}
+                                    className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] text-white py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-2 disabled:opacity-20 shadow-xl shadow-[#5E6AD2]/20"
+                                >
+                                    {isCreating ? <Activity className="w-4 h-4 animate-spin" /> : <span>Execute Creation</span>}
+                                </motion.button>
+                            )}
+                        </div>
+                    </div>
+                </motion.div>
             </div>
-        </div>
+        </AnimatePresence>
     );
 };
+
+const UserCircle = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn("lucide lucide-circle-user", className)}
+    >
+        <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" /><path d="M16 21v-2a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v2" />
+    </svg>
+);
+
+const Activity = ({ className }: { className?: string }) => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className={cn("lucide lucide-activity", className)}
+    >
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+);

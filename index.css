@@ -2,7 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom Scrollbar for that native feel (Moved from index.html) */
+/* ============================================================================
+ * DARK MODE SUPPORT
+ * ============================================================================
+ * CSS Custom Properties for theme switching
+ */
+
+:root {
+  /* Light theme colors */
+  --bg-primary: #FFFFFF;
+  --bg-secondary: #F3F4F6;
+  --bg-tertiary: #E5E7EB;
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-tertiary: #9CA3AF;
+  --border-color: #E5E7EB;
+  --accent-color: #5E6AD2;
+  --accent-hover: #4C51BF;
+  --shadow-color: rgba(0, 0, 0, 0.1);
+  --scrollbar-thumb: #3F414D;
+  --scrollbar-thumb-hover: #52545E;
+}
+
+.dark {
+  /* Dark theme colors */
+  --bg-primary: #1E1F24;
+  --bg-secondary: #2D2F3A;
+  --bg-tertiary: #3A3D4A;
+  --text-primary: #F9FAFB;
+  --text-secondary: #D1D5DB;
+  --text-tertiary: #9CA3AF;
+  --border-color: #4B5563;
+  --accent-color: #60A5FA;
+  --accent-hover: #3B82F6;
+  --shadow-color: rgba(0, 0, 0, 0.3);
+  --scrollbar-thumb: #4B5563;
+  --scrollbar-thumb-hover: #6B7280;
+}
+
+/* Apply theme colors to body */
+body {
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom Scrollbar for that native feel */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -13,14 +62,42 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3F414D;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #52545E;
+  background: var(--scrollbar-thumb-hover);
 }
 
-body {
-  background-color: #1E1F24;
+/* Custom Animations */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Print styles - always use light mode */
+@media print {
+  :root {
+    --bg-primary: #FFFFFF;
+    --text-primary: #000000;
+  }
 }

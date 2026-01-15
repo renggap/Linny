@@ -1,6 +1,7 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Routes, Route, useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useAuth } from './contexts/AuthContext';
+import { api } from './services/api';
 import { Sidebar } from './components/Sidebar';
 import { IssueList } from './components/IssueList';
 import { IssueModal } from './components/IssueModal';
@@ -11,444 +12,418 @@ import { ProjectModal } from './components/ProjectModal';
 import { TeamModal } from './components/TeamModal';
 import { PublicProjectView } from './components/PublicProjectView';
 import { ProjectSettingsModal } from './components/ProjectSettingsModal';
+import { PublicViewContainer } from './components/PublicViewContainer';
 import { UserManagementModal } from './components/UserManagementModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { NotificationPopover } from './components/NotificationPopover';
 import { ProjectRightSidebar } from './components/ProjectRightSidebar';
 import { ProjectOverviewHeader } from './components/ProjectOverviewHeader';
-import { INITIAL_ISSUES, MOCK_USERS, MOCK_PROJECTS, MOCK_TEAMS, MOCK_COMMENTS, MOCK_NOTIFICATIONS } from './constants';
-import { Issue, Status, Priority, User, Team, Project, UserRole, Comment, Notification, NotificationType, Activity } from './types';
-import { List, Layout, Bell, Plus, GanttChart } from './components/Icons';
+import { TeamDashboard } from './components/TeamDashboard';
+import { Issue, Status, Priority, User, Team, Project, UserRole, Comment, Notification, NotificationType, Activity, PartialIssue } from './types';
+import { List, Layout, Bell, Plus, GanttChart, X, PanelRightClose } from './components/Icons';
 
 const App: React.FC = () => {
-  // --- STATE ---
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [teams, setTeams] = useState<Team[]>(MOCK_TEAMS);
-  const [projects, setProjects] = useState<Project[]>(MOCK_PROJECTS);
-  const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
-  const [comments, setComments] = useState<Comment[]>(MOCK_COMMENTS);
-  const [notifications, setNotifications] = useState<Notification[]>(MOCK_NOTIFICATIONS);
+  const { user: currentUser, isAuthenticated, isLoading: authLoading, refreshUser } = useAuth();
 
-  // Add Activity State
+  // --- DATA STATE (fetched from API) ---
+  const [users, setUsers] = useState<User[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [issues, setIssues] = useState<Issue[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [activities, setActivities] = useState<Activity[]>([]);
 
-  // ... other states ...
-
-  const logActivity = (
-    type: Activity['type'],
-    entityTitle: string,
-    description: string,
-    projectId?: string,
-    issueId?: string
-  ) => {
-    if (!currentUser) return;
-
-    const newActivity: Activity = {
-      id: `act_${Date.now()}`,
-      userId: currentUser.id,
-      type,
-      entityTitle,
-      description,
-      projectId,
-      issueId,
-      createdAt: new Date()
-    };
-
-    setActivities(prev => {
-      const updated = [newActivity, ...prev];
-      // Keep persistent history but limit in memory if needed (though requirement says limit view, not storage necessarily)
-      // We'll cap storage at 500 to be safe
-      return updated.slice(0, 500);
-    });
-  };
-
-
-
-  // ... (inside save data effect)
-  useEffect(() => { localStorage.setItem('linear_clone_activities', JSON.stringify(activities)); }, [activities]);
-
+  // Loading states
+  const [isDataLoading, setIsDataLoading] = useState(true);
 
   // UI State
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
   const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
-
   const [isUserManagementOpen, setIsUserManagementOpen] = useState(false);
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
   const [settingsProject, setSettingsProject] = useState<Project | null>(null);
-  const [editingIssue, setEditingIssue] = useState<Issue | undefined>(undefined);
-  const [currentTeamId, setCurrentTeamId] = useState<string>(MOCK_TEAMS[0].id);
+  const [editingIssue, setEditingIssue] = useState<Issue | PartialIssue | undefined>(undefined);
+  const [currentTeamId, setCurrentTeamId] = useState<string>('');
   const [isRightSidebarOpen, setIsRightSidebarOpen] = useState(true);
 
   // Navigation State
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<Status | null>(null);
   const [assigneeFilter, setAssigneeFilter] = useState<string | null>(null);
-
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [currentView, setCurrentView] = useState<'list' | 'board' | 'timeline'>('list');
-  const [pendingInvites, setPendingInvites] = useState<{ email: string, role: UserRole }[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(true);
+  const [isProjectOverviewExpanded, setIsProjectOverviewExpanded] = useState(true);
 
   // Router hooks
   const navigate = useNavigate();
   const location = useLocation();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  // Track whether URL change is from user action to prevent redirect loops
+  const isNavigatingRef = useRef(false);
+
+  // --- DATA FETCHING ---
+
+  // Fetch all data on mount (only once)
+  const fetchAllData = useCallback(async () => {
+    console.log('[App] fetchAllData called, isAuthenticated:', isAuthenticated);
+    if (!isAuthenticated) {
+      console.log('[App] Not authenticated, skipping data fetch');
+      setIsDataLoading(false);
+      return;
+    }
+
+    setIsDataLoading(true);
+    try {
+      console.log('[App] Fetching all data...');
+      const [usersData, teamsData, projectsData, notifs, acts] = await Promise.all([
+        api.users.getAll(),
+        api.teams.getAll(),
+        api.projects.getAll(),
+        api.notifications.getAll(),
+        api.activities.getAll({ limit: 100 })
+      ]);
+
+      console.log('[App] Data fetched:', { users: usersData.length, teams: teamsData.length, projects: projectsData.length });
+      setUsers(usersData);
+      setTeams(teamsData);
+      setProjects(projectsData);
+      setNotifications(notifs);
+      setActivities(acts);
+
+      // Set initial team if not set
+      const teamId = currentTeamId || teamsData[0]?.id;
+      if (teamId && teamsData.length > 0) {
+        console.log('[App] Setting team:', teamId);
+        setCurrentTeamId(teamId);
+        // Issues will be fetched by the useEffect below
+      }
+    } catch (error) {
+      console.error('[App] Failed to fetch data:', error);
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  // Track if we've fetched data for current auth session
+  const hasFetchedDataRef = useRef(false);
+
+  // Set loading to false when not authenticated
+  useEffect(() => {
+    if (!isAuthenticated) {
+      console.log('[App] Not authenticated, setting data loading to false');
+      setIsDataLoading(false);
+      hasFetchedDataRef.current = false;
+    }
+  }, [isAuthenticated]);
+
+  // Fetch data when authenticated status changes
+  useEffect(() => {
+    console.log('[App] Auth status changed, isAuthenticated:', isAuthenticated, 'hasFetched:', hasFetchedDataRef.current);
+    if (isAuthenticated && !hasFetchedDataRef.current) {
+      console.log('[App] User authenticated, fetching data...');
+      hasFetchedDataRef.current = true;
+      fetchAllData();
+    }
+  }, [isAuthenticated, fetchAllData]);
+
+  // Fetch projects and issues when team changes
+  useEffect(() => {
+    if (!currentTeamId || !isAuthenticated) return;
+
+    const fetchTeamData = async () => {
+      try {
+        console.log('[App] Fetching projects and issues for team:', currentTeamId);
+
+        // Clear selected project when switching teams
+        setSelectedProjectId(null);
+
+        // Fetch projects for the new team
+        const projectsData = await api.projects.getAll({ teamId: currentTeamId });
+        console.log('[App] Projects fetched:', projectsData.length);
+        setProjects(projectsData);
+
+        // Fetch issues for the new team
+        const issuesData = await api.issues.getAll({ teamId: currentTeamId });
+        console.log('[App] Issues fetched:', issuesData.length);
+        setIssues(issuesData);
+      } catch (error) {
+        console.error('Failed to fetch team data:', error);
+      }
+    };
+
+    fetchTeamData();
+  }, [currentTeamId, isAuthenticated]);
+  // Fetch full project details (including links) when project is selected
+  useEffect(() => {
+    if (selectedProjectId && isAuthenticated) {
+      const fetchProjectDetails = async () => {
+        try {
+          console.log('[App] Fetching full project details for:', selectedProjectId);
+          const updated = await api.projects.getByIdWithLinks(selectedProjectId);
+          setProjects((prev: Project[]) => prev.map((p: Project) => p.id === updated.id ? updated : p));
+        } catch (error) {
+          console.error('[App] Failed to fetch project details:', error);
+        }
+      };
+      fetchProjectDetails();
+    }
+  }, [selectedProjectId, isAuthenticated]);
+
+  // Fetch issues when team changes - consolidated into fetchAllData
+  // Issues are now fetched inside fetchAllData to avoid race conditions
+
+  // Fetch comments for a specific issue
+  const fetchComments = useCallback(async (issueId: string) => {
+    try {
+      const commentsData = await api.comments.getByIssue(issueId);
+      setComments(commentsData);
+    } catch (error) {
+      console.error('Failed to fetch comments:', error);
+    }
+  }, []);
+
+  // Fetch notifications (called manually)
+  const fetchNotifications = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const notifs = await api.notifications.getAll();
+      setNotifications(notifs);
+    } catch (error) {
+      console.error('Failed to fetch notifications:', error);
+    }
+  }, [isAuthenticated]);
 
   // --- COMPUTED ---
-  const currentTeam = teams.find(t => t.id === currentTeamId);
-  // Filter projects by team
-  const teamProjects = projects.filter(p => p.teamId === currentTeamId);
 
+  const currentTeam = teams.find(t => t.id === currentTeamId);
+  const teamProjects = projects.filter(p => p.teamId === currentTeamId);
   const currentProject = projects.find(p => p.id === selectedProjectId);
 
-  // Filter issues by team projects
+  // Filter issues client-side - allow status/assignee filters without requiring a selected project
   const visibleIssues = issues.filter(i => {
     const project = projects.find(p => p.id === i.projectId);
-    // Must belong to a project in the current team
     if (!project || project.teamId !== currentTeamId) return false;
-
-    // Project Filter
     if (selectedProjectId && i.projectId !== selectedProjectId) return false;
-
-    // Status Filter
     if (statusFilter && i.status !== statusFilter) return false;
-
-    // Assignee Filter
-    if (assigneeFilter && i.assigneeId !== assigneeFilter) return false;
-
+    if (assigneeFilter && !i.assigneeIds.includes(assigneeFilter)) return false;
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const searchableText = `${i.title} ${i.description} ${i.identifier}`.toLowerCase();
+      if (!searchableText.includes(query)) return false;
+    }
     return true;
   });
 
-  const myNotifications = currentUser ? notifications.filter(n => n.userId === currentUser.id && !n.isRead) : [];
+  const myNotifications = notifications.filter(n => !n.isRead);
 
-  // Permissions Check Helpers
+  // Permissions
   const canCreateContent = currentUser?.role !== UserRole.Viewer;
   const isAdmin = currentUser?.role === UserRole.Admin;
 
-  // --- EFFECT: Check Due Dates ---
-  useEffect(() => {
-    if (!currentUser) return;
+  // --- HANDLERS ---
 
-    // Check for issues due today that are assigned to current user
-    const checkDueDates = () => {
-      const today = new Date().toISOString().split('T')[0];
-      const dueIssues = issues.filter(i =>
-        i.assigneeId === currentUser.id &&
-        i.dueDate &&
-        new Date(i.dueDate).toISOString().split('T')[0] === today &&
-        i.status !== Status.Done &&
-        i.status !== Status.Canceled
-      );
+  // Issue handlers
+  const handleSaveIssue = async (issueData: Partial<Issue>) => {
+    if (!canCreateContent) {
+      throw new Error('You do not have permission to create issues');
+    }
 
-      dueIssues.forEach(issue => {
-        // Avoid duplicate notifications
-        const exists = notifications.some(n =>
-          n.issueId === issue.id &&
-          n.type === NotificationType.DueDate &&
-          n.userId === currentUser.id &&
-          new Date(n.createdAt).toISOString().split('T')[0] === today
-        );
-
-        if (!exists) {
-          const notif: Notification = {
-            id: `n_due_${Date.now()}_${issue.id}`,
-            userId: currentUser.id,
-            type: NotificationType.DueDate,
-            message: `Issue "${issue.title}" is due today`,
-            issueId: issue.id,
-            isRead: false,
-            createdAt: new Date()
-          };
-          setNotifications(prev => [notif, ...prev]);
+    try {
+      if (issueData.id) {
+        const updated = await api.issues.update(issueData.id, issueData);
+        setIssues(prev => prev.map(i => i.id === updated.id ? updated : i));
+        setEditingIssue(prev => {
+          if (prev && 'id' in prev && prev.id === updated.id) return updated;
+          return prev;
+        });
+        if (updated.id) {
+          await fetchComments(updated.id);
         }
-      });
-    };
-
-    checkDueDates();
-    // In a real app, setup an interval or run on load
-  }, [issues, currentUser]); // Removed notifications dependency to avoid loops, though in production need better logic
-
-  // --- HANDLERS ---
-
-  // Auth
-  // --- EFFECT: Auth Persistence ---
-  // --- EFFECT: Data Persistence ---
-
-  // Helper to revive dates from JSON
-  const dateReviver = (key: string, value: any) => {
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) {
-      return new Date(value);
-    }
-    return value;
-  };
-
-  useEffect(() => {
-    // Load User
-    const storedUser = localStorage.getItem('linear_clone_user');
-    if (storedUser) {
-      try {
-        const user = JSON.parse(storedUser, dateReviver);
-        setCurrentUser(user);
-      } catch (e) {
-        console.error("Failed to parse stored user", e);
-        localStorage.removeItem('linear_clone_user');
-      }
-    }
-
-    // Load Data (Users, Teams, Projects, Issues)
-    const loadData = (key: string, setter: (data: any) => void) => {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        try { setter(JSON.parse(stored, dateReviver)); } catch (e) { console.error(e); }
-      }
-    };
-
-    loadData('linear_clone_users', setUsers);
-    loadData('linear_clone_teams', setTeams);
-    loadData('linear_clone_projects', setProjects);
-    loadData('linear_clone_issues', setIssues);
-    loadData('linear_clone_comments', setComments);
-    loadData('linear_clone_notifications', setNotifications);
-    loadData('linear_clone_activities', setActivities);
-
-  }, []);
-
-  // Save Data on Changes
-  useEffect(() => {
-    if (currentUser) localStorage.setItem('linear_clone_user', JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => { localStorage.setItem('linear_clone_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('linear_clone_teams', JSON.stringify(teams)); }, [teams]);
-  useEffect(() => { localStorage.setItem('linear_clone_projects', JSON.stringify(projects)); }, [projects]);
-  useEffect(() => { localStorage.setItem('linear_clone_issues', JSON.stringify(issues)); }, [issues]);
-  useEffect(() => { localStorage.setItem('linear_clone_comments', JSON.stringify(comments)); }, [comments]);
-  useEffect(() => { localStorage.setItem('linear_clone_notifications', JSON.stringify(notifications)); }, [notifications]);
-
-  // --- HANDLERS ---
-
-  // Auth
-  const handleLogin = (user: User) => {
-    setCurrentUser(user);
-    localStorage.setItem('linear_clone_user', JSON.stringify(user));
-  };
-
-  const handleSignup = (name: string, email: string, pass: string) => {
-    const params = new URLSearchParams(window.location.search);
-    const inviteTeamId = params.get('inviteTeamId');
-    const inviteRole = params.get('inviteRole') as UserRole;
-
-    const newUser: User = {
-      id: `u${Date.now()}`,
-      name,
-      email,
-      password: pass,
-      avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
-      role: inviteRole || UserRole.Member
-    };
-
-    setUsers(prev => {
-      const newUsers = [...prev, newUser];
-      localStorage.setItem('linear_clone_users', JSON.stringify(newUsers));
-      return newUsers;
-    });
-
-    if (inviteTeamId) {
-      setTeams(prev => prev.map(t => t.id === inviteTeamId ? { ...t, members: [...t.members, newUser.id] } : t));
-    }
-
-    setCurrentUser(newUser);
-    localStorage.setItem('linear_clone_user', JSON.stringify(newUser));
-    window.history.replaceState({}, document.title, window.location.pathname);
-  };
-
-  const handleLogout = () => {
-    setCurrentUser(null);
-    localStorage.removeItem('linear_clone_user');
-  };
-
-  // User Management
-  const handleUpdateUserRole = (userId: string, newRole: UserRole) => {
-    if (!isAdmin) return;
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-  };
-
-  const handleRemoveUser = (userId: string) => {
-    if (!isAdmin) return;
-    if (userId === currentUser?.id) return;
-    if (confirm('Are you sure you want to remove this user?')) {
-      setUsers(prev => prev.filter(u => u.id !== userId));
-      setTeams(prev => prev.map(t => ({
-        ...t,
-        members: t.members.filter(mid => mid !== userId)
-      })));
-    }
-  };
-
-  const handleInviteUser = (email: string, role: UserRole) => {
-    setPendingInvites(prev => [...prev, { email, role }]);
-  };
-
-  // Helper to process text for mentions
-  const processMentions = (text: string, issueId: string, type: 'comment' | 'description') => {
-    if (!currentUser) return;
-
-    // Simple regex to find @Name
-    // Iterate all users to check presence
-    users.forEach(user => {
-      if (user.id === currentUser.id) return; // Don't notify self
-
-      if (text.includes(`@${user.name}`)) {
-        const notif: Notification = {
-          id: `n_${Date.now()}_${user.id}`,
-          userId: user.id,
-          type: NotificationType.Mention,
-          message: type === 'comment' ? 'mentioned you in a comment' : 'mentioned you in an issue',
-          issueId: issueId,
-          isRead: false,
-          actorId: currentUser.id,
-          createdAt: new Date()
+      } else {
+        const formatDate = (date: Date | string | undefined) => {
+          if (!date) return undefined;
+          if (date instanceof Date) return date.toISOString();
+          if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+            return `${date}T00:00:00.000Z`;
+          }
+          return date;
         };
-        setNotifications(prev => [notif, ...prev]);
+
+        const created = await api.issues.create({
+          title: issueData.title || '',
+          description: issueData.description,
+          status: issueData.status,
+          priority: issueData.priority,
+          assigneeIds: issueData.assigneeIds || [],
+          projectId: issueData.projectId!,
+          startDate: formatDate(issueData.startDate),
+          dueDate: formatDate(issueData.dueDate),
+          blockedBy: issueData.blockedBy
+        });
+
+        setIssues(prev => [created, ...prev]);
+        setEditingIssue(undefined);
+        // Issues will be refreshed by the useEffect below
       }
-    });
-  };
-
-  const handleUpdateProfile = (data: Partial<User>) => {
-    if (!currentUser) return;
-    const updatedUser = { ...currentUser, ...data };
-    setCurrentUser(updatedUser);
-    setUsers(prev => prev.map(u => u.id === currentUser.id ? updatedUser : u));
-  };
-
-  // Data Actions
-  const handleSaveIssue = (issueData: Partial<Issue>) => {
-    if (!canCreateContent) return;
-
-    let savedIssueId = issueData.id;
-
-    if (issueData.id) {
-      // Edit - update the issues array
-      setIssues(prev => prev.map(i => i.id === issueData.id ? { ...i, ...issueData, updatedAt: new Date() } as Issue : i));
-
-      // Also update editingIssue so the modal shows the new data
-      setEditingIssue(prev => {
-        if (prev && prev.id === issueData.id) {
-          return { ...prev, ...issueData, updatedAt: new Date() } as Issue;
-        }
-        return prev;
-      });
-
-      // Check for mentions in description update
-      if (issueData.description) {
-        processMentions(issueData.description, issueData.id, 'description');
-        const issue = issues.find(i => i.id === issueData.id);
-        if (issue && issue.description !== issueData.description) {
-          logActivity('issue_update', issue.title, 'updated the description', issue.projectId, issue.id);
-        }
-      }
-    } else {
-      // Create
-      const project = projects.find(p => p.id === issueData.projectId);
-      const prefix = project ? project.identifier : 'LIN';
-      const newId = Math.random().toString(36).substr(2, 9);
-      savedIssueId = newId;
-
-      const newIssue: Issue = {
-        id: newId,
-        identifier: `${prefix}-${100 + issues.length + 1}`,
-        title: issueData.title || 'Untitled',
-        description: issueData.description || '',
-        status: issueData.status || Status.Backlog,
-        priority: issueData.priority || Priority.NoPriority,
-        assigneeId: issueData.assigneeId,
-        projectId: issueData.projectId!,
-        startDate: issueData.startDate,
-        dueDate: issueData.dueDate,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setIssues([newIssue, ...issues]);
-
-      if (newIssue.description) {
-        processMentions(newIssue.description, newIssue.id, 'description');
-      }
-
-      // Only clear editing issue after CREATING a new issue
-      setEditingIssue(undefined);
-
-      logActivity('issue_created', newIssue.title, 'created the issue', newIssue.projectId, newIssue.id);
+    } catch (error) {
+      console.error('Failed to save issue:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to save issue. Please try again.';
+      alert(errorMessage);
+      throw error;
     }
   };
 
-  const handleCreateSubtask = (parentIssueId: string, title: string) => {
-    if (!canCreateContent) return;
-    const parent = issues.find(i => i.id === parentIssueId);
-    if (!parent) return;
-
-    const project = projects.find(p => p.id === parent.projectId);
-    const prefix = project ? project.identifier : 'LIN';
-    const newId = Math.random().toString(36).substr(2, 9);
-
-    const newIssue: Issue = {
-      id: newId,
-      identifier: `${prefix}-${100 + issues.length + 1}`,
-      title: title,
-      description: '',
-      status: Status.Todo,
-      priority: Priority.NoPriority,
-      projectId: parent.projectId,
-      parentId: parentIssueId,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
-
-    setIssues([...issues, newIssue]);
-  };
-
-  const handleDeleteIssue = (id: string) => {
+  const handleDeleteIssue = async (id: string) => {
     if (!isAdmin) {
-      alert("Only Admins can delete issues.");
+      alert('Only Admins can delete issues.');
       return;
     }
-    if (confirm('Are you sure you want to delete this issue?')) {
+    if (!confirm('Are you sure you want to delete this issue?')) return;
+
+    try {
+      await api.issues.delete(id);
       setIssues(prev => prev.filter(i => i.id !== id));
+    } catch (error) {
+      console.error('Failed to delete issue:', error);
     }
   };
 
-  const handleStatusChange = (id: string, status: Status) => {
+  const handleStatusChange = async (id: string, status: Status) => {
     if (!canCreateContent) return;
-    const issue = issues.find(i => i.id === id);
-    setIssues(prev => prev.map(i => i.id === id ? { ...i, status, updatedAt: new Date() } : i));
 
+    try {
+      const updated = await api.issues.updateStatus(id, status);
+      setIssues(prev => prev.map(i => i.id === updated.id ? updated : i));
+    } catch (error) {
+      console.error('Failed to update status:', error);
+    }
+  };
+
+  const handleCreateSubtask = async (parentIssueId: string, title: string) => {
+    if (!canCreateContent) return;
+
+    try {
+      const subtask = await api.issues.createSubtask(parentIssueId, title);
+      setIssues(prev => [...prev, subtask]);
+      // Issues will be refreshed by the useEffect below
+    } catch (error) {
+      console.error('Failed to create subtask:', error);
+    }
+  };
+
+  // Comment handler
+  const handleAddComment = async (issueId: string, content: string) => {
+    if (!currentUser) return;
+
+    try {
+      const newComment = await api.comments.create(content, issueId);
+      setComments(prev => [...prev, newComment]);
+    } catch (error) {
+      console.error('Failed to add comment:', error);
+      throw error;
+    }
+  };
+
+  // Notification handlers
+  const handleReadNotification = async (id: string) => {
+    try {
+      await api.notifications.markRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  const handleOpenIssueFromNotification = async (issueId: string) => {
+    const issue = issues.find(i => i.id === issueId);
     if (issue) {
-      logActivity('status_change', issue.title, `changed status to ${status}`, issue.projectId, issue.id);
+      setEditingIssue(issue);
+      setIsIssueModalOpen(true);
+      setIsNotificationOpen(false);
+      await fetchComments(issueId);
     }
   };
 
-  const handleCreateProject = (name: string, identifier: string, icon: string, teamId: string) => {
+  // Project handlers
+  const handleCreateProject = async (name: string, identifier: string, icon: string, teamId: string) => {
     if (!canCreateContent) return;
-    const newProject: Project = {
-      id: `p${Date.now()}`,
-      name,
-      identifier,
-      icon,
-      teamId
-    };
-    setProjects([...projects, newProject]);
-    setCurrentTeamId(teamId);
-    logActivity('project_update', newProject.name, 'created the project', newProject.id);
+
+    try {
+      const newProject = await api.projects.create({
+        name,
+        identifier,
+        icon,
+        teamId
+      });
+      setProjects(prev => [...prev, newProject]);
+      // Don't switch teams - user is already in the correct team
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      throw error;
+    }
   };
 
-  const handleUpdateProject = (projectId: string, updates: Partial<Project>) => {
-    setProjects(prev => prev.map(p => p.id === projectId ? { ...p, ...updates } : p));
-    if (updates.description) {
-      const project = projects.find(p => p.id === projectId);
-      if (project) {
-        logActivity('project_update', project.name, 'updated project description', projectId);
+  const handleUpdateProject = async (projectId: string, updates: Partial<Project>) => {
+    try {
+      const sanitizedUpdates: any = { ...updates };
+
+      // Format dates
+      if (sanitizedUpdates.startDate instanceof Date) {
+        sanitizedUpdates.startDate = sanitizedUpdates.startDate.toISOString().split('T')[0];
       }
+      if (sanitizedUpdates.targetDate instanceof Date) {
+        sanitizedUpdates.targetDate = sanitizedUpdates.targetDate.toISOString().split('T')[0];
+      }
+
+      // Handle links separately - they're stored in a different table
+      const currentProject = projects.find(p => p.id === projectId);
+      const currentLinks = currentProject?.links || [];
+      const newLinks = updates.links;
+
+      if (newLinks && newLinks !== currentLinks) {
+        // Find added permanent links (not temp links from frontend)
+        const addedLinks = newLinks.filter(l => !currentLinks.find(cl => cl.id === l.id) && (!l.id || !l.id.startsWith('temp-')));
+        // Find removed permanent links
+        const removedLinks = currentLinks.filter(l => !newLinks.find(nl => nl.id === l.id) && (!l.id || !l.id.startsWith('temp-')));
+
+        // Add new links to backend
+        for (const link of addedLinks) {
+          await api.projects.addLink(projectId, link.title, link.url);
+        }
+
+        // Remove deleted links from backend
+        for (const link of removedLinks) {
+          await api.projects.deleteLink(projectId, link.id);
+        }
+
+        // Remove links from sanitizedUpdates since we've handled them separately
+        delete sanitizedUpdates.links;
+      }
+
+      // Only include valid update fields
+      const allowedFields = ['name', 'identifier', 'icon', 'teamId', 'description', 'isPublic', 'publicSlug', 'leadId', 'startDate', 'targetDate'];
+      Object.keys(sanitizedUpdates).forEach(key => {
+        if (!allowedFields.includes(key)) {
+          delete sanitizedUpdates[key];
+        }
+      });
+
+      // Only call update if there are non-link updates
+      if (Object.keys(sanitizedUpdates).length > 0) {
+        const updated = await api.projects.update(projectId, sanitizedUpdates);
+        setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+      }
+
+      // Always refetch project with links from backend to get persisted links
+      const updated = await api.projects.getByIdWithLinks(projectId);
+      setProjects(prev => prev.map(p => p.id === updated.id ? updated : p));
+    } catch (error) {
+      console.error('Failed to update project:', error);
     }
   };
 
@@ -457,54 +432,81 @@ const App: React.FC = () => {
     setIsProjectSettingsOpen(true);
   };
 
-  const handleCreateTeam = (name: string, icon: string) => {
-    if (!currentUser) return;
-    const newTeam: Team = {
-      id: `t${Date.now()}`,
-      name,
-      icon,
-      members: [currentUser.id]
-    };
-    setTeams([...teams, newTeam]);
-    setCurrentTeamId(newTeam.id);
-  };
+  // Team handlers
+  const handleCreateTeam = async (name: string, icon: string) => {
+    if (!currentUser) throw new Error('You must be logged in to create a team');
 
-  const handleAddComment = (issueId: string, content: string) => {
-    if (!currentUser) return;
-    const newComment: Comment = {
-      id: `c${Date.now()}`,
-      content,
-      issueId,
-      userId: currentUser.id,
-      createdAt: new Date()
-    };
-    setComments([...comments, newComment]);
-    processMentions(content, issueId, 'comment');
-
-    const issue = issues.find(i => i.id === issueId); // find issue for logging
-    if (issue) {
-      logActivity('comment', issue.title, 'commented on the issue', issue.projectId, issueId);
+    try {
+      const newTeam = await api.teams.create(name, icon);
+      setTeams(prev => [...prev, newTeam]);
+      setCurrentTeamId(newTeam.id);
+      // Close modal immediately after successful creation
+      setIsTeamModalOpen(false);
+    } catch (error) {
+      console.error('Failed to create team:', error);
+      throw error;
     }
   };
 
-  // Notification Actions
-  const handleReadNotification = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-  };
+  // User management handlers
+  const handleUpdateUserRole = async (userId: string, newRole: UserRole) => {
+    if (!isAdmin) return;
 
-  const handleOpenIssueFromNotification = (issueId: string) => {
-    const issue = issues.find(i => i.id === issueId);
-    if (issue) {
-      setEditingIssue(issue);
-      setIsIssueModalOpen(true);
-      setIsNotificationOpen(false);
+    try {
+      const updatedUser = await api.users.updateRole(userId, newRole);
+      setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    } catch (error) {
+      console.error('Failed to update user role:', error);
+      throw error;
     }
   };
 
-  // Navigation Handlers
+  const handleRemoveUser = async (userId: string) => {
+    if (!isAdmin) return;
+    if (userId === currentUser?.id) return;
+    if (!confirm('Are you sure you want to remove this user?')) return;
+
+    try {
+      await api.users.remove(userId);
+      setUsers(prev => prev.filter(u => u.id !== userId));
+      // Remove from team members
+      setTeams(prev => prev.map(t => ({
+        ...t,
+        members: t.members.filter((m: any) => m !== userId)
+      })));
+    } catch (error) {
+      console.error('Failed to remove user:', error);
+    }
+  };
+
+  const handleInviteUser = (email: string, role: UserRole) => {
+    // In a real app, this would send an email invite
+    // For now, just show a message
+    alert(`Invite functionality would send an email to ${email} for role: ${role}`);
+  };
+
+  const handleUpdateProfile = async (data: { name?: string; avatar_url?: string }) => {
+    if (!currentUser) return;
+
+    try {
+      const updatedUser = await api.users.updateProfile(currentUser.id, data);
+      // Update in users array
+      setUsers((prev: User[]) => prev.map((u: User) => u.id === currentUser.id ? updatedUser : u));
+      // Refresh current user in auth context to update avatar in UI
+      await refreshUser();
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      alert('Failed to update profile. Please try again.');
+    }
+  };
+
+  // Navigation handlers
   const handleSelectProject = (projectId: string | null) => {
     setSelectedProjectId(projectId);
-    setAssigneeFilter(null);
+    if (projectId !== null) {
+      setAssigneeFilter(null);
+      setStatusFilter(null);
+    }
   };
 
   const handleSelectAssigneeFilter = (userId: string | null) => {
@@ -512,54 +514,152 @@ const App: React.FC = () => {
     setSelectedProjectId(null);
   };
 
-  // --- EFFECT ---
+  // Helper function to validate and start issue creation
+  const handleCreateIssue = (prefill?: Partial<Issue>) => {
+    console.log('[App] handleCreateIssue called:', {
+      canCreateContent,
+      currentTeamId,
+      selectedProjectId,
+      projectsCount: projects.filter(p => p.teamId === currentTeamId).length
+    });
+    if (!canCreateContent) return;
+
+    const teamProjects = projects.filter(p => p.teamId === currentTeamId);
+    console.log('[App] Team projects:', teamProjects.map(p => ({ id: p.id, name: p.name })));
+    if (teamProjects.length === 0) {
+      alert('Please create a project first before creating issues.');
+      setIsProjectModalOpen(true);
+      return;
+    }
+
+    // Issues can only be created within a selected project
+    // But we allow opening the modal without one, and let the user select it there
+    const effectiveProjectId = selectedProjectId || (teamProjects.length > 0 ? teamProjects[0].id : undefined);
+
+    if (!effectiveProjectId) {
+      alert('Please create a project first before creating issues.');
+      return;
+    }
+
+    // Automatically assign to the current selected project
+    // The key prop on IssueModal will force a remount when selectedProjectId changes
+    const issueData = {
+      projectId: selectedProjectId,
+      ...prefill
+    };
+    setEditingIssue(issueData as any);
+    setIsIssueModalOpen(true);
+  };
+
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
+
       if (e.key.toLowerCase() === 'c' && canCreateContent) {
+        const teamProjects = projects.filter(p => p.teamId === currentTeamId);
+        if (teamProjects.length === 0) {
+          e.preventDefault();
+          alert('Please create a project first before creating issues.');
+          setIsProjectModalOpen(true);
+          return;
+        }
         e.preventDefault();
-        setEditingIssue(undefined);
-        setIsIssueModalOpen(true);
+        handleCreateIssue();
+      }
+
+      if (e.key === '/') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+
+      if (e.key === 'Escape' && searchQuery) {
+        setSearchQuery('');
+        searchInputRef.current?.blur();
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canCreateContent]);
+  }, [canCreateContent, searchQuery, currentTeamId, projects]);
 
-  // --- URL SYNC: Parse URL on load ---
+  // URL sync - sync URL to state (only responds to URL changes, not state changes)
   useEffect(() => {
     const path = location.pathname;
-
-    // Skip public routes - handled separately
     if (path.startsWith('/public/')) return;
 
-    // Parse: /team/:teamId/project/:projectId/issue/:issueId
+    // Skip if this URL change is from our own navigation
+    if (isNavigatingRef.current) {
+      isNavigatingRef.current = false;
+      return;
+    }
+
     const teamMatch = path.match(/^\/team\/([^/]+)/);
     const projectMatch = path.match(/^\/team\/[^/]+\/project\/([^/]+)/);
     const issueMatch = path.match(/^\/team\/[^/]+\/project\/[^/]+\/issue\/([^/]+)/);
 
+    let newTeamId = currentTeamId;
+    let newProjectId = selectedProjectId;
+    let newEditingIssue = editingIssue;
+
     if (teamMatch) {
       const team = teams.find(t => t.id === teamMatch[1] || t.name.toLowerCase().replace(/\s+/g, '-') === teamMatch[1]);
-      if (team) setCurrentTeamId(team.id);
-    }
-
-    if (projectMatch) {
-      const project = projects.find(p => p.id === projectMatch[1] || p.identifier.toLowerCase() === projectMatch[1].toLowerCase());
-      if (project) setSelectedProjectId(project.id);
-    }
-
-    if (issueMatch && currentUser) {
-      const issue = issues.find(i => i.id === issueMatch[1] || i.identifier.toLowerCase() === issueMatch[1].toLowerCase());
-      if (issue) {
-        setEditingIssue(issue);
-        setIsIssueModalOpen(true);
+      if (team) {
+        newTeamId = team.id;
       }
     }
-  }, [location.pathname, teams, projects, issues]);
 
-  // --- URL SYNC: Update URL when navigation changes ---
+    if (projectMatch && newTeamId) {
+      const teamProjects = projects.filter(p => p.teamId === newTeamId);
+      const project = teamProjects.find(p => p.id === projectMatch[1] || p.identifier.toLowerCase() === projectMatch[1].toLowerCase());
+      if (project) {
+        newProjectId = project.id;
+      } else {
+        newProjectId = null;
+      }
+    } else {
+      newProjectId = null;
+    }
+
+    if (issueMatch && newProjectId) {
+      const projectIssues = issues.filter(i => i.projectId === newProjectId);
+      const issue = projectIssues.find(i => i.id === issueMatch[1] || i.identifier.toLowerCase() === issueMatch[1].toLowerCase());
+      if (issue) {
+        if (!editingIssue || (editingIssue as Issue).id !== issue.id) {
+          newEditingIssue = issue;
+          setIsIssueModalOpen(true);
+          fetchComments(issue.id);
+        } else {
+          // It's the same issue, keep it
+          newEditingIssue = editingIssue;
+        }
+      } else {
+        newEditingIssue = undefined;
+      }
+    } else {
+      // No issue match in URL.
+      // Only clear if it was a full issue (navigated away from an issue URL)
+      // If it's a PartialIssue (creating new), we keep it as it has no URL representation yet
+      if (editingIssue && 'id' in editingIssue) {
+        newEditingIssue = undefined;
+      }
+    }
+
+    // Batch state updates to prevent multiple re-renders
+    if (newTeamId !== currentTeamId) {
+      setCurrentTeamId(newTeamId);
+    }
+    if (newProjectId !== selectedProjectId) {
+      setSelectedProjectId(newProjectId);
+    }
+    if (newEditingIssue !== editingIssue) {
+      setEditingIssue(newEditingIssue);
+    }
+  }, [location.pathname, teams, projects, issues, fetchComments]);
+
+  // Update URL when navigation changes (responds to state changes, not URL changes)
   useEffect(() => {
-    if (!currentUser) return;
+    if (!currentUser || location.pathname.startsWith('/public/')) return;
 
     const team = teams.find(t => t.id === currentTeamId);
     if (!team) return;
@@ -574,96 +674,80 @@ const App: React.FC = () => {
       }
     }
 
-    if (editingIssue && isIssueModalOpen) {
+    if (editingIssue && isIssueModalOpen && 'id' in editingIssue) {
       const project = projects.find(p => p.id === editingIssue.projectId);
       if (project) {
         newPath = `/team/${teamSlug}/project/${project.identifier.toLowerCase()}/issue/${editingIssue.identifier.toLowerCase()}`;
       }
     }
 
-    if (location.pathname !== newPath && !location.pathname.startsWith('/public/')) {
+    // Use window.location.pathname to always get the current URL, not the stale closure value
+    if (window.location.pathname !== newPath && !isNavigatingRef.current) {
+      // Mark that we're navigating to prevent URL sync from triggering
+      isNavigatingRef.current = true;
+      // Use replace: true to prevent history stack bloat
       navigate(newPath, { replace: true });
+      // Reset the flag after navigation
+      setTimeout(() => {
+        isNavigatingRef.current = false;
+      }, 0);
     }
-  }, [currentTeamId, selectedProjectId, editingIssue, isIssueModalOpen, currentUser, teams, projects]);
+  }, [currentTeamId, selectedProjectId, editingIssue, isIssueModalOpen, currentUser, teams, projects, navigate, location.pathname]);
 
   // --- RENDER ---
 
-  // Handle public project view (no auth required)
-  if (location.pathname.startsWith('/public/')) {
-    const publicSlug = location.pathname.replace('/public/', '').split('/')[0].toLowerCase();
-    const publicProject = projects.find(p =>
-      p.isPublic && (
-        p.publicSlug?.toLowerCase() === publicSlug ||
-        p.id === publicSlug ||
-        p.identifier.toLowerCase() === publicSlug
-      )
-    );
-
+  // Show loading state
+  if (authLoading || isDataLoading) {
     return (
-      <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE] font-sans">
-        <PublicProjectView
-          project={publicProject || null}
-          issues={issues}
-          users={users}
-          onViewIssue={(issue) => {
-            // For public view, we show a read-only issue modal
-            setEditingIssue(issue);
-            setIsIssueModalOpen(true);
-          }}
-        />
-        <IssueModal
-          isOpen={isIssueModalOpen}
-          onClose={() => setIsIssueModalOpen(false)}
-          onSave={() => { }} // No-op for public view
-          users={users}
-          projects={[]} // No projects for public view
-          existingIssue={editingIssue}
-          comments={[]} // No comments for public view
-          currentUser={null} // No current user for public view
-          onAddComment={() => { }} // No-op
-          issues={issues}
-          onCreateSubtask={() => { }} // No-op
-          onOpenIssue={(issueId) => {
-            const issue = issues.find(i => i.id === issueId);
-            if (issue) setEditingIssue(issue);
-          }}
-          defaultProjectId={null}
-          isPublicView={true}
-        />
+      <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE] font-sans flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading...</p>
+        </div>
       </div>
     );
   }
 
-  if (!currentUser) {
-    return <Auth users={users} onLogin={handleLogin} onSignup={handleSignup} />;
+  // Public route handling - fetch data if not loaded yet
+  if (location.pathname.startsWith('/public/')) {
+    return <PublicViewContainer />;
   }
 
-  let headerTitle = "All Issues";
-  if (selectedProjectId) {
-    headerTitle = projects.find(p => p.id === selectedProjectId)?.name || "Project";
-  } else if (statusFilter) {
-    headerTitle = `All ${statusFilter}`;
-  } else if (assigneeFilter) {
+  // Auth check
+  if (!isAuthenticated) {
+    return <Auth />;
+  }
+
+  // Header title
+  let headerTitle = "Overview";
+  if (searchQuery) headerTitle = `Search: "${searchQuery}"`;
+  else if (selectedProjectId) headerTitle = projects.find(p => p.id === selectedProjectId)?.name || "Project";
+  else if (statusFilter) headerTitle = `All ${statusFilter}`;
+  else if (assigneeFilter) {
     const user = users.find(u => u.id === assigneeFilter);
     headerTitle = user ? `Issues assigned to ${user.name}` : "Assigned Issues";
   }
 
+  const isDashboard = !selectedProjectId && !statusFilter && !assigneeFilter && !searchQuery && !!currentTeam;
+
   return (
     <div className="flex h-screen bg-[#1E1F24] text-[#DEDEDE] font-sans overflow-hidden selection:bg-[#5E6AD2] selection:text-white">
-
       <Sidebar
-        currentUser={currentUser}
+        currentUser={currentUser!}
         users={users}
         teams={teams}
         projects={projects}
         currentTeam={currentTeam}
         onSwitchTeam={setCurrentTeamId}
-        onCreateIssue={() => { setEditingIssue(undefined); setIsIssueModalOpen(true); }}
+        onCreateIssue={() => handleCreateIssue()}
         onCreateProject={() => setIsProjectModalOpen(true)}
         onCreateTeam={() => setIsTeamModalOpen(true)}
         onSelectProject={handleSelectProject}
         selectedProjectId={selectedProjectId}
-        onLogout={handleLogout}
+        onLogout={async () => {
+          await api.auth.logout();
+          window.location.href = '/';
+        }}
         onOpenUserManagement={() => setIsUserManagementOpen(true)}
         onOpenUserProfile={() => setIsUserProfileOpen(true)}
         onOpenProjectSettings={handleOpenProjectSettings}
@@ -676,63 +760,76 @@ const App: React.FC = () => {
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#1E1F24]">
-
-        {/* Header */}
-        <header className="border-b border-[#363840] flex flex-col md:flex-row md:items-center md:justify-between px-4 md:px-6 py-3 md:py-0 pb-6 md:pb-0 bg-[#1E1F24] z-10 shrink-0 min-h-[4rem] md:h-14">
-          <div className="flex items-center space-x-2 text-sm text-gray-500 mb-2 md:mb-0">
+        <header className="border-b border-[#363840]/30 flex items-center justify-between px-6 h-[60px] bg-[#1E1F24]/80 backdrop-blur-md z-30 shrink-0 sticky top-0">
+          <div className="flex items-center space-x-3 text-sm min-w-0">
             <button
               onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              className="md:hidden mr-2 p-1.5 bg-[#2E3036] hover:bg-[#3E4049] rounded text-gray-400 hover:text-white transition-colors"
+              className="md:hidden p-1.5 bg-[#2E3036] hover:bg-[#3E4049] rounded-lg text-gray-400 hover:text-white transition-all active:scale-95"
             >
-              ☰
+              <Layout className="w-4 h-4" />
             </button>
-            <span
-              className="hover:text-gray-300 cursor-pointer transition-colors"
-              onClick={() => {
-                // Navigate to team view
-                const teamSlug = currentTeam?.name.toLowerCase().replace(/\s+/g, '-');
-                if (teamSlug) {
-                  navigate(`/team/${teamSlug}`);
-                }
-              }}
-            >
-              {currentTeam?.name}
-            </span>
-            <span>/</span>
-            <span className="font-medium text-[#E5E7EB] flex items-center">
-              <span className={`w-1.5 h-1.5 rounded-full mr-2 ${statusFilter ? 'bg-blue-500' : 'bg-orange-500'}`}></span>
-              {headerTitle}
-            </span>
+
+            <div className="flex items-center space-x-2 text-gray-500 font-medium truncate">
+              <span
+                className="hover:text-white cursor-pointer transition-colors bg-white/5 px-2 py-0.5 rounded-md border border-white/5 active:scale-95 whitespace-nowrap"
+                onClick={() => {
+                  const teamSlug = currentTeam?.name.toLowerCase().replace(/\s+/g, '-');
+                  if (teamSlug) navigate(`/team/${teamSlug}`);
+                  setSelectedProjectId(null);
+                  setStatusFilter(null);
+                  setAssigneeFilter(null);
+                  setSearchQuery('');
+                }}
+              >
+                {currentTeam?.name}
+              </span>
+              <span className="opacity-20 translate-y-[1px]">/</span>
+              <div className="flex items-center space-x-2 truncate">
+                <div className={`w-2 h-2 rounded-full shadow-sm shrink-0 ${statusFilter ? 'bg-[#5E6AD2]' : selectedProjectId ? 'bg-orange-500' : 'bg-green-500'}`} />
+                <span className="text-white font-bold tracking-tight truncate">{headerTitle}</span>
+              </div>
+            </div>
           </div>
 
           <div className="flex items-center justify-between md:justify-end space-x-2 relative">
-            <div className="flex items-center bg-[#2E3036] rounded-md p-0.5 border border-[#363840]">
-              <button
-                onClick={() => setCurrentView('list')}
-                className={`p-1.5 rounded-sm ${currentView === 'list' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
-                title="List View"
-              >
-                <List className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentView('board')}
-                className={`p-1.5 rounded-sm ${currentView === 'board' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
-                title="Board View"
-              >
-                <Layout className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setCurrentView('timeline')}
-                className={`p-1.5 rounded-sm ${currentView === 'timeline' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`}
-                title="Timeline (Gantt) View"
-              >
-                <GanttChart className="w-4 h-4" />
-              </button>
+            {!isDashboard && (
+              <div className="flex items-center bg-[#2E3036] rounded-md p-0.5 border border-[#363840]">
+                <button onClick={() => setCurrentView('list')} className={`p-1.5 rounded-sm ${currentView === 'list' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`} title="List View">
+                  <List className="w-4 h-4" />
+                </button>
+                <button onClick={() => setCurrentView('board')} className={`p-1.5 rounded-sm ${currentView === 'board' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`} title="Board View">
+                  <Layout className="w-4 h-4" />
+                </button>
+                <button onClick={() => setCurrentView('timeline')} className={`p-1.5 rounded-sm ${currentView === 'timeline' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`} title="Timeline (Gantt) View">
+                  <GanttChart className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            <div className="relative">
+              <input
+                ref={searchInputRef}
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search... (Press /)"
+                className="w-48 md:w-64 bg-[#2E3036] border border-[#363840] rounded px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#5E6AD2] focus:ring-1 focus:ring-[#5E6AD2] transition-all"
+              />
+              {searchQuery && (
+                <button onClick={() => { setSearchQuery(''); searchInputRef.current?.blur(); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+              {searchQuery && (
+                <span className="absolute -bottom-5 left-0 text-xs text-gray-500 whitespace-nowrap">
+                  {visibleIssues.length} result{visibleIssues.length !== 1 ? 's' : ''}
+                </span>
+              )}
             </div>
 
-            <div className="hidden md:block relative">
+            <div className="relative">
               <button
-                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                onClick={() => { setIsNotificationOpen(!isNotificationOpen); fetchNotifications(); }}
                 className="p-2 hover:bg-[#2E3036] rounded text-gray-400 hover:text-gray-200 transition-colors relative"
               >
                 <Bell className="w-4 h-4" />
@@ -750,8 +847,18 @@ const App: React.FC = () => {
               )}
             </div>
 
+            {currentProject && selectedProjectId && (
+              <button
+                onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
+                className={`p-2 rounded transition-colors ${isRightSidebarOpen ? 'bg-[#3E4049] text-white' : 'hover:bg-[#2E3036] text-gray-400 hover:text-gray-200'}`}
+                title={isRightSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              >
+                <PanelRightClose className="w-4 h-4" />
+              </button>
+            )}
+
             <button
-              onClick={() => { setEditingIssue(undefined); setIsIssueModalOpen(true); }}
+              onClick={() => handleCreateIssue()}
               disabled={!canCreateContent}
               className={`bg-[#5E6AD2] text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center shadow-lg shadow-purple-900/20 ${canCreateContent ? 'hover:bg-[#4b55aa]' : 'opacity-50 cursor-not-allowed grayscale'}`}
             >
@@ -762,89 +869,81 @@ const App: React.FC = () => {
           </div>
         </header>
 
-        {/* Content Area with optional Sidebar */}
         <div className="flex-1 flex flex-row overflow-hidden relative">
-
-          <div className="flex-1 overflow-hidden relative flex flex-col pt-6">
-
-            {/* Project Overview Header */}
+          <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#1E1F24]">
             {currentProject && selectedProjectId && (
-              <ProjectOverviewHeader
-                project={currentProject}
-                onUpdate={(p) => handleUpdateProject(p.id, p)}
-              />
+              <div className="shrink-0 pt-6">
+                <ProjectOverviewHeader
+                  project={currentProject}
+                  onUpdate={(p) => handleUpdateProject(p.id, p)}
+                  isExpanded={isProjectOverviewExpanded}
+                  onToggleExpand={() => setIsProjectOverviewExpanded(!isProjectOverviewExpanded)}
+                />
+              </div>
             )}
 
-            {currentView === 'list' ? (
-              <IssueList
-                issues={visibleIssues}
-                users={users}
-                onEdit={(issue) => {
-                  if (canCreateContent) {
-                    setEditingIssue(issue);
-                    setIsIssueModalOpen(true);
-                  }
-                }}
-                onDelete={handleDeleteIssue}
-                onStatusChange={handleStatusChange}
-                isPublicView={false}
-              />
-            ) : currentView === 'board' ? (
-              <BoardView
-                issues={visibleIssues}
-                users={users}
-                onEdit={(issue) => {
-                  if (canCreateContent) {
-                    setEditingIssue(issue);
-                    setIsIssueModalOpen(true);
-                  }
-                }}
-                onDelete={handleDeleteIssue}
-                onStatusChange={handleStatusChange}
-                onCreateIssue={(status) => {
-                  if (canCreateContent) {
-                    setEditingIssue({ status } as any); // Hacky way to pass initial status
-                    setIsIssueModalOpen(true);
-                  }
-                }}
-                isPublicView={false}
-              />
-            ) : (
-              <TimelineView
-                issues={visibleIssues}
-                users={users}
-                onEdit={(issue) => {
-                  if (canCreateContent) {
-                    setEditingIssue(issue);
-                    setIsIssueModalOpen(true);
-                  }
-                }}
-              />
-            )}
+            <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
+              {isDashboard ? (
+                <TeamDashboard
+                  team={currentTeam!}
+                  issues={issues}
+                  users={users}
+                  projects={teamProjects}
+                />
+              ) : currentView === 'list' ? (
+                <div className="flex-1 overflow-y-auto relative no-scrollbar">
+                  <IssueList
+                    issues={visibleIssues}
+                    users={users}
+                    onEdit={async (issue) => {
+                      if (canCreateContent) {
+                        setEditingIssue(issue);
+                        setIsIssueModalOpen(true);
+                        await fetchComments(issue.id);
+                      }
+                    }}
+                    onDelete={handleDeleteIssue}
+                    onStatusChange={handleStatusChange}
+                    isPublicView={false}
+                  />
+                </div>
+              ) : currentView === 'board' ? (
+                <BoardView
+                  issues={visibleIssues}
+                  users={users}
+                  onEdit={async (issue) => {
+                    if (canCreateContent) {
+                      setEditingIssue(issue);
+                      setIsIssueModalOpen(true);
+                      await fetchComments(issue.id);
+                    }
+                  }}
+                  onDelete={handleDeleteIssue}
+                  onStatusChange={handleStatusChange}
+                  onCreateIssue={(status) => handleCreateIssue({ status })}
+                  isPublicView={false}
+                  statusFilter={statusFilter}
+                />
+              ) : (
+                <TimelineView
+                  issues={visibleIssues}
+                  users={users}
+                  onEdit={async (issue) => {
+                    if (canCreateContent) {
+                      setEditingIssue(issue);
+                      setIsIssueModalOpen(true);
+                      await fetchComments(issue.id);
+                    }
+                  }}
+                />
+              )}
 
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1E1F24] to-transparent pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1E1F24] to-transparent pointer-events-none z-10"></div>
+            </div>
           </div>
 
-          {/* Right Sidebar Toggle Button - Bottom Right */}
-          <button
-            onClick={() => setIsRightSidebarOpen(!isRightSidebarOpen)}
-            className={`hidden md:flex absolute bottom-4 right-4 p-2 bg-[#2E3036] hover:bg-[#3E4049] rounded-full text-gray-400 hover:text-white transition-all shadow-lg border border-[#363840] ${isRightSidebarOpen ? 'bg-[#3E4049] text-white' : ''}`}
-            title="Toggle Sidebar"
-          >
-            <div className="flex items-center space-x-2">
-              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 3l4 4-4 4"></path>
-                <path d="M16 3l-4 4 4 4"></path>
-                <path d="M4 11v2"></path>
-                <path d="M20 11v2"></path>
-              </svg>
-              <span className="text-xs font-medium">Toggle</span>
-            </div>
-          </button>
-
-          {/* Project Right Sidebar */}
           {currentProject && selectedProjectId && isRightSidebarOpen && (
-            <div className="hidden md:block">
+            <div className="hidden md:block w-80 shrink-0 border-l border-[#22242A]">
               <ProjectRightSidebar
                 project={currentProject}
                 issues={issues}
@@ -854,26 +953,28 @@ const App: React.FC = () => {
               />
             </div>
           )}
-
         </div>
-
       </main>
 
       <IssueModal
+        key={editingIssue && 'id' in editingIssue ? editingIssue.id : (selectedProjectId || 'new-issue')}
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
         onSave={handleSaveIssue}
         users={users}
-        projects={teamProjects} // Only allow selecting projects from current team
+        projects={teamProjects}
         existingIssue={editingIssue}
         comments={comments}
-        currentUser={currentUser}
+        currentUser={currentUser!}
         onAddComment={handleAddComment}
         issues={issues}
         onCreateSubtask={handleCreateSubtask}
-        onOpenIssue={(issueId) => {
+        onOpenIssue={async (issueId) => {
           const issue = issues.find(i => i.id === issueId);
-          if (issue) setEditingIssue(issue);
+          if (issue) {
+            setEditingIssue(issue);
+            await fetchComments(issueId);
+          }
         }}
         defaultProjectId={selectedProjectId || teamProjects[0]?.id}
         isPublicView={location.pathname.startsWith('/public/')}
@@ -882,7 +983,7 @@ const App: React.FC = () => {
       <ProjectModal
         isOpen={isProjectModalOpen}
         onClose={() => setIsProjectModalOpen(false)}
-        teams={teams}
+        currentTeam={currentTeam}
         onSave={handleCreateProject}
       />
 
@@ -896,7 +997,7 @@ const App: React.FC = () => {
         isOpen={isUserManagementOpen}
         onClose={() => setIsUserManagementOpen(false)}
         users={users}
-        currentUser={currentUser}
+        currentUser={currentUser!}
         currentTeam={currentTeam}
         onUpdateRole={handleUpdateUserRole}
         onRemoveUser={handleRemoveUser}
@@ -906,7 +1007,7 @@ const App: React.FC = () => {
       <UserProfileModal
         isOpen={isUserProfileOpen}
         onClose={() => setIsUserProfileOpen(false)}
-        currentUser={currentUser}
+        currentUser={currentUser!}
         onSave={handleUpdateProfile}
         currentTeam={currentTeam}
       />
@@ -917,7 +1018,6 @@ const App: React.FC = () => {
         project={settingsProject}
         onUpdate={handleUpdateProject}
       />
-
     </div>
   );
 };

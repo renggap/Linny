@@ -27,9 +27,9 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  password?: string; // In real app, hash this.
   avatarUrl: string;
   role: UserRole;
+  createdAt?: Date;
 }
 
 export interface Team {
@@ -67,8 +67,8 @@ export interface Issue {
   description: string;
   status: Status;
   priority: Priority;
-  assigneeIds?: string[];
-  assigneeId?: string; // @deprecated use assigneeIds
+  assigneeIds: string[];
+  assignees?: User[]; // Populated from API
   projectId: string;
 
   // Timeline fields
@@ -83,11 +83,18 @@ export interface Issue {
   updatedAt: Date;
 }
 
+/**
+ * Partial issue data for pre-filling the create issue form.
+ * Used when creating an issue from a specific context (e.g., from a board column).
+ */
+export type PartialIssue = Partial<Pick<Issue, 'status' | 'priority' | 'projectId'>>;
+
 export interface Comment {
   id: string;
   content: string;
   issueId: string;
   userId: string;
+  user?: User; // Populated from API
   createdAt: Date;
 }
 
@@ -105,6 +112,7 @@ export interface Notification {
   isRead: boolean;
   createdAt: Date;
   actorId?: string; // The person who triggered it (e.g. who tagged you)
+  actor?: User; // Populated from API
 }
 
 export interface Activity {

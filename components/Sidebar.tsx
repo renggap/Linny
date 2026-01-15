@@ -1,7 +1,29 @@
 
 import React, { useState } from 'react';
-import { Layers, Users, Search, Plus, Sparkles, ChevronDown, LogOut, Shield, Settings, StatusIcon } from './Icons';
+import {
+  Layers,
+  Search,
+  Plus,
+  ChevronDown,
+  LogOut,
+  Settings,
+  Globe,
+  X,
+  LayoutGrid,
+  Users,
+  ChevronRight,
+  Command
+} from 'lucide-react';
+import { StatusIcon } from './Icons'; // Keep custom status icons
 import { Project, Team, User, UserRole, Status } from '../types';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Utilitiy
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
 
 interface SidebarProps {
   currentUser: User;
@@ -13,10 +35,9 @@ interface SidebarProps {
   onCreateIssue: () => void;
   onCreateProject: () => void;
   onCreateTeam: () => void;
-  onSelectProject: (projectId: string | null) => void; // null for 'all'
+  onSelectProject: (projectId: string | null) => void;
   onLogout: () => void;
   onOpenUserManagement: () => void;
-  // New props for navigation state
   selectedProjectId: string | null;
   assigneeFilter: string | null;
   onSelectAssigneeFilter: (userId: string | null) => void;
@@ -27,6 +48,49 @@ interface SidebarProps {
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (collapsed: boolean) => void;
 }
+
+const SidebarItem = ({
+  icon: Icon,
+  label,
+  isActive,
+  onClick,
+  rightElement,
+  className,
+  indent = false
+}: {
+  icon?: any,
+  label: string,
+  isActive?: boolean,
+  onClick?: () => void,
+  rightElement?: React.ReactNode,
+  className?: string,
+  indent?: boolean
+}) => (
+  <motion.div
+    onClick={onClick}
+    whileHover={{ x: 2 }}
+    whileTap={{ scale: 0.98 }}
+    className={cn(
+      "group flex items-center px-3 py-1.5 mx-2 rounded-md cursor-pointer transition-all duration-200 border border-transparent",
+      isActive
+        ? "bg-[#1A1C23] border-[#2C2D35] text-[#E8E8E8]"
+        : "text-[#8A8F98] hover:bg-[#15161A] hover:text-[#C0C4CC]",
+      indent && "ml-6",
+      className
+    )}
+  >
+    {Icon && (
+      <Icon
+        className={cn(
+          "w-4 h-4 mr-3 transition-colors",
+          isActive ? "text-[#5E6AD2]" : "text-[#5E6068] group-hover:text-[#8A8F98]"
+        )}
+      />
+    )}
+    <span className="flex-1 text-[13px] font-medium truncate">{label}</span>
+    {rightElement}
+  </motion.div>
+);
 
 export const Sidebar: React.FC<SidebarProps> = ({
   currentUser,
@@ -52,13 +116,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   setIsSidebarCollapsed
 }) => {
   const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [isAllIssuesCollapsed, setIsAllIssuesCollapsed] = useState(true);
 
   const teamProjects = projects.filter(p => p.teamId === currentTeam?.id);
-  const filteredProjects = teamProjects.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const canCreateContent = currentUser.role !== UserRole.Viewer;
   const isAdmin = currentUser.role === UserRole.Admin;
@@ -74,217 +134,284 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      <aside className={`w-[240px] bg-[#222328] border-r border-[#363840] flex flex-col h-full text-[#9CA3AF] text-[13px] font-medium select-none ${isSidebarCollapsed ? 'hidden md:flex' : 'flex'}`}>
+      <AnimatePresence>
+        {!isSidebarCollapsed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden"
+            onClick={() => setIsSidebarCollapsed(true)}
+          />
+        )}
+      </AnimatePresence>
 
-        {/* Team Switcher */}
-        <div className="relative">
+      <aside
+        className={cn(
+          "w-[240px] bg-[#0F1014] border-r border-[#22242A] flex flex-col h-full select-none z-50 transition-all duration-300",
+          isSidebarCollapsed ? "hidden md:flex" : "fixed inset-y-0 left-0 flex shadow-2xl md:static md:shadow-none"
+        )}
+      >
+        {/* Mobile Close Button */}
+        <button
+          className="absolute top-3 right-3 p-1.5 text-[#5E6068] hover:text-[#E8E8E8] md:hidden"
+          onClick={() => setIsSidebarCollapsed(true)}
+        >
+          <X className="w-5 h-5" />
+        </button>
+
+        {/* Team Switcher Header */}
+        <div className="relative shrink-0 z-40 px-3 pt-4 pb-2">
           <div
             onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
-            className="h-12 flex items-center px-4 border-b border-[#363840] hover:bg-[#2E3036] transition-colors cursor-pointer text-[#E5E7EB]"
+            className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all cursor-pointer group select-none"
           >
-            <div className="w-5 h-5 bg-gradient-to-br from-purple-500 to-blue-500 rounded flex items-center justify-center text-[10px] font-bold text-white mr-2">
-              {currentTeam?.icon || 'T'}
+            <div className="w-6 h-6 bg-[#1A1C23] border border-[#2C2D35] rounded-md flex items-center justify-center text-xs font-bold text-[#E8E8E8] shadow-sm group-hover:border-[#5E6AD2]/50 group-hover:text-white transition-all">
+              {currentTeam?.icon || <LayoutGrid className="w-3.5 h-3.5" />}
             </div>
-            <span className="font-semibold tracking-tight truncate max-w-[120px]">{currentTeam?.name || 'Select Team'}</span>
-            <ChevronDown className="w-3 h-3 ml-auto opacity-50" />
+            <span className="ml-3 font-medium text-[13px] text-[#E8E8E8] tracking-tight truncate flex-1">
+              {currentTeam?.name || 'Select Team'}
+            </span>
+            <ChevronDown className={cn("w-3.5 h-3.5 text-[#5E6068] transition-transform duration-200", isTeamMenuOpen && "rotate-180")} />
           </div>
 
-          {isTeamMenuOpen && (
-            <div className="absolute top-12 left-0 w-full bg-[#25262B] border border-[#363840] shadow-xl z-20 py-1">
-              <div className="px-3 py-1 text-[10px] font-semibold uppercase text-gray-500">Switch Team</div>
-              {teams.map(team => (
-                <div
-                  key={team.id}
-                  onClick={() => { onSwitchTeam(team.id); setIsTeamMenuOpen(false); }}
-                  className="flex items-center px-3 py-2 hover:bg-[#2E3036] cursor-pointer text-gray-200"
-                >
-                  <div className="w-4 h-4 bg-gray-700 rounded flex items-center justify-center text-[9px] mr-2 text-white">
-                    {team.icon}
-                  </div>
-                  {team.name}
+          {/* Team Dropdown */}
+          <AnimatePresence>
+            {isTeamMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.15 }}
+                className="absolute top-full left-3 right-3 mt-1 bg-[#14151A] border border-[#26272F] shadow-xl rounded-xl overflow-hidden z-[60]"
+              >
+                <div className="px-3 py-2 bg-[#1A1C23]/50 border-b border-[#26272F]">
+                  <span className="text-[10px] font-semibold text-[#5E6068] uppercase tracking-wider">Switch Team</span>
                 </div>
-              ))}
-              {isAdmin && (
-                <div className="border-t border-[#363840] mt-1 pt-1">
+                <div className="max-h-[200px] overflow-y-auto py-1">
+                  {teams.map(team => (
+                    <div
+                      key={team.id}
+                      onClick={() => { onSwitchTeam(team.id); setIsTeamMenuOpen(false); }}
+                      className={cn(
+                        "flex items-center px-3 py-2 cursor-pointer transition-colors border-l-2",
+                        currentTeam?.id === team.id
+                          ? "bg-[#1A1C23] border-[#5E6AD2] text-white"
+                          : "border-transparent text-[#8A8F98] hover:bg-[#15161A] hover:text-[#C0C4CC]"
+                      )}
+                    >
+                      <span className="text-sm">{team.icon}</span>
+                      <span className="ml-3 text-[13px] font-medium">{team.name}</span>
+                    </div>
+                  ))}
+                </div>
+                {isAdmin && (
                   <div
                     onClick={() => { onCreateTeam(); setIsTeamMenuOpen(false); }}
-                    className="px-3 py-2 text-gray-400 hover:text-white hover:bg-[#2E3036] cursor-pointer text-xs flex items-center"
+                    className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
                   >
-                    <Plus className="w-3 h-3 mr-2" /> Create Team
+                    <Plus className="w-3.5 h-3.5 mr-2" />
+                    <span className="text-[12px] font-medium">Create New Team</span>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
-        <div className="flex-1 overflow-y-auto py-3 px-2 space-y-6">
-
-          {/* Primary Actions */}
-          <div className="space-y-0.5">
-            <button
-              onClick={onCreateIssue}
-              disabled={!canCreateContent}
-              className={`w-full flex items-center px-2 py-1.5 rounded-md text-[#E5E7EB] group transition-all ${canCreateContent ? 'hover:bg-[#2E3036]' : 'opacity-50 cursor-not-allowed'}`}
-            >
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center mr-2 border transition-all ${canCreateContent ? 'bg-[#5E6AD2]/20 text-[#5E6AD2] border-[#5E6AD2]/30 group-hover:bg-[#5E6AD2] group-hover:text-white' : 'bg-gray-700 text-gray-500 border-gray-600'}`}>
-                <Plus className="w-3.5 h-3.5" />
+        {/* Create Issue Action */}
+        <div className="px-5 mb-6">
+          <button
+            onClick={onCreateIssue}
+            disabled={!canCreateContent}
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-1.5 rounded-lg border transition-all text-left group shadow-lg shadow-black/20",
+              canCreateContent
+                ? "bg-[#1A1C23] border-[#2C2D35] text-[#C0C4CC] hover:border-[#3A3C46] hover:bg-[#202229] hover:text-white"
+                : "opacity-40 cursor-not-allowed border-transparent bg-[#1A1C23]"
+            )}
+          >
+            <div className="flex items-center">
+              <div className="w-5 h-5 rounded bg-[#5E6AD2]/10 flex items-center justify-center mr-2 border border-[#5E6AD2]/20 group-hover:border-[#5E6AD2]/50 transition-colors">
+                <Plus className="w-3.5 h-3.5 text-[#5E6AD2]" />
               </div>
-              New Issue
-              {canCreateContent && <span className="ml-auto text-[10px] bg-[#2E3036] px-1.5 py-0.5 rounded text-gray-500 border border-white/5">C</span>}
-            </button>
-
-            <div className="px-0 py-1">
-              <div className="relative group">
-                <Search className="absolute left-2.5 top-2 w-3.5 h-3.5 text-gray-500 group-focus-within:text-gray-300 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Filter projects..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full bg-[#1E1F24] border border-[#363840] rounded-md py-1.5 pl-8 pr-2 text-xs text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#5E6AD2] transition-colors"
-                />
-              </div>
+              <span className="text-[13px] font-medium">New Issue</span>
             </div>
+            <div className="flex items-center space-x-1">
+              <span className="text-[10px] font-mono text-[#5E6068] bg-[#15161A] px-1.5 rounded border border-[#22242A]">C</span>
+            </div>
+          </button>
+        </div>
 
-            {/* Collapsible All Issues Section */}
-            <div className="space-y-0.5">
-              <div
-                onClick={() => setIsAllIssuesCollapsed(!isAllIssuesCollapsed)}
-                className={`flex items-center px-2 py-1.5 rounded-md cursor-pointer transition-colors ${!selectedProjectId && !statusFilter && !assigneeFilter ? 'bg-[#2E3036] text-white' : 'text-[#E5E7EB] hover:bg-[#2E3036]'}`}
-              >
-                <Layers className={`w-4 h-4 mr-2.5 ${!selectedProjectId && !statusFilter && !assigneeFilter ? 'text-[#5E6AD2]' : ''}`} />
-                <span className="flex-1">All Issues</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isAllIssuesCollapsed ? 'rotate-180' : ''}`} />
-              </div>
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-1 space-y-6 no-scrollbar">
 
+          {/* Navigation */}
+          <nav className="space-y-0.5">
+            <SidebarItem
+              label="Search..."
+              icon={Search}
+              isActive={false}
+              className="mb-4" // spacer
+              onClick={() => {
+                // Focus existing search input logic if needed, or open global search
+                // For now just consistent UI
+                const input = document.querySelector('header input') as HTMLInputElement;
+                if (input) input.focus();
+              }}
+              rightElement={<Command className="w-3 h-3 text-[#5E6068]" />}
+            />
+
+            <SidebarItem
+              label="All Issues"
+              icon={Layers}
+              isActive={!selectedProjectId && !statusFilter && !assigneeFilter}
+              onClick={() => {
+                setIsAllIssuesCollapsed(!isAllIssuesCollapsed);
+                if (isAllIssuesCollapsed) {
+                  // Expand means we probably want to see specific filters, but clicking main "All Issues" usually resets filters in Linear
+                  // However, let's just toggle collapse here to reveal sub-items
+                } else {
+                  // If collapsing, maybe just collapse
+                }
+                // Default behavior from old sidebar
+                if (isAllIssuesCollapsed) setIsAllIssuesCollapsed(false);
+                else setIsAllIssuesCollapsed(true);
+
+                setStatusFilter(null);
+                onSelectProject(null);
+                onSelectAssigneeFilter(null);
+              }}
+              rightElement={
+                <ChevronRight
+                  className={cn("w-3.5 h-3.5 text-[#5E6068] transition-transform duration-200", !isAllIssuesCollapsed && "rotate-90")}
+                />
+              }
+            />
+
+            <AnimatePresence>
               {!isAllIssuesCollapsed && (
-                <>
-                  {/* Status Filters */}
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden space-y-0.5"
+                >
                   {statusViews.map(view => (
-                    <div
+                    <SidebarItem
                       key={view.status}
+                      indent
+                      label={view.label}
+                      isActive={statusFilter === view.status}
                       onClick={() => {
                         setStatusFilter(view.status);
                         onSelectProject(null);
                         onSelectAssigneeFilter(null);
                       }}
-                      className={`flex items-center px-2 py-1.5 rounded-md cursor-pointer transition-colors ${statusFilter === view.status ? 'bg-[#2E3036] text-white' : 'text-[#E5E7EB] hover:bg-[#2E3036]'}`}
-                    >
-                      <StatusIcon status={view.status} className="w-4 h-4 mr-2.5" />
-                      All {view.label}
-                    </div>
+                      icon={({ className }: { className?: string }) => (
+                        <div className="mr-3 ml-0.5">
+                          <StatusIcon status={view.status} className={cn("w-3.5 h-3.5", className?.replace('text-[#5E6AD2]', ''))} />
+                        </div>
+                      )}
+                    />
                   ))}
-                </>
+                </motion.div>
               )}
-            </div>
-
-          </div>
+            </AnimatePresence>
+          </nav>
 
           {/* Projects */}
-          <div>
-            <div className="px-2 mb-1 text-[11px] font-semibold opacity-50 uppercase tracking-wider flex items-center justify-between">
-              Projects
+          <div className="pt-2">
+            <div className="px-5 mb-2 flex items-center justify-between group">
+              <span className="text-[11px] font-semibold text-[#5E6068] uppercase tracking-wider">Projects</span>
               {canCreateContent && (
-                <button
-                  onClick={onCreateProject}
-                  className="flex items-center space-x-1 px-1.5 py-0.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white rounded text-[10px] font-medium transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <Plus className="w-3 h-3" />
-                  <span>New</span>
+                <button onClick={onCreateProject} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
+                  <Plus className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             <div className="space-y-0.5">
-              {filteredProjects.map(project => (
-                <div
+              {teamProjects.map(project => (
+                <SidebarItem
                   key={project.id}
+                  label={project.name}
+                  icon={() => <span className="text-base mr-3 opacity-80 leading-none">{project.icon}</span>}
+                  isActive={selectedProjectId === project.id}
                   onClick={() => onSelectProject(project.id)}
-                  className={`flex items-center px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${selectedProjectId === project.id ? 'bg-[#2E3036] text-white' : 'hover:bg-[#2E3036]'}`}
-                >
-                  <span className="mr-2.5 text-sm w-4 text-center">{project.icon}</span>
-                  <span className="truncate flex-1">{project.name}</span>
-                  {project.isPublic && (
-                    <span className="text-[9px] bg-green-500/20 text-green-400 px-1.5 py-0.5 rounded mr-1">Public</span>
-                  )}
-                  <Settings
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenProjectSettings(project);
-                    }}
-                    className="w-3.5 h-3.5 opacity-0 group-hover:opacity-50 hover:!opacity-100 cursor-pointer text-gray-400 hover:text-white transition-opacity"
-                  />
-                </div>
+                  rightElement={
+                    <div className="flex items-center">
+                      {project.isPublic && <Globe className="w-3 h-3 text-[#5E6068] mr-2" />}
+                      <Settings
+                        onClick={(e) => { e.stopPropagation(); onOpenProjectSettings(project); }}
+                        className="w-3.5 h-3.5 text-[#5E6068] hover:text-[#E8E8E8] opacity-0 group-hover:opacity-100 transition-opacity"
+                      />
+                    </div>
+                  }
+                />
               ))}
-              {filteredProjects.length === 0 && (
-                <div className="px-2 py-1.5 text-xs text-gray-600 italic">
-                  {searchQuery ? 'No matching projects' : 'No projects'}
-                </div>
+              {teamProjects.length === 0 && (
+                <div className="px-5 py-2 text-xs text-[#5E6068] italic">No projects found</div>
               )}
             </div>
           </div>
 
           {/* Team Members */}
-          <div>
-            <div className="px-2 mb-1 text-[11px] font-semibold opacity-50 uppercase tracking-wider flex items-center justify-between">
-              Team Members
+          <div className="pt-2">
+            <div className="px-5 mb-2 flex items-center justify-between group">
+              <span className="text-[11px] font-semibold text-[#5E6068] uppercase tracking-wider">Your Team</span>
               {isAdmin && (
-                <button
-                  onClick={onOpenUserManagement}
-                  className="flex items-center space-x-1 px-1.5 py-0.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white rounded text-[10px] font-medium transition-all shadow-lg shadow-purple-900/20"
-                >
-                  <Settings className="w-3 h-3" />
-                  <span>Manage</span>
+                <button onClick={onOpenUserManagement} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
+                  <Settings className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             <div className="space-y-0.5">
-              {currentTeam?.members.map(memberId => {
-                const member = users.find(u => u.id === memberId);
-                if (!member) return null;
-                return (
-                  <div
-                    key={memberId}
-                    onClick={() => onSelectAssigneeFilter(memberId)}
-                    className={`flex items-center px-2 py-1.5 rounded-md cursor-pointer group transition-colors ${assigneeFilter === memberId ? 'bg-[#2E3036] text-white' : 'hover:bg-[#2E3036] text-gray-400'}`}
-                  >
-                    <img src={member.avatarUrl} alt={member.name} className={`w-4 h-4 rounded-full mr-2.5 transition-all ${assigneeFilter === memberId ? 'grayscale-0' : 'grayscale group-hover:grayscale-0'}`} />
-                    <span className={`truncate transition-colors ${assigneeFilter === memberId ? 'text-white' : 'group-hover:text-gray-200'}`}>{member.name}</span>
-                  </div>
-                );
-              })}
-              {!isAdmin && (
-                <div
-                  onClick={onOpenUserManagement}
-                  className="flex items-center px-2 py-1.5 rounded-md hover:bg-[#2E3036] cursor-pointer text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  <div className="w-4 h-4 border border-dashed border-gray-600 rounded-full flex items-center justify-center mr-2.5">
-                    <Plus className="w-2.5 h-2.5" />
-                  </div>
-                  Invite people
-                </div>
-              )}
+              {users.map(user => (
+                <SidebarItem
+                  key={user.id}
+                  label={user.name}
+                  isActive={assigneeFilter === user.id}
+                  onClick={() => onSelectAssigneeFilter(user.id)}
+                  icon={() => (
+                    <div className="w-4 h-4 rounded-full bg-[#2C2D35] overflow-hidden mr-3 ring-1 ring-[#363840]/50 flex items-center justify-center">
+                      {user.avatarUrl ? (
+                        <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
+                      ) : (
+                        <span className="text-[8px] font-bold text-[#8A8F98]">{user.name[0]}</span>
+                      )}
+                    </div>
+                  )}
+                />
+              ))}
             </div>
           </div>
-
         </div>
 
-        {/* User Profile */}
-        <div className="p-3 border-t border-[#363840]">
+        {/* User Profile Footer */}
+        <div className="mt-auto px-3 py-3 border-t border-[#22242A] bg-[#0F1014]/50 backdrop-blur-sm">
           <div
             onClick={onOpenUserProfile}
-            className="flex items-center px-2 py-1.5 rounded-md hover:bg-[#2E3036] cursor-pointer group relative"
+            className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] cursor-pointer group transition-all"
           >
-            <div className="w-6 h-6 rounded-full overflow-hidden mr-2">
-              <img src={currentUser.avatarUrl} alt="User" className="w-full h-full object-cover" />
+            <div className="w-8 h-8 rounded-full bg-[#1A1C23] border border-[#2C2D35] overflow-hidden mr-3 flex items-center justify-center relative">
+              {currentUser.avatarUrl ? (
+                <img src={currentUser.avatarUrl} className="w-full h-full object-cover" alt="" />
+              ) : (
+                <Users className="w-4 h-4 text-[#5E6068]" />
+              )}
+              <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#1A1C23]" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="truncate text-xs text-white font-medium">{currentUser.name}</div>
-              <div className="truncate text-[10px] text-gray-500 flex items-center">
-                {currentUser.role}
-              </div>
+              <div className="text-[13px] font-medium text-[#E8E8E8] truncate">{currentUser.name}</div>
+              <div className="text-[10px] text-[#5E6068] font-mono truncate">{currentUser.email}</div>
             </div>
-            <LogOut onClick={onLogout} className="w-4 h-4 text-gray-500 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all absolute right-2" />
+            <button
+              onClick={(e) => { e.stopPropagation(); onLogout(); }}
+              className="p-1.5 rounded-md hover:bg-[#2C2D35] text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
 

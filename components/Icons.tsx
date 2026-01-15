@@ -2,6 +2,7 @@
 import React from 'react';
 import {
   CheckCircle2,
+  Globe,
   Circle,
   HelpCircle,
   Layout,
@@ -18,6 +19,7 @@ import {
   Users,
   Bell,
   Sidebar,
+  PanelRightClose,
   Sparkles,
   LogOut,
   Calendar,
@@ -41,6 +43,8 @@ import {
   ArrowUpRight,
   GripVertical,
   AlertCircle,
+  AlertTriangle,
+  RefreshCw,
   CornerDownRight
 } from 'lucide-react';
 import { Priority, Status } from '../types';
@@ -76,6 +80,7 @@ export {
   Users,
   Bell,
   Sidebar,
+  PanelRightClose,
   Sparkles,
   Layout,
   List,
@@ -100,5 +105,8 @@ export {
   Link2,
   ArrowUpRight,
   GripVertical,
-  CornerDownRight
+  AlertTriangle,
+  RefreshCw,
+  CornerDownRight,
+  Globe
 };

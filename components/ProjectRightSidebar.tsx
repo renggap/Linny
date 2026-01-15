@@ -1,9 +1,17 @@
 
 import React, { useMemo, useState } from 'react';
-import { Project, Issue, User, Status, Activity } from '../types';
-import { Calendar } from 'lucide-react';
+import { Project, Issue, User, Status, Activity, Priority } from '../types';
+import { Clock, Users, BarChart3, Target, Calendar } from 'lucide-react';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
+import { motion, AnimatePresence } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Utility
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface ProjectRightSidebarProps {
     project: Project;
@@ -13,6 +21,17 @@ interface ProjectRightSidebarProps {
     onUpdate: (project: Project) => void;
 }
 
+const ProgressBar = ({ percentage, color = "bg-[#5E6AD2]" }: { percentage: number, color?: string }) => (
+    <div className="h-1.5 w-full bg-[#1A1C23] rounded-full overflow-hidden">
+        <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${percentage}%` }}
+            transition={{ duration: 1, ease: "easeOut" }}
+            className={cn("h-full rounded-full", color)}
+        />
+    </div>
+);
+
 export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
     project,
     issues,
@@ -20,14 +39,14 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
     activities,
     onUpdate
 }) => {
-    const [visibleCount, setVisibleCount] = useState(5);
+    const [visibleCount, setVisibleCount] = useState(8);
 
     const projectIssues = useMemo(() => issues.filter(i => i.projectId === project.id), [issues, project.id]);
 
     // Progress Calculation
     const totalIssues = projectIssues.length;
     const completedIssues = projectIssues.filter(i => i.status === Status.Done || i.status === Status.Canceled).length;
-    const startedIssues = projectIssues.filter(i => i.status === Status.InProgress || i.status === Status.InReview).length;
+    const activeIssues = projectIssues.filter(i => i.status !== Status.Done && i.status !== Status.Canceled).length;
 
     const completionPercentage = totalIssues > 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
 
@@ -36,13 +55,14 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
         const memberStats = new Map<string, { total: number, completed: number }>();
 
         projectIssues.forEach(issue => {
-            if (!issue.assigneeId) return;
-            const stats = memberStats.get(issue.assigneeId) || { total: 0, completed: 0 };
-            stats.total++;
-            if (issue.status === Status.Done || issue.status === Status.Canceled) {
-                stats.completed++;
-            }
-            memberStats.set(issue.assigneeId, stats);
+            issue.assigneeIds.forEach(assigneeId => {
+                const stats = memberStats.get(assigneeId) || { total: 0, completed: 0 };
+                stats.total++;
+                if (issue.status === Status.Done || issue.status === Status.Canceled) {
+                    stats.completed++;
+                }
+                memberStats.set(assigneeId, stats);
+            });
         });
 
         return Array.from(memberStats.entries()).map(([userId, stats]) => ({
@@ -54,9 +74,6 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
 
     // Filter Activities
     const filteredActivities = useMemo(() => {
-        // Filter by project ID (either directed at project, or issues within project)
-        // Since activity has projectId, we can use that directly.
-        // Also ensure we sort descendant
         return (activities || [])
             .filter(a => a.projectId === project.id)
             .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -67,161 +84,194 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
     }, [filteredActivities, visibleCount]);
 
     return (
-        <aside className="w-80 border-l border-[#363840] bg-[#1E1F24] flex flex-col h-full overflow-y-auto">
-            <div className="p-6 space-y-8">
+        <aside className="w-80 border-l border-[#22242A] bg-[#0F1014] flex flex-col h-full overflow-hidden shrink-0">
+            <div className="flex-1 overflow-y-auto no-scrollbar py-8 px-6 space-y-10">
 
-                {/* Project Lead */}
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Project Lead</h3>
-                    <UserSelect
-                        users={users}
-                        selectedUserIds={project.leadId ? [project.leadId] : []}
-                        onSelect={(id) => onUpdate({ ...project, leadId: id })}
-                        placeholder="Assign Lead"
-                    />
-                </div>
-
-                {/* Dates */}
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Timeline</h3>
-                    <div className="space-y-3">
-                        <div className="flex flex-col">
-                            <label className="text-xs text-gray-500 mb-1">Start Date</label>
-                            <DatePicker
-                                value={project.startDate}
-                                onChange={(date) => onUpdate({ ...project, startDate: date })}
-                                placeholder="Set Start Date"
-                                className="w-full"
-                            />
-                        </div>
-
-                        <div className="flex flex-col">
-                            <label className="text-xs text-gray-500 mb-1">Target Date</label>
-                            <DatePicker
-                                value={project.targetDate}
-                                onChange={(date) => onUpdate({ ...project, targetDate: date })}
-                                placeholder="Set Target Date"
-                                className="w-full"
-                            />
-                        </div>
+                {/* Properties Section */}
+                <section className="space-y-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-[11px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                            <Users className="w-3.5 h-3.5 mr-2" /> Properties
+                        </h4>
                     </div>
-                </div>
 
-                {/* Progress Chart */}
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-4">Progress</h3>
-                    <div className="flex items-center space-x-4">
-                        {/* Donut Chart */}
-                        <div className="relative w-20 h-20">
-                            <svg viewBox="0 0 36 36" className="w-full h-full transform -rotate-90">
-                                {/* Background */}
-                                <path
-                                    d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                    fill="none"
-                                    stroke="#2E3036"
-                                    strokeWidth="4"
-                                />
-                                {/* Progress */}
-                                {totalIssues > 0 && (
-                                    <path
-                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        fill="none"
-                                        stroke="#5E6AD2" // Completed Color
-                                        strokeWidth="4"
-                                        strokeDasharray={`${completionPercentage}, 100`}
-                                    />
-                                )}
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
-                                {completionPercentage}%
-                            </div>
-                        </div>
-
-                        <div className="space-y-1 text-xs">
-                            <div className="flex items-center text-gray-300">
-                                <span className="w-2 h-2 rounded-full bg-[#5E6AD2] mr-2"></span>
-                                <span>Done ({completedIssues})</span>
-                            </div>
-                            <div className="flex items-center text-gray-400">
-                                <span className="w-2 h-2 rounded-full bg-[#F2C94C] mr-2"></span>
-                                <span>In Progress ({startedIssues})</span>
-                            </div>
-                            <div className="flex items-center text-gray-500">
-                                <span className="w-2 h-2 rounded-full bg-gray-600 mr-2"></span>
-                                <span>Todo ({totalIssues - completedIssues - startedIssues})</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Member Progress */}
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Member Progress</h3>
-                    <div className="space-y-3">
-                        {memberProgress.map(({ userId, percentage }) => {
-                            const user = users.find(u => u.id === userId);
-                            if (!user) return null;
-                            return (
-                                <div key={userId} className="flex items-center justify-between group">
-                                    <div className="flex items-center space-x-2">
-                                        <img src={user.avatarUrl} className="w-5 h-5 rounded-full grayscale opacity-70 group-hover:grayscale-0 group-hover:opacity-100 transition-all" alt={user.name} />
-                                        <span className="text-sm text-gray-400 group-hover:text-gray-200 transition-colors">{user.name}</span>
-                                    </div>
-                                    <div className="flex items-center space-x-2">
-                                        <div className="w-16 h-1 bg-[#2E3036] rounded-full overflow-hidden">
-                                            <div className="h-full bg-[#5E6AD2]" style={{ width: `${percentage}%` }}></div>
-                                        </div>
-                                        <span className="text-xs text-gray-500 w-6 text-right">{percentage}%</span>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                        {memberProgress.length === 0 && <span className="text-xs text-gray-600 italic">No members assigned</span>}
-                    </div>
-                </div>
-
-                {/* Activity Log */}
-                <div>
-                    <h3 className="text-xs font-semibold text-gray-500 uppercase mb-3">Activity Log</h3>
                     <div className="space-y-4">
-                        {visibleActivities.map(activity => {
+                        <div className="group">
+                            <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider mb-2 block ml-1">Project Lead</label>
+                            <div className="bg-[#14151A] rounded-xl border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
+                                <UserSelect
+                                    users={users}
+                                    selectedUserIds={project.leadId ? [project.leadId] : []}
+                                    onSelect={(id) => {
+                                        onUpdate({ id: project.id, leadId: id } as Project);
+                                    }}
+                                    placeholder="Assign lead..."
+                                />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider block ml-1">Starts</label>
+                                <DatePicker
+                                    value={project.startDate}
+                                    onChange={(date) => {
+                                        const dateStr = date.toISOString().split('T')[0];
+                                        onUpdate({ id: project.id, startDate: dateStr } as Project);
+                                    }}
+                                    placeholder="Set date"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider block ml-1">Target</label>
+                                <DatePicker
+                                    value={project.targetDate}
+                                    onChange={(date) => {
+                                        const dateStr = date.toISOString().split('T')[0];
+                                        onUpdate({ id: project.id, targetDate: dateStr } as Project);
+                                    }}
+                                    placeholder="Set date"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Progress Visualizer */}
+                <section className="space-y-5">
+                    <h4 className="text-[11px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                        <BarChart3 className="w-3.5 h-3.5 mr-2" /> Progress
+                    </h4>
+
+                    <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-5 space-y-6">
+                        <div className="flex items-end justify-between">
+                            <div>
+                                <span className="text-4xl font-light text-[#E8E8E8] tracking-tight">{completionPercentage}%</span>
+                                <p className="text-[9px] text-[#5E6068] font-bold uppercase tracking-widest mt-1">Completion Rate</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-sm font-mono text-[#C0C4CC]">{completedIssues}/{totalIssues}</span>
+                                <p className="text-[9px] text-[#5E6068] font-bold uppercase mt-1">Issues</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            <ProgressBar percentage={completionPercentage} />
+                            <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 rounded-full bg-[#5E6AD2]" />
+                                    <span className="text-[#8A8F98] font-medium">{completedIssues} Done</span>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                    <div className="w-2 h-2 rounded-full bg-[#2C2D35]" />
+                                    <span className="text-[#8A8F98] font-medium">{activeIssues} Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Assignees Section */}
+                <section className="space-y-5">
+                    <h4 className="text-[11px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                        <Target className="w-3.5 h-3.5 mr-2" /> Contributors
+                    </h4>
+
+                    <div className="space-y-4">
+                        <AnimatePresence>
+                            {memberProgress.map(({ userId, percentage }, idx) => {
+                                const user = users.find(u => u.id === userId);
+                                if (!user) return null;
+                                return (
+                                    <motion.div
+                                        key={userId}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="group"
+                                    >
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="flex items-center space-x-3">
+                                                <img
+                                                    src={user.avatarUrl}
+                                                    className="w-5 h-5 rounded-full ring-1 ring-[#22242A] group-hover:ring-[#5E6AD2]/50 transition-all"
+                                                    alt=""
+                                                />
+                                                <span className="text-xs font-medium text-[#C0C4CC] group-hover:text-[#E8E8E8] transition-colors">{user.name}</span>
+                                            </div>
+                                            <span className="text-[10px] font-mono text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors">{percentage}%</span>
+                                        </div>
+                                        <div className="h-1 bg-[#1A1C23] rounded-full overflow-hidden">
+                                            <motion.div
+                                                initial={{ width: 0 }}
+                                                animate={{ width: `${percentage}%` }}
+                                                className="h-full bg-[#2C2D35] group-hover:bg-[#5E6AD2] transition-all duration-500"
+                                            />
+                                        </div>
+                                    </motion.div>
+                                )
+                            })}
+                        </AnimatePresence>
+                        {memberProgress.length === 0 && (
+                            <div className="py-8 text-center border border-dashed border-[#22242A] rounded-2xl">
+                                <span className="text-[10px] text-[#3A3C46] font-bold uppercase italic tracking-widest">No active contributors</span>
+                            </div>
+                        )}
+                    </div>
+                </section>
+
+                {/* Activity Section */}
+                <section className="space-y-5 pb-8">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-[11px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                            <Clock className="w-3.5 h-3.5 mr-2" /> Activity
+                        </h4>
+                    </div>
+
+                    <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-[#22242A]">
+                        {visibleActivities.map((activity, idx) => {
                             const user = users.find(u => u.id === activity.userId);
                             return (
-                                <div key={activity.id} className="flex gap-3 relative pl-4 border-l border-[#2E3036]">
-                                    <div className="absolute left-[-4px] top-1.5 w-2 h-2 rounded-full bg-[#2E3036] ring-4 ring-[#1E1F24]"></div>
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center space-x-1 mb-0.5">
-                                            {user && <img src={user.avatarUrl} className="w-3.5 h-3.5 rounded-full" alt={user.name} />}
-                                            <span className="text-xs font-medium text-gray-200">{user?.name || 'Unknown'}</span>
-                                        </div>
-                                        <span className="text-xs text-gray-400">
+                                <motion.div
+                                    key={activity.id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: idx * 0.03 }}
+                                    className="flex gap-4 relative"
+                                >
+                                    <div className="z-10 bg-[#0F1014] p-0.5">
+                                        <img
+                                            src={user?.avatarUrl}
+                                            className="w-3.5 h-3.5 rounded-full ring-1 ring-[#22242A]"
+                                            alt=""
+                                        />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[11px] text-[#8A8F98] leading-relaxed">
+                                            <span className="font-bold text-[#C0C4CC] mr-1">{user?.name}</span>
                                             {activity.description}
                                             {activity.issueId && (
-                                                <> on <a href="#" className="text-[#5E6AD2] hover:underline hover:text-[#4b55aa] transition-colors">{activity.entityTitle}</a></>
+                                                <span className="text-[#5E6AD2] ml-1 font-bold hover:underline cursor-pointer">#{activity.entityTitle}</span>
                                             )}
-                                            {!activity.issueId && activity.entityTitle && (
-                                                <span className="text-gray-300"> ({activity.entityTitle})</span>
-                                            )}
-                                        </span>
-                                        <span className="text-[10px] text-gray-600 mt-1">
-                                            {new Date(activity.createdAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                                        </p>
+                                        <span className="text-[9px] text-[#3A3C46] font-bold uppercase mt-1 block">
+                                            {new Date(activity.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
-                                </div>
+                                </motion.div>
                             );
                         })}
-                        {visibleActivities.length === 0 && <span className="text-xs text-gray-600 italic">No activity recorded</span>}
 
                         {filteredActivities.length > visibleCount && (
                             <button
                                 onClick={() => setVisibleCount(prev => prev + 10)}
-                                className="text-xs text-[#5E6AD2] hover:text-[#4b55aa] font-medium pt-2 pl-4"
+                                className="w-full py-3 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] uppercase tracking-widest border border-[#22242A] rounded-xl hover:bg-[#14151A] transition-all mt-4"
                             >
-                                View More
+                                Show full history
                             </button>
                         )}
                     </div>
-                </div>
+                </section>
 
             </div>
         </aside>

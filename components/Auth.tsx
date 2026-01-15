@@ -1,138 +1,208 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles } from './Icons';
-import { User } from '../types';
+import { Terminal, Shield, Cpu, Activity, ArrowRight, Lock, Mail, User as UserIcon, Heart } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { motion, AnimatePresence } from 'framer-motion';
 
-interface AuthProps {
-  users: User[];
-  onLogin: (user: User) => void;
-  onSignup: (name: string, email: string, pass: string) => void;
-}
-
-export const Auth: React.FC<AuthProps> = ({ users, onLogin, onSignup }) => {
-  const [isLogin, setIsLogin] = useState(true);
+export const Auth: React.FC = () => {
+  const { login, register, isLoading, error, clearError } = useAuth();
+  const [isLoginMode, setIsLoginMode] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [error, setError] = useState('');
+  const [localError, setLocalError] = useState('');
   const [inviteMode, setInviteMode] = useState(false);
 
   useEffect(() => {
-    // Check for invite params
     const params = new URLSearchParams(window.location.search);
     const inviteEmail = params.get('inviteEmail');
     if (inviteEmail) {
-        setIsLogin(false);
-        setEmail(inviteEmail);
-        setInviteMode(true);
+      setIsLoginMode(false);
+      setEmail(inviteEmail);
+      setInviteMode(true);
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setLocalError('');
+    clearError();
 
-    if (isLogin) {
-      const user = users.find(u => u.email === email && u.password === password);
-      if (user) {
-        onLogin(user);
-      } else {
-        setError('Invalid credentials');
+    if (isLoginMode) {
+      try {
+        await login(email, password);
+      } catch (err) {
+        setLocalError('Authentication failed: Invalid credentials');
       }
     } else {
       if (!email || !password || !name) {
-        setError('All fields are required');
+        setLocalError('All credentials must be provided');
         return;
       }
-      if (users.find(u => u.email === email)) {
-        // If user exists, try to log them in automatically if password matches (simplification)
-        // Or show error
-        setError('Email already exists. Please log in.');
-        return;
+      try {
+        await register(name, email, password);
+      } catch (err) {
+        setLocalError(error || 'Registration sequence interrupted');
       }
-      onSignup(name, email, password);
     }
   };
 
+  const handleToggleMode = () => {
+    setIsLoginMode(!isLoginMode);
+    setLocalError('');
+    clearError();
+  };
+
+  const displayError = localError || error;
+
   return (
-    <div className="flex min-h-screen bg-[#1E1F24] items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#25262B] border border-[#363840] rounded-xl p-8 shadow-2xl">
-        <div className="flex flex-col items-center mb-8">
-           <div className="w-10 h-10 bg-[#5E6AD2] rounded-lg flex items-center justify-center text-white mb-4 shadow-lg shadow-[#5E6AD2]/20">
-             <Sparkles className="w-5 h-5" />
-           </div>
-           <h1 className="text-2xl font-bold text-white tracking-tight">Linear Clone</h1>
-           <p className="text-gray-500 mt-2 text-sm">
-               {inviteMode ? 'Accept your invitation to join' : 'Log in to manage your projects'}
-           </p>
-        </div>
+    <div className="flex min-h-screen bg-[#0A0A0C] items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Dynamic Background Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#5E6AD2]/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#5E6AD2]/5 rounded-full blur-[120px] animate-pulse delay-700" />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Full Name</label>
-              <input 
-                type="text" 
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:border-[#5E6AD2] focus:outline-none transition-colors"
-                placeholder="Jane Doe"
-              />
-            </div>
-          )}
-          
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Email</label>
-            <input 
-              type="email" 
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              disabled={inviteMode} // Lock email if coming from invite
-              className={`w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:border-[#5E6AD2] focus:outline-none transition-colors ${inviteMode ? 'opacity-50 cursor-not-allowed' : ''}`}
-              placeholder="name@company.com"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Password</label>
-            <input 
-              type="password" 
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:border-[#5E6AD2] focus:outline-none transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
-
-          {error && <div className="text-red-500 text-xs">{error}</div>}
-
-          <button 
-            type="submit"
-            className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] text-white font-medium py-2 rounded-md transition-colors shadow-lg shadow-purple-900/20"
-          >
-            {isLogin ? 'Log In' : 'Create Account'}
-          </button>
-        </form>
-
-        <div className="mt-6 text-center">
-          {!inviteMode && (
-            <button 
-                onClick={() => { setIsLogin(!isLogin); setError(''); }}
-                className="text-sm text-gray-500 hover:text-[#5E6AD2] transition-colors"
-            >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
-            </button>
-          )}
-          {inviteMode && (
-              <button 
-                  onClick={() => { setInviteMode(false); setIsLogin(true); setEmail(''); }}
-                  className="text-sm text-gray-500 hover:text-[#5E6AD2] transition-colors"
-              >
-                  Cancel invitation
-              </button>
-          )}
-        </div>
+        {/* Subtle Grid */}
+        <div className="absolute inset-0 opacity-[0.03]"
+          style={{ backgroundImage: 'linear-gradient(#5E6AD2 1px, transparent 1px), linear-gradient(90deg, #5E6AD2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       </div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="w-full max-w-[440px] relative z-10"
+      >
+        <div className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+
+          <div className="flex flex-col items-center mb-10">
+            <motion.div
+              whileHover={{ scale: 1.05, rotate: 5 }}
+              className="w-14 h-14 bg-[#14151A] border border-[#2C2D35] rounded-2xl flex items-center justify-center text-[#5E6AD2] mb-8 shadow-2xl relative group"
+            >
+              <Terminal className="w-7 h-7" />
+              <div className="absolute inset-0 bg-[#5E6AD2]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.div>
+
+            <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linear</h1>
+            <div className="flex items-center space-x-2">
+              <div className="h-px w-4 bg-[#2C2D35]" />
+              <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">
+                {isLoginMode ? 'Access Restricted' : 'Secure Initializing'}
+              </span>
+              <div className="h-px w-4 bg-[#2C2D35]" />
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <AnimatePresence mode="wait">
+              {!isLoginMode && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="space-y-2 overflow-hidden"
+                >
+                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Identity Name</label>
+                  <div className="relative group">
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                      placeholder="Specify identity..."
+                      disabled={isLoading}
+                    />
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Access Email</label>
+              <div className="relative group">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  disabled={isLoading || inviteMode}
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
+                  placeholder="address@nodex.network"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2 text-left">
+              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Pass-Key</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                  placeholder="••••••••••••"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {displayError && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 p-3 rounded-xl"
+              >
+                <Shield className="w-4 h-4 text-red-500 shrink-0" />
+                <span className="text-red-400 text-[11px] font-medium leading-tight">{displayError}</span>
+              </motion.div>
+            )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-30 text-white text-[12px] font-bold py-4 rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/10 flex items-center justify-center group"
+            >
+              {isLoading ? (
+                <Activity className="w-4 h-4 animate-spin" />
+              ) : (
+                <>
+                  <span>{isLoginMode ? 'Authorize Access' : 'Register'}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
+            </button>
+          </form>
+
+          <div className="mt-10 pt-8 border-t border-[#22242A] text-center">
+            {!inviteMode ? (
+              <button
+                type="button"
+                onClick={handleToggleMode}
+                className="text-[10px] font-bold text-[#5E6068] hover:text-[#C0C4CC] uppercase tracking-widest transition-colors flex items-center justify-center mx-auto group"
+              >
+                <Cpu className="w-3.5 h-3.5 mr-2 group-hover:text-[#5E6AD2] transition-colors" />
+                {isLoginMode ? "Create New Account" : "Back to Login Area"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setInviteMode(false); setIsLoginMode(true); setEmail(''); }}
+                className="text-[10px] font-bold text-red-500 hover:text-red-400 uppercase tracking-widest transition-colors"
+              >
+                Abort Invitation
+              </button>
+            )}
+          </div>
+        </div>
+
+        <p className="mt-8 text-center text-[#3A3C46] text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+          <Heart className="w-4 h-4 text-red-500 fill-red-500" />
+          Made with love by Neo DEV Team
+        </p>
+      </motion.div>
     </div>
   );
 };

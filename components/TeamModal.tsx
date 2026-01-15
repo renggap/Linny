@@ -1,79 +1,138 @@
 
-import React, { useState } from 'react';
-import { X, Users } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Users, Command, ArrowRight, ShieldCheck } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TeamModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, icon: string) => void;
+  onSave: (name: string, icon: string) => Promise<void>;
 }
 
 export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave }) => {
   const [name, setName] = useState('');
-  const [icon, setIcon] = useState('🛸');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
+  const icon = name.trim().charAt(0).toUpperCase() || 'T';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name) {
-      onSave(name, icon);
-      onClose();
-      setName('');
-      setIcon('🛸');
+    if (!name.trim()) return;
+    setIsSubmitting(true);
+    setError('');
+    try {
+      await onSave(name.trim(), icon);
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create team.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleClose = () => {
+    setName('');
+    setError('');
+    onClose();
+  };
+
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) handleClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-[#25262B] w-[400px] rounded-xl shadow-2xl border border-[#363840] p-6 animate-in zoom-in-95 duration-200">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-white flex items-center">
-            <Users className="w-4 h-4 mr-2 text-gray-400" />
-            Create Team
-          </h2>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={handleClose}
+          className="absolute inset-0 bg-[#070809]/80 backdrop-blur-sm"
+        />
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Team Name</label>
-            <input 
-              type="text" 
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors"
-              placeholder="e.g. Customer Support"
-              autoFocus
-            />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[440px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] overflow-hidden relative z-10"
+        >
+          {/* Dynamic Background */}
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Users className="w-32 h-32 text-[#5E6AD2]" />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Icon (Emoji)</label>
-            <input 
-              type="text" 
-              value={icon}
-              onChange={e => setIcon(e.target.value)}
-              className="w-full bg-[#191A1F] border border-[#363840] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#5E6AD2] transition-colors"
-              placeholder="🛸"
-              maxLength={2}
-            />
-          </div>
-
-          <div className="pt-2 flex justify-end space-x-2">
-            <button type="button" onClick={onClose} className="px-3 py-2 text-xs font-medium text-gray-400 hover:text-white transition-colors">Cancel</button>
-            <button 
-                type="submit" 
-                disabled={!name} 
-                className={`px-3 py-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-xs font-semibold rounded transition-colors shadow-lg shadow-purple-900/20 ${!name ? 'opacity-50 cursor-not-allowed' : ''}`}
+          {/* Header / Identity */}
+          <div className="flex flex-col items-center pt-12 pb-8 border-b border-[#1A1C23] relative">
+            <motion.div
+              initial={{ scale: 0.8 }}
+              animate={{ scale: 1 }}
+              className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl font-bold text-[#E8E8E8] mb-6 shadow-2xl relative group"
             >
-                Create Team
-            </button>
+              {icon}
+              <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-[#5E6AD2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </motion.div>
+            <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">Establish New Hub</h2>
+            <div className="flex items-center space-x-2 mt-1.5">
+              <Command className="w-3 h-3 text-[#5E6068]" />
+              <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">Core Organizational Unit</span>
+            </div>
           </div>
-        </form>
+
+          {/* Form Content */}
+          <div className="p-10">
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-4 bg-red-500/5 border border-red-500/10 rounded-xl text-[11px] text-red-500 font-bold text-center uppercase tracking-widest flex items-center justify-center space-x-2"
+                >
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Fault: {error}</span>
+                </motion.div>
+              )}
+
+              <div className="space-y-3">
+                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em] ml-1">Terminal Handle</label>
+                <input
+                  type="text"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] font-medium"
+                  placeholder="e.g. Engine Team"
+                  autoFocus
+                />
+              </div>
+
+              <div className="pt-4 space-y-4">
+                <button
+                  type="submit"
+                  disabled={!name.trim() || isSubmitting}
+                  className="w-full py-4 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-2xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-[#5E6AD2]/20 flex items-center justify-center group"
+                >
+                  <span>{isSubmitting ? 'Syncing...' : 'Deploy Unit'}</span>
+                  <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="w-full py-2 text-[10px] font-bold text-[#3A3C46] hover:text-[#C0C4CC] transition-colors uppercase tracking-widest"
+                >
+                  Abort Operation
+                </button>
+              </div>
+            </form>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 };

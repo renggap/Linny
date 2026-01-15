@@ -1,8 +1,16 @@
+
 import React from 'react';
 import { Issue, Project, User, Status } from '../types';
 import { IssueList } from './IssueList';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Lock } from 'lucide-react';
+import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+function cn(...inputs: ClassValue[]) {
+    return twMerge(clsx(inputs));
+}
 
 interface PublicProjectViewProps {
     project: Project | null;
@@ -19,18 +27,28 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
 }) => {
     if (!project) {
         return (
-            <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center">
-                <div className="text-center">
-                    <Lock className="w-16 h-16 mx-auto text-gray-600 mb-4" />
-                    <h1 className="text-2xl font-bold text-white mb-2">Project Not Found</h1>
-                    <p className="text-gray-400 mb-6">This project doesn't exist or is not publicly shared.</p>
+            <div className="min-h-screen bg-[#070809] flex items-center justify-center p-6 relative overflow-hidden">
+                <div className="absolute inset-0 opacity-[0.03]"
+                    style={{ backgroundImage: 'linear-gradient(#5E6AD2 1px, transparent 1px), linear-gradient(90deg, #5E6AD2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-center relative z-10"
+                >
+                    <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                        <Lock className="w-8 h-8 text-[#5E6AD2]" />
+                    </div>
+                    <h1 className="text-2xl font-bold text-white mb-2 uppercase tracking-widest leading-none">Access Restricted</h1>
+                    <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-[0.3em] mb-10">Object not found in public registry</p>
                     <Link
                         to="/"
-                        className="text-[#5E6AD2] hover:underline"
+                        className="inline-flex items-center space-x-3 px-8 py-3.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 group"
                     >
-                        Go to Home
+                        <span>Return to Terminal</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
-                </div>
+                </motion.div>
             </div>
         );
     }
@@ -38,59 +56,123 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
     const projectIssues = issues.filter(i => i.projectId === project.id);
 
     return (
-        <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE]">
-            {/* Header */}
-            <header className="h-16 border-b border-[#363840] flex items-center justify-between px-6 bg-[#25262B]">
-                <div className="flex items-center space-x-3">
-                    <span className="text-2xl">{project.icon}</span>
-                    <div>
-                        <h1 className="text-lg font-semibold text-white">{project.name}</h1>
-                        <p className="text-xs text-gray-500">Public View • Read Only</p>
+        <div className="min-h-screen bg-[#0A0A0C] text-[#C0C4CC] flex flex-col font-sans">
+            {/* Nav Header */}
+            <header className="h-16 border-b border-[#1A1C23] flex items-center justify-between px-8 bg-[#0F1014]/80 backdrop-blur-xl sticky top-0 z-40">
+                <div className="flex items-center space-x-6">
+                    <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-[#14151A] border border-[#22242A] rounded-lg flex items-center justify-center text-lg shadow-inner">
+                            {project.icon}
+                        </div>
+                        <div>
+                            <h1 className="text-sm font-bold text-[#E8E8E8] tracking-tight">{project.name}</h1>
+                            <div className="flex items-center space-x-2 mt-0.5">
+                                <span className="text-[9px] font-black text-[#5E6AD2] uppercase tracking-widest">Public Registry</span>
+                                <div className="w-1 h-1 rounded-full bg-[#3A3C46]" />
+                                <span className="text-[9px] font-bold text-[#3A3C46] uppercase tracking-widest">Read Only Access</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div className="flex items-center space-x-2 text-xs text-gray-500">
-                    <ExternalLink className="w-4 h-4" />
-                    <span>Shared publicly</span>
+
+                <div className="flex items-center space-x-6">
+                    <div className="hidden md:flex items-center space-x-2 bg-[#14151A] px-3 py-1.5 rounded-full border border-[#22242A]">
+                        <ExternalLink className="w-3 h-3 text-[#5E6AD2]" />
+                        <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Live Broadcast</span>
+                    </div>
+                    <Link to="/" className="text-[10px] font-bold text-[#E8E8E8] hover:text-[#5E6AD2] transition-colors uppercase tracking-[0.2em]">
+                        Login
+                    </Link>
                 </div>
             </header>
 
-            {/* Content */}
-            <main className="p-6 max-w-5xl mx-auto">
-                {project.description && (
-                    <div className="mb-6 p-4 bg-[#25262B] rounded-lg border border-[#363840]">
-                        <p className="text-sm text-gray-300">{project.description}</p>
-                    </div>
-                )}
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto no-scrollbar">
+                <main className="max-w-6xl mx-auto py-12 px-8 space-y-12">
 
-                <div className="mb-4 flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-gray-400">
-                        Issues ({issues.filter(i => i.projectId === project.id && !i.parentId).length})
-                    </h2>
+                    {/* Project Overview Card */}
+                    <section className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 relative overflow-hidden group shadow-2xl">
+                        <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
+                            <Terminal className="w-40 h-40" />
+                        </div>
+
+                        <div className="relative z-10 space-y-6">
+                            <div className="flex items-center space-x-3 text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.4em]">
+                                <Layout className="w-3 h-3" />
+                                <span>Deployment Intelligence</span>
+                            </div>
+
+                            {project.description ? (
+                                <p className="text-lg text-[#E8E8E8] font-medium leading-relaxed max-w-3xl">
+                                    {project.description}
+                                </p>
+                            ) : (
+                                <p className="text-lg text-[#3A3C46] italic font-medium">
+                                    No description specified for this unit.
+                                </p>
+                            )}
+
+                            <div className="flex items-center space-x-8 pt-4">
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-widest block">Issue Count</span>
+                                    <span className="text-sm font-mono text-[#5E6AD2] font-bold">{projectIssues.length}</span>
+                                </div>
+                                <div className="w-px h-8 bg-[#1A1C23]" />
+                                <div className="space-y-1">
+                                    <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-widest block">Deployment ID</span>
+                                    <span className="text-sm font-mono text-[#C0C4CC] font-bold">{project.identifier}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Issues Section */}
+                    <section className="space-y-6 pb-20">
+                        <div className="flex items-center justify-between px-2">
+                            <div className="flex items-center space-x-3">
+                                <div className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2]" />
+                                <h2 className="text-[11px] font-black text-[#E8E8E8] uppercase tracking-[0.3em]">
+                                    Active Objectives
+                                </h2>
+                            </div>
+                        </div>
+
+                        {projectIssues.length > 0 ? (
+                            <div className="bg-[#0F1014] border border-[#22242A] rounded-2xl overflow-hidden shadow-xl">
+                                <IssueList
+                                    issues={projectIssues}
+                                    users={users}
+                                    onEdit={onViewIssue}
+                                    onDelete={() => { }} // No-op for public
+                                    onStatusChange={() => { }} // No-op for public
+                                    isPublicView={true}
+                                />
+                            </div>
+                        ) : (
+                            <div className="py-24 border border-dashed border-[#1A1C23] rounded-3xl flex flex-col items-center justify-center space-y-4">
+                                <Hash className="w-8 h-8 text-[#1A1C23]" />
+                                <span className="text-[10px] text-[#3A3C46] font-black uppercase tracking-widest">Registry Empty</span>
+                            </div>
+                        )}
+                    </section>
+                </main>
+            </div>
+
+            {/* Fixed Footer */}
+            <footer className="h-12 bg-[#0F1014] border-t border-[#1A1C23] flex items-center justify-between px-8 shrink-0">
+                <div className="flex items-center space-x-2">
+                    <div className="w-1 h-1 rounded-full bg-[#5E6AD2]" />
+                    <p className="text-[9px] text-[#5E6068] font-bold uppercase tracking-widest">
+                        Protocol Engineering • v2.0.4
+                    </p>
                 </div>
-
-                {projectIssues.length > 0 ? (
-                    <div className="bg-[#25262B] rounded-lg border border-[#363840] overflow-hidden">
-                        <IssueList
-                            issues={projectIssues}
-                            users={users}
-                            onEdit={onViewIssue}
-                            onDelete={() => { }} // No-op for public view
-                            onStatusChange={() => { }} // No-op for public view
-                            isPublicView={true}
-                        />
-                    </div>
-                ) : (
-                    <div className="text-center py-12 text-gray-500">
-                        <p>No issues in this project yet.</p>
-                    </div>
-                )}
-            </main>
-
-            {/* Footer */}
-            <footer className="fixed bottom-0 left-0 right-0 h-10 bg-[#25262B] border-t border-[#363840] flex items-center justify-center">
-                <p className="text-xs text-gray-500">
-                    Powered by Linear Clone • <Link to="/" className="text-[#5E6AD2] hover:underline">Sign in</Link> to manage projects
-                </p>
+                <div className="flex items-center space-x-4">
+                    <span className="text-[9px] text-[#3A3C46] font-bold uppercase tracking-widest">Transmission Secure</span>
+                    <div className="h-3 w-px bg-[#1A1C23]" />
+                    <Link to="/" className="text-[9px] text-[#5E6AD2] hover:text-[#E8E8E8] font-bold uppercase tracking-widest transition-colors">
+                        Internal Access
+                    </Link>
+                </div>
             </footer>
         </div>
     );
