@@ -15,6 +15,7 @@ import {
   UserCircle,
   ArrowRight
 } from 'lucide-react'; // Standard icons from lucide-react
+import { UserAvatar } from './UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -136,14 +137,14 @@ const IssueRow: React.FC<{
         {/* Assignees */}
         <div className="flex -space-x-1.5 min-w-[24px]">
           {assignees.slice(0, 3).map((u) => (
-            <div key={u.id} className="relative group/avatar">
-              <img
-                src={u.avatarUrl}
-                alt={u.name}
-                className="w-5 h-5 rounded-full border border-[#0F1014] ring-1 ring-[#26272F] group-hover/avatar:ring-[#5E6AD2]/50 transition-all z-0 group-hover/avatar:z-10"
-                title={u.name}
-              />
-            </div>
+            <UserAvatar
+              key={u.id}
+              name={u.name}
+              avatarUrl={u.avatarUrl}
+              size="sm"
+              className="border border-[#0F1014] ring-1 ring-[#26272F]"
+              showRing
+            />
           ))}
           {assignees.length === 0 && (
             <div className="w-5 h-5 rounded-full border border-[#26272F] border-dashed flex items-center justify-center group-hover:border-[#5E6068] transition-colors">

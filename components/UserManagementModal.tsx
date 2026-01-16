@@ -1,14 +1,8 @@
 
 import React, { useState } from 'react';
-import { X, Shield, Trash2, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, User as UserIcon } from 'lucide-react';
+import { X, Shield, Trash2, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, User as UserIcon, Crown } from 'lucide-react';
 import { User, UserRole, Team } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
 
 interface UserManagementModalProps {
     isOpen: boolean;
@@ -39,12 +33,16 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
     if (!isOpen) return null;
 
-    const filteredUsers = users.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    // Filter by team members first, then by search query
+    const teamMemberIds = currentTeam?.members || [];
+    const filteredUsers = users
+        .filter(u => teamMemberIds.includes(u.id))
+        .filter(u =>
+            u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchQuery.toLowerCase())
+        );
 
-    const canManage = currentUser.role === UserRole.Admin || currentUser.role === UserRole.TeamLead;
+    const canManage = currentUser.role === UserRole.Administrator || currentUser.role === UserRole.TeamLead;
 
     const handleGenerateLink = () => {
         if (!inviteEmail) return;
@@ -143,9 +141,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                             <div className="flex items-center space-x-5">
                                                 <div className="relative">
                                                     <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-2xl border border-[#22242A] p-0.5 bg-[#0F1014] object-cover" />
-                                                    {user.role === UserRole.Admin && (
+                                                    {user.role === UserRole.Administrator && (
                                                         <div className="absolute -top-1 -right-1 w-5 h-5 bg-[#5E6AD2] rounded-lg flex items-center justify-center border-2 border-[#0F1014] text-white">
-                                                            <Shield className="w-2.5 h-2.5" />
+                                                            <Crown className="w-2.5 h-2.5" />
                                                         </div>
                                                     )}
                                                 </div>
@@ -168,10 +166,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                                             onChange={(e) => onUpdateRole(user.id, e.target.value as UserRole)}
                                                             className="bg-[#14151A] border border-[#22242A] text-[10px] font-bold text-[#C0C4CC] rounded-xl pl-4 pr-10 py-2.5 focus:outline-none hover:border-[#5E6AD2]/50 cursor-pointer appearance-none uppercase tracking-widest transition-all"
                                                         >
-                                                            <option value={UserRole.Admin}>ADMINISTRATOR</option>
-                                                            <option value={UserRole.TeamLead}>TEAM LEADER</option>
-                                                            <option value={UserRole.Member}>FULL MEMBER</option>
-                                                            <option value={UserRole.Viewer}>VIEWER</option>
+                                                            <option value={UserRole.Administrator}>ADMINISTRATOR</option>
+                                                            <option value={UserRole.TeamLead}>TEAM LEAD</option>
+                                                            <option value={UserRole.Member}>MEMBER</option>
+                                                            <option value={UserRole.Guest}>GUEST</option>
                                                         </select>
                                                         <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#3A3C46] pointer-events-none group-hover/select:text-[#5E6AD2] transition-colors" />
                                                     </div>
@@ -227,10 +225,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                                     onChange={(e) => setInviteRole(e.target.value as UserRole)}
                                                     className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-xs text-[#C0C4CC] focus:outline-none appearance-none cursor-pointer font-bold uppercase tracking-[0.2em] hover:border-[#5E6AD2]/50 transition-all"
                                                 >
-                                                    <option value={UserRole.Admin}>ADMINISTRATOR</option>
-                                                    <option value={UserRole.TeamLead}>TEAM LEADER</option>
-                                                    <option value={UserRole.Member}>FULL MEMBER</option>
-                                                    <option value={UserRole.Viewer}>OBSERVER</option>
+                                                    <option value={UserRole.Administrator}>ADMINISTRATOR</option>
+                                                    <option value={UserRole.TeamLead}>TEAM LEAD</option>
+                                                    <option value={UserRole.Member}>MEMBER</option>
+                                                    <option value={UserRole.Guest}>GUEST</option>
                                                 </select>
                                                 <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] pointer-events-none group-hover/select:text-[#5E6AD2] transition-colors" />
                                             </div>

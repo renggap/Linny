@@ -11,6 +11,8 @@
     "build:server": "cd server && npm run build",
     "preview": "vite preview",
     "migrate": "tsx server/migrate.ts",
+    "seed": "tsx server/seed/index.ts",
+    "seed:force": "tsx server/seed/index.ts --force",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html}\"",

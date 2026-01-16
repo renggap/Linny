@@ -71,7 +71,6 @@ desktop.ini
 .claudeignore
 
 # Temporary working directories
-server/tmpclaude-*/
-server/tmpclaude-9fba-*/
-server/tmpclaude-919a-*/
-server/tmpclaude-b199-*/
+tmpclaude-*
+server/tmpclaude-*
+nul

@@ -50,8 +50,8 @@ async function isTeamMember(userId: string, teamId: string): Promise<boolean> {
     return false;
   }
 
-  // Admins have access to all teams
-  if (user.role === 'Admin') {
+  // Administrators have access to all teams
+  if (user.role === 'Administrator') {
     return true;
   }
 
@@ -187,33 +187,33 @@ export function requireRole(...allowedRoles: string[]) {
 }
 
 /**
- * Authorization helper - can create content (not Viewer)
+ * Authorization helper - can create content (not Guest)
  */
 export function requireCanCreateContent(req: AuthRequest, res: Response, next: NextFunction): void | Response {
-  if (req.userRole === 'Viewer') {
-    return res.status(403).json({ error: 'Forbidden: Viewers cannot create content' });
+  if (req.userRole === 'Guest') {
+    return res.status(403).json({ error: 'Forbidden: Guests cannot create content' });
   }
   next();
   return;
 }
 
 /**
- * Authorization helper - admin only
+ * Authorization helper - administrator only
  */
 export function requireAdmin(req: AuthRequest, res: Response, next: NextFunction): void | Response {
-  if (req.userRole !== 'Admin') {
-    return res.status(403).json({ error: 'Forbidden: Admin access required' });
+  if (req.userRole !== 'Administrator') {
+    return res.status(403).json({ error: 'Forbidden: Administrator access required' });
   }
   next();
   return;
 }
 
 /**
- * Authorization helper - admin or team lead
+ * Authorization helper - administrator or team lead
  */
 export function requireAdminOrTeamLead(req: AuthRequest, res: Response, next: NextFunction): void | Response {
-  if (req.userRole !== 'Admin' && req.userRole !== 'Team Lead') {
-    return res.status(403).json({ error: 'Forbidden: Admin or Team Lead access required' });
+  if (req.userRole !== 'Administrator' && req.userRole !== 'Team Lead') {
+    return res.status(403).json({ error: 'Forbidden: Administrator or Team Lead access required' });
   }
   next();
   return;

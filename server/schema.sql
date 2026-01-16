@@ -8,12 +8,14 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   avatar_url TEXT NOT NULL,
-  role TEXT NOT NULL CHECK(role IN ('Admin', 'Team Lead', 'Member', 'Viewer')),
+  role TEXT NOT NULL CHECK(role IN ('Administrator', 'Team Lead', 'Member', 'Guest')),
+  email_verified INTEGER DEFAULT 0,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);
 
 -- Teams table
 CREATE TABLE IF NOT EXISTS teams (
@@ -90,18 +92,6 @@ CREATE TABLE IF NOT EXISTS issue_assignees (
 
 CREATE INDEX IF NOT EXISTS idx_issue_assignees_issue ON issue_assignees(issue_id);
 CREATE INDEX IF NOT EXISTS idx_issue_assignees_user ON issue_assignees(user_id);
-
--- Issue dependencies (blocking relationships)
-CREATE TABLE IF NOT EXISTS issue_dependencies (
-  blocked_id TEXT NOT NULL,
-  blocking_id TEXT NOT NULL,
-  PRIMARY KEY (blocked_id, blocking_id),
-  FOREIGN KEY (blocked_id) REFERENCES issues(id) ON DELETE CASCADE,
-  FOREIGN KEY (blocking_id) REFERENCES issues(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_issue_dependencies_blocked ON issue_dependencies(blocked_id);
-CREATE INDEX IF NOT EXISTS idx_issue_dependencies_blocking ON issue_dependencies(blocking_id);
 
 -- Comments table
 CREATE TABLE IF NOT EXISTS comments (

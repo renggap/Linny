@@ -26,7 +26,6 @@ import notificationsRoutes from './routes/notifications.js';
 import activitiesRoutes from './routes/activities.js';
 import analyticsRoutes from './routes/analytics.js';
 import adminRoutes from './routes/admin.js';
-import filesRoutes from './routes/files.js';
 import searchRoutes from './routes/search.js';
 import exportRoutes from './routes/export.js';
 import webhooksRoutes from './routes/webhooks.js';
@@ -354,7 +353,6 @@ app.use('/api/v1/notifications', apiRateLimit, notificationsRoutes);
 app.use('/api/v1/activities', apiRateLimit, activitiesRoutes);
 app.use('/api/v1/analytics', apiRateLimit, analyticsRoutes);
 app.use('/api/v1/admin', apiRateLimit, adminRoutes);
-app.use('/api/v1/files', apiRateLimit, filesRoutes);
 app.use('/api/v1/search', apiRateLimit, searchRoutes);
 app.use('/api/v1/export', apiRateLimit, exportRoutes);
 app.use('/api/v1/webhooks', apiRateLimit, webhooksRoutes);
@@ -373,7 +371,6 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/activities', activitiesRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/files', filesRoutes);
 app.use('/api/search', searchRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/webhooks', webhooksRoutes);
@@ -407,15 +404,15 @@ async function startServer() {
     const db = await getDatabase();
     console.log('✅ Database initialized');
 
-    // Migration: Ensure first user is Admin if no Admin users exist
+    // Migration: Ensure first user is Administrator if no Administrator users exist
     const allUsers = await db.getAllUsers();
-    const hasAdmin = allUsers.some(u => u.role === 'Admin');
+    const hasAdmin = allUsers.some(u => u.role === 'Administrator');
     if (!hasAdmin && allUsers.length > 0) {
       const firstUser = allUsers[0];
       if (firstUser) {
-        console.log(`⚠️  No Admin users found. Promoting first user (${firstUser.email}) to Admin...`);
-        await db.updateUser(firstUser.id, { role: 'Admin' });
-        console.log('✅ First user promoted to Admin');
+        console.log(`⚠️  No Administrator users found. Promoting first user (${firstUser.email}) to Administrator...`);
+        await db.updateUser(firstUser.id, { role: 'Administrator' });
+        console.log('✅ First user promoted to Administrator');
       }
     }
 

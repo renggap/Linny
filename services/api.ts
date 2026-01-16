@@ -19,22 +19,15 @@
  */
 
 import { User, UserRole, Team, Project, Status, Priority, Issue, Activity, Comment, Notification } from '../types';
-import { getUserAvatarUrl } from '../utils/avatar';
 
 const API_BASE = '/api/v1';
 
 // Field name transformation helpers
 function transformUser(user: any): User {
-  // Normalize avatar URL - handles both avatar_url (snake_case) and avatarUrl (camelCase)
-  // Server now sends avatarUrl, but we handle both for compatibility
-  const existingAvatar = user.avatarUrl || user.avatar_url;
-  const normalizedAvatar = getUserAvatarUrl({ name: user.name, avatar_url: existingAvatar });
-
-  // Transform to camelCase and normalize avatar
+  const { avatar_url, ...rest } = user;
   return {
-    ...user,
-    avatarUrl: normalizedAvatar,
-    avatar_url: undefined, // Remove snake_case version
+    ...rest,
+    avatarUrl: avatar_url || undefined,
   } as User;
 }
 
@@ -635,6 +628,15 @@ export const teamsApi = {
     await fetchWithAuth(`/teams/${teamId}/members/${userId}`, { method: 'DELETE' });
     const team = await teamsApi.getById(teamId);
     return team.members;
+  },
+
+  async update(id: string, updates: { name?: string; icon?: string }): Promise<Team> {
+    const response = await fetchWithAuth(`/teams/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates)
+    });
+    const data = await handleResponse<{ team: Team }>(response);
+    return data.team;
   }
 };
 
@@ -771,6 +773,10 @@ export const projectsApi = {
 
   async deleteLink(projectId: string, linkId: string): Promise<void> {
     await fetchWithAuth(`/projects/${projectId}/links/${linkId}`, { method: 'DELETE' });
+  },
+
+  async delete(id: string): Promise<void> {
+    await fetchWithAuth(`/projects/${id}`, { method: 'DELETE' });
   }
 };
 
@@ -814,7 +820,6 @@ export const issuesApi = {
     startDate?: string;
     dueDate?: string;
     parentId?: string;
-    blockedBy?: string[];
   }): Promise<Issue> {
     const response = await fetchWithAuth('/issues', {
       method: 'POST',
@@ -859,13 +864,6 @@ export const issuesApi = {
     });
     const data = await handleResponse<{ issue: any }>(response);
     return transformIssue(data.issue);
-  },
-
-  async setDependencies(id: string, blockingIds: string[]): Promise<void> {
-    await fetchWithAuth(`/issues/${id}/dependencies`, {
-      method: 'PUT',
-      body: JSON.stringify({ blockingIds })
-    });
   }
 };
 
@@ -921,6 +919,25 @@ export const activitiesApi = {
   }
 };
 
+// ===== ADMIN API =====
+
+export const adminApi = {
+  async deleteWorkspace(): Promise<void> {
+    const response = await fetchWithAuth('/admin/workspace', { method: 'DELETE' });
+    await handleResponse<{ message: string }>(response);
+  },
+
+  async clearCache(): Promise<void> {
+    const response = await fetchWithAuth('/admin/cache', { method: 'DELETE' });
+    await handleResponse<{ message: string }>(response);
+  },
+
+  async getCacheStats(): Promise<{ keys: number; size: string }> {
+    const response = await fetchWithAuth('/admin/cache/stats');
+    return await handleResponse<{ keys: number; size: string }>(response);
+  }
+};
+
 // Export all APIs as a single object
 export const api = {
   auth: authApi,
@@ -930,7 +947,8 @@ export const api = {
   issues: issuesApi,
   comments: commentsApi,
   notifications: notificationsApi,
-  activities: activitiesApi
+  activities: activitiesApi,
+  admin: adminApi
 };
 
 // Export offline status and queue for UI

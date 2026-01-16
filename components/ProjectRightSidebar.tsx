@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState } from 'react';
-import { Project, Issue, User, Status, Activity, Priority } from '../types';
+import { Project, Issue, User, Status, Activity, Priority, UserRole } from '../types';
 import { Clock, Users, BarChart3, Target, Calendar } from 'lucide-react';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
@@ -17,6 +17,7 @@ interface ProjectRightSidebarProps {
     project: Project;
     issues: Issue[];
     users: User[];
+    workspaceUsers?: User[];
     activities: Activity[];
     onUpdate: (project: Project) => void;
 }
@@ -36,6 +37,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
     project,
     issues,
     users,
+    workspaceUsers,
     activities,
     onUpdate
 }) => {
@@ -50,12 +52,16 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
 
     const completionPercentage = totalIssues > 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
 
-    // Member Progress
+    // Member Progress (Contributors - excluding Guests)
     const memberProgress = useMemo(() => {
         const memberStats = new Map<string, { total: number, completed: number }>();
 
         projectIssues.forEach(issue => {
             issue.assigneeIds.forEach(assigneeId => {
+                const user = users.find(u => u.id === assigneeId);
+                // Skip Guests - they cannot be contributors
+                if (!user || user.role === UserRole.Guest) return;
+
                 const stats = memberStats.get(assigneeId) || { total: 0, completed: 0 };
                 stats.total++;
                 if (issue.status === Status.Done || issue.status === Status.Canceled) {
@@ -70,7 +76,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
             percentage: Math.round((stats.completed / stats.total) * 100),
             count: stats.total
         })).sort((a, b) => b.count - a.count);
-    }, [projectIssues]);
+    }, [projectIssues, users]);
 
     // Filter Activities
     const filteredActivities = useMemo(() => {
@@ -100,7 +106,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                             <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider mb-2 block ml-1">Project Lead</label>
                             <div className="bg-[#14151A] rounded-xl border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
                                 <UserSelect
-                                    users={users}
+                                    users={workspaceUsers || users}
                                     selectedUserIds={project.leadId ? [project.leadId] : []}
                                     onSelect={(id) => {
                                         onUpdate({ id: project.id, leadId: id } as Project);

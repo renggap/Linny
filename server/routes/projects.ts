@@ -2,10 +2,12 @@ import { Router, Response } from 'express';
 import { getDatabase } from '../database.js';
 import { createProjectSchema, updateProjectSchema } from '../validation/schemas.js';
 import { validateBody } from '../middleware/validation.js';
-import { authenticate } from '../middleware/auth.js';
+import { authenticate, requireAdminOrTeamLead } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
 import { cacheMiddleware, invalidateCache } from '../middleware/cache.js';
 import { AuthRequest } from '../middleware/auth.js';
+import { z } from 'zod';
+import { validateParams } from '../middleware/validation.js';
 
 const router = Router();
 
@@ -55,13 +57,36 @@ router.get('/public/:slug', asyncHandler(async (req: AuthRequest, res: Response)
     }));
   }
 
+  // Get all unique user IDs from comments on these issues
+  let commentAuthorIds: string[] = [];
+  if (issueIds.length > 0) {
+    const commentAuthors = await db.all(`
+      SELECT DISTINCT user_id
+      FROM comments
+      WHERE issue_id IN (${issueIds.map(() => '?').join(',')})
+    `, issueIds);
+    commentAuthorIds = commentAuthors.map((row: any) => row.user_id);
+  }
+
+  // Combine team members and comment authors, removing duplicates
+  const allUserIds = new Set([
+    ...teamMembers.map(m => m.id),
+    ...commentAuthorIds
+  ]);
+
+  // Fetch all users
+  const allUsers = await Promise.all(
+    Array.from(allUserIds).map(userId => db.getUserById(userId))
+  );
+  const validUsers = allUsers.filter(Boolean);
+
   res.json({
     project: {
       ...project,
       members: teamMembers.map(m => m.id)
     },
     issues: issuesWithAssignees,
-    users: teamMembers.map(({ id, name, email, avatar_url, role, created_at, updated_at }) => ({
+    users: validUsers.map(({ id, name, email, avatar_url, role, created_at, updated_at }) => ({
       id,
       name,
       email,
@@ -238,9 +263,9 @@ router.patch('/:id', authenticate, validateBody(updateProjectSchema), asyncHandl
 
 /**
  * DELETE /api/v1/projects/:id
- * Delete project (invalidates cache) - requires authentication
+ * Delete project (invalidates cache) - requires Administrator or Team Lead
  */
-router.delete('/:id', authenticate, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticate, requireAdminOrTeamLead, validateParams(z.object({ id: z.string().min(1) })), asyncHandler(async (req: AuthRequest, res: Response) => {
   const db = await getDatabase();
   const projectId = req.params.id;
 

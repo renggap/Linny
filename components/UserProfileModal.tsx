@@ -2,15 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { X, User as UserIcon, Mail, ShieldCheck, Lock, Activity, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { User, Team } from '../types';
-import { getUserAvatarUrl } from '../utils/avatar';
+import { UserAvatar } from './UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../services/api';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from '../lib/utils';
 
 interface UserProfileModalProps {
     isOpen: boolean;
@@ -97,8 +92,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
     if (!isOpen || !currentUser) return null;
 
-    const avatarUrl = getUserAvatarUrl(currentUser);
-
     return (
         <AnimatePresence>
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
@@ -151,11 +144,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                             <div className="space-y-10">
                                 {/* Profile Header */}
                                 <div className="flex items-center space-x-6">
-                                    <div className="relative">
-                                        <div className="w-20 h-20 rounded-2xl overflow-hidden border border-[#22242A] shadow-2xl bg-[#14151A] p-0.5">
-                                            <img src={avatarUrl} alt="" className="w-full h-full object-cover rounded-[14px]" />
-                                        </div>
-                                    </div>
+                                    <UserAvatar
+                                        name={currentUser.name}
+                                        avatarUrl={currentUser.avatarUrl}
+                                        size="xl"
+                                        className="rounded-2xl border-2 border-[#22242A] shadow-2xl"
+                                    />
                                     <div>
                                         <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">{currentUser.name}</h2>
                                         <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em] mt-1">Network Node Identity</p>

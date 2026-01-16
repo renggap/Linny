@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Issue, Status, User, Priority } from '../types';
 import { StatusIcon, PriorityIcon, Trash2, Calendar, Plus } from './Icons';
 import { UserCircle } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -82,11 +83,12 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, is
         <div className="flex -space-x-1.5">
           {assignees.length > 0 ? (
             assignees.slice(0, 3).map((u, i) => (
-              <img
+              <UserAvatar
                 key={u.id}
-                src={u.avatarUrl}
-                alt=""
-                className="w-5 h-5 rounded-full border border-[#14151A] ring-1 ring-[#22242A] transition-all group-hover:ring-[#5E6AD2]/30"
+                name={u.name}
+                avatarUrl={u.avatarUrl}
+                size="sm"
+                className="border border-[#14151A] ring-1 ring-[#22242A]"
                 style={{ zIndex: 3 - i }}
               />
             ))

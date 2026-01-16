@@ -1,16 +1,15 @@
 
-import React from 'react';
-import { Issue, Project, User, Status } from '../types';
+import React, { useState, useEffect } from 'react';
+import { Issue, Project, User, Status, ResourceLink } from '../types';
 import { IssueList } from './IssueList';
+import { BoardView } from './BoardView';
 import { Link } from 'react-router-dom';
-import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight } from 'lucide-react';
+import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight, Heart, Grid3x3 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../lib/utils';
+import { api } from '../services/api';
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+type ViewType = 'list' | 'board';
 
 interface PublicProjectViewProps {
     project: Project | null;
@@ -25,6 +24,19 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
     users,
     onViewIssue
 }) => {
+    const [currentView, setCurrentView] = useState<ViewType>('list');
+    const [projectLinks, setProjectLinks] = useState<ResourceLink[]>([]);
+
+    useEffect(() => {
+        if (project) {
+            api.projects.getLinks(project.id).then(links => {
+                setProjectLinks(links);
+            }).catch(() => {
+                setProjectLinks([]);
+            });
+        }
+    }, [project]);
+
     if (!project) {
         return (
             <div className="min-h-screen bg-[#070809] flex items-center justify-center p-6 relative overflow-hidden">
@@ -76,10 +88,6 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-6">
-                    <div className="hidden md:flex items-center space-x-2 bg-[#14151A] px-3 py-1.5 rounded-full border border-[#22242A]">
-                        <ExternalLink className="w-3 h-3 text-[#5E6AD2]" />
-                        <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Live Broadcast</span>
-                    </div>
                     <Link to="/" className="text-[10px] font-bold text-[#E8E8E8] hover:text-[#5E6AD2] transition-colors uppercase tracking-[0.2em]">
                         Login
                     </Link>
@@ -99,7 +107,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                         <div className="relative z-10 space-y-6">
                             <div className="flex items-center space-x-3 text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.4em]">
                                 <Layout className="w-3 h-3" />
-                                <span>Deployment Intelligence</span>
+                                <span>Project Description</span>
                             </div>
 
                             {project.description ? (
@@ -110,6 +118,29 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                 <p className="text-lg text-[#3A3C46] italic font-medium">
                                     No description specified for this unit.
                                 </p>
+                            )}
+
+                            {/* Resource Links Section */}
+                            {projectLinks.length > 0 && (
+                                <div className="space-y-3 pt-4">
+                                    <div className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em]">
+                                        Resource Links
+                                    </div>
+                                    <div className="flex flex-wrap gap-3">
+                                        {projectLinks.map((link) => (
+                                            <a
+                                                key={link.id}
+                                                href={link.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center space-x-2 px-4 py-2 bg-[#14151A] hover:bg-[#1A1C23] border border-[#22242A] hover:border-[#5E6AD2]/30 rounded-lg transition-all group/link"
+                                            >
+                                                <ExternalLink className="w-3.5 h-3.5 text-[#5E6068] group-hover/link:text-[#5E6AD2]" />
+                                                <span className="text-[11px] font-medium text-[#C0C4CC]">{link.title}</span>
+                                            </a>
+                                        ))}
+                                    </div>
+                                </div>
                             )}
 
                             <div className="flex items-center space-x-8 pt-4">
@@ -135,19 +166,61 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                     Active Objectives
                                 </h2>
                             </div>
+
+                            {/* View Switcher */}
+                            <div className="flex items-center space-x-1 bg-[#14151A] rounded-lg border border-[#22242A] p-1">
+                                <button
+                                    onClick={() => setCurrentView('list')}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                                        currentView === 'list'
+                                            ? "bg-[#5E6AD2] text-white"
+                                            : "text-[#5E6068] hover:text-[#C0C4CC]"
+                                    )}
+                                >
+                                    <span className="hidden md:inline">List</span>
+                                    <span className="md:hidden">List</span>
+                                </button>
+                                <button
+                                    onClick={() => setCurrentView('board')}
+                                    className={cn(
+                                        "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center space-x-1.5",
+                                        currentView === 'board'
+                                            ? "bg-[#5E6AD2] text-white"
+                                            : "text-[#5E6068] hover:text-[#C0C4CC]"
+                                    )}
+                                >
+                                    <Grid3x3 className="w-3 h-3" />
+                                    <span className="hidden md:inline">Board</span>
+                                </button>
+                            </div>
                         </div>
 
                         {projectIssues.length > 0 ? (
-                            <div className="bg-[#0F1014] border border-[#22242A] rounded-2xl overflow-hidden shadow-xl">
-                                <IssueList
-                                    issues={projectIssues}
-                                    users={users}
-                                    onEdit={onViewIssue}
-                                    onDelete={() => { }} // No-op for public
-                                    onStatusChange={() => { }} // No-op for public
-                                    isPublicView={true}
-                                />
-                            </div>
+                            <>
+                                {currentView === 'list' && (
+                                    <div className="bg-[#0F1014] border border-[#22242A] rounded-2xl overflow-hidden shadow-xl">
+                                        <IssueList
+                                            issues={projectIssues}
+                                            users={users}
+                                            onEdit={onViewIssue}
+                                            onDelete={() => { }} // No-op for public
+                                            onStatusChange={() => { }} // No-op for public
+                                            isPublicView={true}
+                                        />
+                                    </div>
+                                )}
+                                {currentView === 'board' && (
+                                    <BoardView
+                                        issues={projectIssues}
+                                        users={users}
+                                        onEdit={onViewIssue}
+                                        onDelete={() => { }} // No-op for public
+                                        onStatusChange={() => { }} // No-op for public
+                                        isPublicView={true}
+                                    />
+                                )}
+                            </>
                         ) : (
                             <div className="py-24 border border-dashed border-[#1A1C23] rounded-3xl flex flex-col items-center justify-center space-y-4">
                                 <Hash className="w-8 h-8 text-[#1A1C23]" />
@@ -161,9 +234,9 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
             {/* Fixed Footer */}
             <footer className="h-12 bg-[#0F1014] border-t border-[#1A1C23] flex items-center justify-between px-8 shrink-0">
                 <div className="flex items-center space-x-2">
-                    <div className="w-1 h-1 rounded-full bg-[#5E6AD2]" />
+                    <Heart className="w-3 h-3 text-red-500 fill-red-500" />
                     <p className="text-[9px] text-[#5E6068] font-bold uppercase tracking-widest">
-                        Protocol Engineering • v2.0.4
+                        Made with Love by Neo Digital
                     </p>
                 </div>
                 <div className="flex items-center space-x-4">

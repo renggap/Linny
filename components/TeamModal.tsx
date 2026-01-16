@@ -79,10 +79,10 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
               {icon}
               <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-[#5E6AD2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
-            <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">Establish New Hub</h2>
+            <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">Create New Workspace</h2>
             <div className="flex items-center space-x-2 mt-1.5">
               <Command className="w-3 h-3 text-[#5E6068]" />
-              <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">Core Organizational Unit</span>
+              <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">Team Container</span>
             </div>
           </div>
 
@@ -118,7 +118,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                   disabled={!name.trim() || isSubmitting}
                   className="w-full py-4 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-2xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-[#5E6AD2]/20 flex items-center justify-center group"
                 >
-                  <span>{isSubmitting ? 'Syncing...' : 'Deploy Unit'}</span>
+                  <span>{isSubmitting ? 'Creating...' : 'Create Workspace'}</span>
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                 </button>
                 <button

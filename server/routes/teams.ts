@@ -99,6 +99,36 @@ router.post('/', authenticate, requireAdminOrTeamLead, validateBody(createTeamSc
 }));
 
 /**
+ * PATCH /api/teams/:id
+ * Update team (admin or team lead)
+ */
+router.patch('/:id', authenticate, requireAdminOrTeamLead, validateParams(z.object({ id: z.string().min(1) })), validateBody(z.object({
+  name: z.string().min(1).max(100).optional(),
+  icon: z.string().max(10).optional()
+})), asyncHandler(async (req: AuthRequest, res: Response) => {
+  const db = await getDatabase();
+  const { id: teamId } = req.params;
+  const { name, icon } = req.body;
+
+  if (!teamId) {
+    return res.status(400).json({ error: 'Team ID is required' });
+  }
+
+  const team = await db.getTeamById(teamId);
+  if (!team) {
+    return res.status(404).json({ error: 'Team not found' });
+  }
+
+  await db.updateTeam(teamId, { name, icon });
+
+  const updatedTeam = await db.getTeamById(teamId);
+  const members = (await db.getTeamMembers(teamId)).map(u => u.id);
+
+  res.json({ team: { ...updatedTeam!, members } });
+  return;
+}));
+
+/**
  * GET /api/teams/:id/members
  * Get team members (authenticated)
  */

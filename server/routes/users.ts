@@ -1,12 +1,11 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { getDatabase } from '../database.js';
-import { AuthRequest, authenticate, requireAdmin } from '../middleware/auth.js';
+import { AuthRequest, authenticate, requireAdmin, requireAdminOrTeamLead } from '../middleware/auth.js';
 import { asyncHandler } from '../middleware/error.js';
 import { apiRateLimit } from '../middleware/rateLimit.js';
 import { updateUserRoleSchema } from '../validation/schemas.js';
 import { validateParams, validateBody } from '../middleware/validation.js';
-import { getUserAvatarUrl } from '../utils/avatar.js';
 import { verifyPassword, hashPassword, validatePasswordStrength } from '../auth/password.js';
 
 const router = Router();
@@ -19,9 +18,9 @@ router.get('/', authenticate, apiRateLimit, asyncHandler(async (_req: AuthReques
   const db = await getDatabase();
   const users = await db.getAllUsers();
   // Remove password_hash, transform avatar_url to avatarUrl, and normalize
-  const sanitizedUsers = users.map(({ password_hash: __pwd, avatar_url: __avatar, ...user }) => ({
+  const sanitizedUsers = users.map(({ password_hash: __pwd, ...user }) => ({
     ...user,
-    avatarUrl: getUserAvatarUrl({ name: user.name, avatar_url: user.avatar_url })
+    avatarUrl: user.avatar_url || undefined
   }));
   res.json({ users: sanitizedUsers });
   return;
@@ -45,9 +44,9 @@ router.get('/:id', authenticate, apiRateLimit, asyncHandler(async (req: AuthRequ
   }
 
   // Remove password_hash and avatar_url, add normalized avatarUrl
-  const { password_hash: __pwd, avatar_url: __avatar, ...sanitizedUser } = {
+  const { password_hash: __pwd, ...sanitizedUser } = {
     ...user,
-    avatarUrl: getUserAvatarUrl(user)
+    avatarUrl: user.avatar_url || undefined
   };
   res.json({ user: sanitizedUser });
   return;
@@ -123,9 +122,9 @@ router.patch('/:id/role', authenticate, requireAdmin, validateParams(z.object({ 
 
 /**
  * DELETE /api/users/:id
- * Remove user (admin only)
+ * Remove user from workspace (Administrator or Team Lead only)
  */
-router.delete('/:id', authenticate, requireAdmin, asyncHandler(async (req: AuthRequest, res: Response) => {
+router.delete('/:id', authenticate, requireAdminOrTeamLead, validateParams(z.object({ id: z.string().min(1) })), asyncHandler(async (req: AuthRequest, res: Response) => {
   const db = await getDatabase();
   const { id } = req.params;
 

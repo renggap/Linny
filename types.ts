@@ -17,10 +17,10 @@ export enum Priority {
 }
 
 export enum UserRole {
-  Admin = 'Admin',
+  Administrator = 'Administrator',
   TeamLead = 'Team Lead',
   Member = 'Member',
-  Viewer = 'Viewer'
+  Guest = 'Guest'
 }
 
 export interface User {
@@ -75,9 +75,8 @@ export interface Issue {
   startDate?: Date;
   dueDate?: Date;
 
-  // Hierarchy & Dependencies
+  // Hierarchy
   parentId?: string; // For subtasks
-  blockedBy?: string[]; // Array of Issue IDs blocking this one
 
   createdAt: Date;
   updatedAt: Date;

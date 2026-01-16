@@ -44,18 +44,13 @@
  *    - Risk: Character encoding problems
  *    - Prevention: UTF-8 enforcement
  *    - Implementation: Proper encoding headers
- * 
- * 6. Circular References:
- *    - Risk: Dependencies create infinite loops
- *    - Prevention: Topological sorting
- *    - Implementation: Dependency resolution
- * 
- * 7. Permission Issues:
+ *
+ * 6. Permission Issues:
  *    - Risk: Unauthorized data access
  *    - Prevention: Authorization checks
  *    - Implementation: Role-based access
- * 
- * 8. Performance Degradation:
+ *
+ * 7. Performance Degradation:
  *    - Risk: Large exports slow down server
  *    - Prevention: Async processing
  *    - Implementation: Background jobs
@@ -109,15 +104,8 @@ router.get('/issues', authenticate, validateQuery(z.object({
     WHERE ia.issue_id IN (${issueIds.map(() => '?').join(',')})
   `, issueIds);
 
-    const dependencies = await db.all(`
-    SELECT id.blocked_id, id.blocking_id
-    FROM issue_dependencies id
-    WHERE id.blocked_id IN (${issueIds.map(() => '?').join(',')})
-  `, issueIds);
-
     // Group related data
     const assigneesMap = new Map<string, any[]>();
-    const dependenciesMap = new Map<string, string[]>();
 
     assignees.forEach((a: any) => {
         if (!assigneesMap.has(a.issue_id)) {
@@ -130,17 +118,9 @@ router.get('/issues', authenticate, validateQuery(z.object({
         });
     });
 
-    dependencies.forEach((d: any) => {
-        if (!dependenciesMap.has(d.blocked_id)) {
-            dependenciesMap.set(d.blocked_id, []);
-        }
-        dependenciesMap.get(d.blocked_id)!.push(d.blocking_id);
-    });
-
     const exportData = issues.map(issue => ({
         ...issue,
-        assignees: assigneesMap.get(issue.id) || [],
-        blockedBy: dependenciesMap.get(issue.id) || []
+        assignees: assigneesMap.get(issue.id) || []
     }));
 
     if (format === 'json') {
@@ -274,8 +254,7 @@ const importIssueSchema = z.object({
     status: z.string(),
     priority: z.string(),
     project_id: z.string(),
-    assignees: z.array(z.string()).optional(),
-    blockedBy: z.array(z.string()).optional()
+    assignees: z.array(z.string()).optional()
 });
 
 const importProjectSchema = z.object({
@@ -339,11 +318,6 @@ router.post('/issues', authenticate, validateQuery(z.object({
             // Set assignees
             if (validated.assignees && validated.assignees.length > 0) {
                 await db.setIssueAssignees(newIssue.id, validated.assignees);
-            }
-
-            // Set dependencies
-            if (validated.blockedBy && validated.blockedBy.length > 0) {
-                await db.setIssueDependencies(newIssue.id, validated.blockedBy);
             }
 
             results.imported++;

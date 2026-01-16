@@ -77,7 +77,7 @@ router.get('/', authenticate, readRateLimit, cacheMiddleware('issues', 60), vali
   const endIndex = startIndex + limitNum;
   const paginatedIssues = issues.slice(startIndex, endIndex);
 
-  // Batch load assignees and dependencies for paginated issues
+  // Batch load assignees for paginated issues
   const issueIds = paginatedIssues.map(i => i.id);
 
   // Get all assignees in a single query
@@ -88,17 +88,8 @@ router.get('/', authenticate, readRateLimit, cacheMiddleware('issues', 60), vali
     WHERE ia.issue_id IN (${issueIds.map(() => '?').join(',')})
   `, issueIds);
 
-  // Get all dependencies in a single query
-  const allDependencies = await db.all(`
-    SELECT id.blocked_id, i.id, i.identifier, i.title
-    FROM issue_dependencies id
-    JOIN issues i ON id.blocking_id = i.id
-    WHERE id.blocked_id IN (${issueIds.map(() => '?').join(',')})
-  `, issueIds);
-
-  // Group assignees and dependencies by issue ID
+  // Group assignees by issue ID
   const assigneesMap = new Map<string, any[]>();
-  const dependenciesMap = new Map<string, string[]>();
 
   allAssignees.forEach((row: any) => {
     if (!assigneesMap.has(row.issue_id)) {
@@ -115,18 +106,10 @@ router.get('/', authenticate, readRateLimit, cacheMiddleware('issues', 60), vali
     });
   });
 
-  allDependencies.forEach((row: any) => {
-    if (!dependenciesMap.has(row.blocked_id)) {
-      dependenciesMap.set(row.blocked_id, []);
-    }
-    dependenciesMap.get(row.blocked_id)!.push(row.id);
-  });
-
   // Combine data
   const issuesWithAssignees = paginatedIssues.map(issue => ({
     ...issue,
-    assignees: assigneesMap.get(issue.id) || [],
-    blockedBy: dependenciesMap.get(issue.id) || []
+    assignees: assigneesMap.get(issue.id) || []
   }));
 
   res.json({
@@ -155,16 +138,13 @@ router.get('/:id', authenticate, readRateLimit, cacheMiddleware('issue', 300), v
   }
 
   const assignees = (await db.getIssueAssignees(issue.id)).map(({ password_hash: _, ...u }) => u);
-  const blockedBy = await db.getIssueDependencies(issue.id);
 
   res.json({
     issue: {
       ...issue,
-      assignees,
-      blockedBy: blockedBy.map(i => i.id)
+      assignees
     }
   });
-  return;
 }));
 
 /**
@@ -173,7 +153,7 @@ router.get('/:id', authenticate, readRateLimit, cacheMiddleware('issue', 300), v
  */
 router.post('/', authenticate, requireCanCreateContent, validateBody(createIssueSchema.partial()), asyncHandler(async (req: AuthRequest, res: Response) => {
   const db = await getDatabase();
-  const { title, description, status, priority, assigneeIds, projectId, startDate, dueDate, parentId, blockedBy } = req.body;
+  const { title, description, status, priority, assigneeIds, projectId, startDate, dueDate, parentId } = req.body;
 
   // Get project to generate identifier
   const project = await db.getProjectById(projectId);
@@ -202,11 +182,6 @@ router.post('/', authenticate, requireCanCreateContent, validateBody(createIssue
     await db.setIssueAssignees(newIssue.id, assigneeIds);
   }
 
-  // Set dependencies
-  if (blockedBy && Array.isArray(blockedBy) && blockedBy.length > 0) {
-    await db.setIssueDependencies(newIssue.id, blockedBy);
-  }
-
   // Log activity
   if (req.userId) {
     await db.createActivity({
@@ -223,26 +198,22 @@ router.post('/', authenticate, requireCanCreateContent, validateBody(createIssue
   invalidateCache('issues');
 
   const assignees = (await db.getIssueAssignees(newIssue.id)).map(({ password_hash: _, ...u }) => u);
-  const blocking = await db.getIssueDependencies(newIssue.id);
 
   // Broadcast new issue via WebSocket
   const wsManager = (global as any).wsManager;
   if (wsManager) {
     broadcastNewIssue(wsManager, projectId, {
       ...newIssue,
-      assignees,
-      blockedBy: blocking.map(i => i.id)
+      assignees
     }, req.userId);
   }
 
   res.status(201).json({
     issue: {
       ...newIssue,
-      assignees,
-      blockedBy: blocking.map(i => i.id)
+      assignees
     }
   });
-  return;
 }));
 
 /**
@@ -252,7 +223,7 @@ router.post('/', authenticate, requireCanCreateContent, validateBody(createIssue
 router.patch('/:id', authenticate, requireCanCreateContent, requireIssueTeamMember('id'), validateParams(z.object({ id: z.string().min(1) })), validateBody(createIssueSchema.partial()), asyncHandler(async (req: AuthRequest, res: Response) => {
   const db = await getDatabase();
   const { id } = req.params;
-  const { title, description, status, priority, assigneeIds, startDate, dueDate, blockedBy } = req.body;
+  const { title, description, status, priority, assigneeIds, startDate, dueDate } = req.body;
 
   const issue = await db.getIssueById(id!);
   if (!issue) {
@@ -287,11 +258,6 @@ router.patch('/:id', authenticate, requireCanCreateContent, requireIssueTeamMemb
     await db.setIssueAssignees(id!, assigneeIds);
   }
 
-  // Update dependencies if provided
-  if (blockedBy !== undefined) {
-    await db.setIssueDependencies(id!, blockedBy);
-  }
-
   // Invalidate cache
   invalidateCache('issues');
   invalidateCache(`issue:${id!}`);
@@ -308,30 +274,24 @@ router.patch('/:id', authenticate, requireCanCreateContent, requireIssueTeamMemb
     updated_at: db.now()
   };
 
-  // Get assignees and dependencies in parallel (still better than sequential)
-  const [assignees, blocking] = await Promise.all([
-    db.getIssueAssignees(id!).then(assignees => assignees.map(({ password_hash: _, ...u }) => u)),
-    db.getIssueDependencies(id!).then(deps => deps.map(i => i.id))
-  ]);
+  // Get assignees
+  const assignees = await db.getIssueAssignees(id!).then(assignees => assignees.map(({ password_hash: _, ...u }) => u));
 
   // Broadcast issue update via WebSocket
   const wsManager = (global as any).wsManager;
   if (wsManager) {
     broadcastIssueUpdate(wsManager, id!, {
       ...updatedIssue,
-      assignees,
-      blockedBy: blocking
+      assignees
     }, req.userId);
   }
 
   res.json({
     issue: {
       ...updatedIssue,
-      assignees,
-      blockedBy: blocking
+      assignees
     }
   });
-  return;
 }));
 
 /**
@@ -380,7 +340,6 @@ router.post('/:id/status', authenticate, requireCanCreateContent, requireIssueTe
   }
 
   res.json({ issue: updatedIssue });
-  return;
 }));
 
 /**
@@ -395,6 +354,11 @@ router.post('/:id/subtasks', authenticate, requireCanCreateContent, requireIssue
   const parentIssue = await db.getIssueById(parentId!);
   if (!parentIssue) {
     return res.status(404).json({ error: 'Parent issue not found' });
+  }
+
+  // Prevent creating subtasks on subtasks (only parent issues can have subtasks)
+  if (parentIssue.parent_id) {
+    return res.status(400).json({ error: 'Cannot create subtasks on a subtask. Only parent issues can have subtasks.' });
   }
 
   const project = await db.getProjectById(parentIssue.project_id);
@@ -422,7 +386,6 @@ router.post('/:id/subtasks', authenticate, requireCanCreateContent, requireIssue
   invalidateCache('issues');
 
   res.status(201).json({ issue: newIssue });
-  return;
 }));
 
 /**
@@ -454,33 +417,6 @@ router.delete('/:id', authenticate, requireAdmin, validateParams(z.object({ id: 
   }
 
   res.json({ message: 'Issue deleted successfully' });
-  return;
-}));
-
-/**
- * PUT /api/v1/issues/:id/dependencies
- * Set issue dependencies (non-viewer, team member, invalidates cache)
- */
-router.put('/:id/dependencies', authenticate, requireCanCreateContent, requireIssueTeamMember('id'), validateParams(z.object({ id: z.string().min(1) })), validateBody(z.object({ blockingIds: z.array(z.string()) })), asyncHandler(async (req: AuthRequest, res: Response) => {
-  const db = await getDatabase();
-  const { id } = req.params;
-  const { blockingIds } = req.body;
-
-  const issue = await db.getIssueById(id!);
-  if (!issue) {
-    return res.status(404).json({ error: 'Issue not found' });
-  }
-
-  await db.setIssueDependencies(id!, blockingIds);
-
-  // Invalidate cache
-  invalidateCache('issues');
-  invalidateCache(`issue:${id!}`);
-
-  const blocking = await db.getIssueDependencies(id!);
-
-  res.json({ blockedBy: blocking.map(i => i.id) });
-  return;
 }));
 
 /**
@@ -516,7 +452,6 @@ router.get('/:issueId/comments', authenticate, apiRateLimit, asyncHandler(async 
   }));
 
   res.json({ comments: commentsWithUsers });
-  return;
 }));
 
 /**
@@ -585,7 +520,6 @@ router.post('/comments', authenticate, validateBody(z.object({ content: z.string
       user: user ? { id: user.id, name: user.name, avatar_url: user.avatar_url } : null
     }
   });
-  return;
 }));
 
 export default router;

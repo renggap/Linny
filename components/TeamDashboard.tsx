@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Issue, Status, User, Project, Team, Priority } from '../types';
+import { Issue, Status, User, Project, Team, Priority, UserRole } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
 import {
     Target,
@@ -116,17 +116,20 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
         const completionRate = total > 0 ? Math.round((byStatus[Status.Done] / total) * 100) : 0;
         const activeCount = byStatus[Status.InProgress] + byStatus[Status.InReview];
 
-        // Sort users by activity
-        const activeMembers = users.map(user => {
-            const userIssues = issues.filter(i => i.assigneeIds.includes(user.id));
-            const done = userIssues.filter(i => i.status === Status.Done).length;
-            return {
-                user,
-                total: userIssues.length,
-                done,
-                completion: userIssues.length > 0 ? Math.round((done / userIssues.length) * 100) : 0
-            };
-        }).sort((a, b) => b.total - a.total).slice(0, 5);
+        // Sort users by activity - only show team members (excluding guests)
+        const teamMemberIds = team.members || [];
+        const activeMembers = users
+            .filter(user => teamMemberIds.includes(user.id) && user.role !== UserRole.Guest)
+            .map(user => {
+                const userIssues = issues.filter(i => i.assigneeIds.includes(user.id));
+                const done = userIssues.filter(i => i.status === Status.Done).length;
+                return {
+                    user,
+                    total: userIssues.length,
+                    done,
+                    completion: userIssues.length > 0 ? Math.round((done / userIssues.length) * 100) : 0
+                };
+            }).sort((a, b) => b.total - a.total).slice(0, 5);
 
         // Sort projects
         const activeProjects = projects.map(p => {
@@ -171,21 +174,18 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         value={stats.activeCount}
                         icon={Activity}
                         color="text-amber-500"
-                        trend="12%"
                     />
                     <StatCard
                         label="Velocity"
                         value={stats.total}
                         icon={Zap}
                         color="text-[#5E6AD2]"
-                        trend="8%"
                     />
                     <StatCard
                         label="Completion"
                         value={`${stats.completionRate}%`}
                         icon={CheckCircle2}
                         color="text-emerald-500"
-                        trend="4%"
                     />
                     <StatCard
                         label="Active Projects"

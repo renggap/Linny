@@ -12,6 +12,7 @@ import { ProjectModal } from './components/ProjectModal';
 import { TeamModal } from './components/TeamModal';
 import { PublicProjectView } from './components/PublicProjectView';
 import { ProjectSettingsModal } from './components/ProjectSettingsModal';
+import { WorkspaceSettingsModal } from './components/WorkspaceSettingsModal';
 import { PublicViewContainer } from './components/PublicViewContainer';
 import { UserManagementModal } from './components/UserManagementModal';
 import { UserProfileModal } from './components/UserProfileModal';
@@ -45,6 +46,7 @@ const App: React.FC = () => {
   const [isUserProfileOpen, setIsUserProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+  const [isWorkspaceSettingsOpen, setIsWorkspaceSettingsOpen] = useState(false);
   const [settingsProject, setSettingsProject] = useState<Project | null>(null);
   const [editingIssue, setEditingIssue] = useState<Issue | PartialIssue | undefined>(undefined);
   const [currentTeamId, setCurrentTeamId] = useState<string>('');
@@ -70,44 +72,69 @@ const App: React.FC = () => {
 
   // Fetch all data on mount (only once)
   const fetchAllData = useCallback(async () => {
-    console.log('[App] fetchAllData called, isAuthenticated:', isAuthenticated);
+    console.log('[App] fetchAllData called', { isAuthenticated, currentUser: !!currentUser });
     if (!isAuthenticated) {
       console.log('[App] Not authenticated, skipping data fetch');
       setIsDataLoading(false);
       return;
     }
 
+    console.log('[App] Starting data fetch...');
     setIsDataLoading(true);
     try {
-      console.log('[App] Fetching all data...');
+      console.log('[App] Calling API endpoints...');
       const [usersData, teamsData, projectsData, notifs, acts] = await Promise.all([
-        api.users.getAll(),
-        api.teams.getAll(),
-        api.projects.getAll(),
-        api.notifications.getAll(),
-        api.activities.getAll({ limit: 100 })
+        api.users.getAll().catch(e => { console.error('[App] Users API error:', e); return []; }),
+        api.teams.getAll().catch(e => { console.error('[App] Teams API error:', e); return []; }),
+        api.projects.getAll().catch(e => { console.error('[App] Projects API error:', e); return []; }),
+        api.notifications.getAll().catch(e => { console.error('[App] Notifications API error:', e); return []; }),
+        api.activities.getAll({ limit: 100 }).catch(e => { console.error('[App] Activities API error:', e); return []; })
       ]);
 
-      console.log('[App] Data fetched:', { users: usersData.length, teams: teamsData.length, projects: projectsData.length });
+      console.log('[App] API responses received:', {
+        users: usersData.length,
+        teams: teamsData.length,
+        projects: projectsData.length,
+        notifications: notifs.length,
+        activities: acts.length
+      });
+
       setUsers(usersData);
       setTeams(teamsData);
       setProjects(projectsData);
       setNotifications(notifs);
       setActivities(acts);
 
-      // Set initial team if not set
-      const teamId = currentTeamId || teamsData[0]?.id;
-      if (teamId && teamsData.length > 0) {
-        console.log('[App] Setting team:', teamId);
-        setCurrentTeamId(teamId);
-        // Issues will be fetched by the useEffect below
+      // Set initial team if not set - find first team where user is a member
+      if (!currentTeamId && teamsData.length > 0 && currentUser) {
+        // Find the first team where the current user is a member
+        const userTeam = teamsData.find(team => team.members.includes(currentUser.id));
+        if (userTeam) {
+          console.log('[App] Setting initial team:', userTeam.name);
+          setCurrentTeamId(userTeam.id);
+        } else {
+          // User is not a member of any team - create one for them automatically
+          try {
+            console.log('[App] User is not a member of any team, creating one...');
+            const newTeam = await api.teams.create(
+              `${currentUser.name}'s Workspace`,
+              currentUser.name.charAt(0).toUpperCase()
+            );
+            // Fetch updated teams list
+            const updatedTeams = await api.teams.getAll();
+            setTeams(updatedTeams);
+            setCurrentTeamId(newTeam.id);
+          } catch (error) {
+            console.error('Failed to create team for user:', error);
+          }
+        }
       }
     } catch (error) {
-      console.error('[App] Failed to fetch data:', error);
+      console.error('Failed to fetch data:', error);
     } finally {
       setIsDataLoading(false);
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, currentUser]);
 
   // Track if we've fetched data for current auth session
   const hasFetchedDataRef = useRef(false);
@@ -115,7 +142,6 @@ const App: React.FC = () => {
   // Set loading to false when not authenticated
   useEffect(() => {
     if (!isAuthenticated) {
-      console.log('[App] Not authenticated, setting data loading to false');
       setIsDataLoading(false);
       hasFetchedDataRef.current = false;
     }
@@ -123,9 +149,9 @@ const App: React.FC = () => {
 
   // Fetch data when authenticated status changes
   useEffect(() => {
-    console.log('[App] Auth status changed, isAuthenticated:', isAuthenticated, 'hasFetched:', hasFetchedDataRef.current);
+    console.log('[App] useEffect triggered', { isAuthenticated, hasFetchedData: hasFetchedDataRef.current });
     if (isAuthenticated && !hasFetchedDataRef.current) {
-      console.log('[App] User authenticated, fetching data...');
+      console.log('[App] Calling fetchAllData');
       hasFetchedDataRef.current = true;
       fetchAllData();
     }
@@ -137,19 +163,15 @@ const App: React.FC = () => {
 
     const fetchTeamData = async () => {
       try {
-        console.log('[App] Fetching projects and issues for team:', currentTeamId);
-
         // Clear selected project when switching teams
         setSelectedProjectId(null);
 
         // Fetch projects for the new team
         const projectsData = await api.projects.getAll({ teamId: currentTeamId });
-        console.log('[App] Projects fetched:', projectsData.length);
         setProjects(projectsData);
 
         // Fetch issues for the new team
         const issuesData = await api.issues.getAll({ teamId: currentTeamId });
-        console.log('[App] Issues fetched:', issuesData.length);
         setIssues(issuesData);
       } catch (error) {
         console.error('Failed to fetch team data:', error);
@@ -158,24 +180,21 @@ const App: React.FC = () => {
 
     fetchTeamData();
   }, [currentTeamId, isAuthenticated]);
+
   // Fetch full project details (including links) when project is selected
   useEffect(() => {
     if (selectedProjectId && isAuthenticated) {
       const fetchProjectDetails = async () => {
         try {
-          console.log('[App] Fetching full project details for:', selectedProjectId);
           const updated = await api.projects.getByIdWithLinks(selectedProjectId);
           setProjects((prev: Project[]) => prev.map((p: Project) => p.id === updated.id ? updated : p));
         } catch (error) {
-          console.error('[App] Failed to fetch project details:', error);
+          console.error('Failed to fetch project details:', error);
         }
       };
       fetchProjectDetails();
     }
   }, [selectedProjectId, isAuthenticated]);
-
-  // Fetch issues when team changes - consolidated into fetchAllData
-  // Issues are now fetched inside fetchAllData to avoid race conditions
 
   // Fetch comments for a specific issue
   const fetchComments = useCallback(async (issueId: string) => {
@@ -204,6 +223,11 @@ const App: React.FC = () => {
   const teamProjects = projects.filter(p => p.teamId === currentTeamId);
   const currentProject = projects.find(p => p.id === selectedProjectId);
 
+  // Filter users by current workspace/team only (for user choosers)
+  const workspaceUsers = currentTeam?.members
+    ? users.filter(u => currentTeam.members.includes(u.id))
+    : users;
+
   // Filter issues client-side - allow status/assignee filters without requiring a selected project
   const visibleIssues = issues.filter(i => {
     const project = projects.find(p => p.id === i.projectId);
@@ -222,8 +246,8 @@ const App: React.FC = () => {
   const myNotifications = notifications.filter(n => !n.isRead);
 
   // Permissions
-  const canCreateContent = currentUser?.role !== UserRole.Viewer;
-  const isAdmin = currentUser?.role === UserRole.Admin;
+  const canCreateContent = currentUser?.role !== UserRole.Guest;
+  const isAdmin = currentUser?.role === UserRole.Administrator;
 
   // --- HANDLERS ---
 
@@ -427,9 +451,42 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteProject = async (projectId: string) => {
+    try {
+      await api.projects.delete(projectId);
+      // Remove project from state
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      // Also remove any issues associated with this project
+      setIssues(prev => prev.filter(i => i.projectId !== projectId));
+      // Close settings modal
+      setIsProjectSettingsOpen(false);
+      // If deleted project was selected, deselect it
+      if (selectedProjectId === projectId) {
+        setSelectedProjectId(null);
+      }
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      throw error;
+    }
+  };
+
   const handleOpenProjectSettings = (project: Project) => {
     setSettingsProject(project);
     setIsProjectSettingsOpen(true);
+  };
+
+  const handleOpenWorkspaceSettings = () => {
+    setIsWorkspaceSettingsOpen(true);
+  };
+
+  const handleUpdateWorkspace = async (teamId: string, updates: { name?: string; icon?: string }) => {
+    try {
+      const updatedTeam = await api.teams.update(teamId, updates);
+      setTeams(prev => prev.map(t => t.id === updatedTeam.id ? updatedTeam : t));
+    } catch (error) {
+      console.error('Failed to update workspace:', error);
+      throw error;
+    }
   };
 
   // Team handlers
@@ -500,6 +557,23 @@ const App: React.FC = () => {
     }
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!currentUser || currentUser.role !== UserRole.Administrator) {
+      alert('Only administrators can delete the workspace.');
+      return;
+    }
+
+    try {
+      await api.admin.deleteWorkspace();
+      // Logout and reload page to clear state
+      await handleLogout();
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to delete workspace:', error);
+      alert('Failed to delete workspace. Please try again.');
+    }
+  };
+
   // Navigation handlers
   const handleSelectProject = (projectId: string | null) => {
     setSelectedProjectId(projectId);
@@ -556,18 +630,6 @@ const App: React.FC = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (['INPUT', 'TEXTAREA', 'SELECT'].includes((e.target as HTMLElement).tagName)) return;
 
-      if (e.key.toLowerCase() === 'c' && canCreateContent) {
-        const teamProjects = projects.filter(p => p.teamId === currentTeamId);
-        if (teamProjects.length === 0) {
-          e.preventDefault();
-          alert('Please create a project first before creating issues.');
-          setIsProjectModalOpen(true);
-          return;
-        }
-        e.preventDefault();
-        handleCreateIssue();
-      }
-
       if (e.key === '/') {
         e.preventDefault();
         searchInputRef.current?.focus();
@@ -581,7 +643,7 @@ const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [canCreateContent, searchQuery, currentTeamId, projects]);
+  }, [searchQuery]);
 
   // URL sync - sync URL to state (only responds to URL changes, not state changes)
   useEffect(() => {
@@ -757,6 +819,7 @@ const App: React.FC = () => {
         setStatusFilter={setStatusFilter}
         isSidebarCollapsed={isSidebarCollapsed}
         setIsSidebarCollapsed={setIsSidebarCollapsed}
+        onOpenWorkspaceSettings={handleOpenWorkspaceSettings}
       />
 
       <main className="flex-1 flex flex-col min-w-0 bg-[#1E1F24]">
@@ -948,6 +1011,7 @@ const App: React.FC = () => {
                 project={currentProject}
                 issues={issues}
                 users={users}
+                workspaceUsers={workspaceUsers}
                 activities={activities}
                 onUpdate={(p) => handleUpdateProject(p.id, p)}
               />
@@ -961,7 +1025,7 @@ const App: React.FC = () => {
         isOpen={isIssueModalOpen}
         onClose={() => setIsIssueModalOpen(false)}
         onSave={handleSaveIssue}
-        users={users}
+        users={workspaceUsers}
         projects={teamProjects}
         existingIssue={editingIssue}
         comments={comments}
@@ -1017,6 +1081,17 @@ const App: React.FC = () => {
         onClose={() => setIsProjectSettingsOpen(false)}
         project={settingsProject}
         onUpdate={handleUpdateProject}
+        currentUser={currentUser || null}
+        onDelete={handleDeleteProject}
+      />
+
+      <WorkspaceSettingsModal
+        isOpen={isWorkspaceSettingsOpen}
+        onClose={() => setIsWorkspaceSettingsOpen(false)}
+        team={currentTeam || null}
+        currentUser={currentUser || null}
+        onUpdate={handleUpdateWorkspace}
+        onDeleteWorkspace={handleDeleteWorkspace}
       />
     </div>
   );

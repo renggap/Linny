@@ -2,7 +2,6 @@ import { Router, Response } from 'express';
 import { getDatabase } from '../database.js';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../auth/password.js';
 import { generateTokenPair, getRefreshTokenExpiryDate, verifyToken, TokenPayload } from '../auth/jwt.js';
-import { generateAvatarUrl } from '../utils/avatar.js';
 import {
   sendEmail,
   generateToken as generateEmailToken,
@@ -81,10 +80,10 @@ router.post('/register', authRateLimit, validateBody(registerSchema), asyncHandl
     return res.status(409).json({ error: 'Email already registered' });
   }
 
-  // Check if this is first user - make them Admin
+  // Check if this is first user - make them Administrator
   const allUsers = await db.getAllUsers();
   const isFirstUser = allUsers.length === 0;
-  const role = isFirstUser ? 'Admin' : 'Member';
+  const role = isFirstUser ? 'Administrator' : 'Member';
 
   // Hash password
   const password_hash = await hashPassword(password);
@@ -94,7 +93,7 @@ router.post('/register', authRateLimit, validateBody(registerSchema), asyncHandl
     name,
     email,
     password_hash,
-    avatar_url: generateAvatarUrl(name),
+    avatar_url: undefined,
     role,
     email_verified: 0
   });

@@ -15,7 +15,7 @@ export const emailSchema = z.string()
   .toLowerCase();
 
 // Valid user roles
-export const userRoleSchema = z.enum(['Admin', 'Team Lead', 'Member', 'Viewer']);
+export const userRoleSchema = z.enum(['Administrator', 'Team Lead', 'Member', 'Guest']);
 
 // Valid statuses
 export const statusSchema = z.enum(['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled']);
@@ -132,8 +132,7 @@ export const createIssueSchema = z.object({
   projectId: z.string().min(1, 'Project ID is required'),
   startDate: dateSchema,
   dueDate: dateSchema,
-  parentId: z.string().optional(),
-  blockedBy: z.array(z.string()).optional()
+  parentId: z.string().optional()
 });
 
 export const updateIssueSchema = createIssueSchema.partial().extend({
@@ -146,10 +145,6 @@ export const updateIssueStatusSchema = z.object({
 
 export const createSubtaskSchema = z.object({
   title: z.string().min(1, 'Title is required').max(500, 'Title must be less than 500 characters').trim()
-});
-
-export const setIssueDependenciesSchema = z.object({
-  blockingIds: z.array(z.string())
 });
 
 // === COMMENT SCHEMAS ===

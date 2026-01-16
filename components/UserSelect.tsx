@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { User } from '../types';
+import { User, UserRole } from '../types';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface UserSelectProps {
@@ -26,6 +26,10 @@ export const UserSelect: React.FC<UserSelectProps> = ({
     const [dropdownStyle, setDropdownStyle] = useState<React.CSSProperties>({});
 
     const selectedUsers = users.filter(u => (selectedUserIds || []).includes(u.id));
+
+    // Filter out Guests from the available users for assignment
+    // Guests cannot be assigned to issues
+    const assignableUsers = users.filter(u => u.role !== UserRole.Guest);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -131,7 +135,7 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                     className="absolute z-[9999] bg-[#25262B] border border-[#363840] rounded-md shadow-xl py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
                     style={{ ...dropdownStyle, position: 'absolute' }}
                 >
-                    {users.map(user => (
+                    {assignableUsers.map(user => (
                         <div
                             key={user.id}
                             className="flex items-center px-3 py-1.5 cursor-pointer hover:bg-[#5E6AD2] hover:text-white group transition-colors text-xs text-gray-200"

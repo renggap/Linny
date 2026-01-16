@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Globe, Lock, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Layout } from 'lucide-react';
-import { Project } from '../types';
+import { X, Globe, Lock, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Layout, Trash2, AlertTriangle } from 'lucide-react';
+import { Project, User, UserRole } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -15,19 +15,27 @@ interface ProjectSettingsModalProps {
     onClose: () => void;
     project: Project | null;
     onUpdate: (projectId: string, updates: Partial<Project>) => void;
+    currentUser: User | null;
+    onDelete?: (projectId: string) => void;
 }
 
 export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     isOpen,
     onClose,
     project,
-    onUpdate
+    onUpdate,
+    currentUser,
+    onDelete
 }) => {
     const [isPublic, setIsPublic] = useState(false);
     const [publicSlug, setPublicSlug] = useState('');
     const [copied, setCopied] = useState(false);
     const [localDescription, setLocalDescription] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const canDeleteProject = currentUser && (currentUser.role === UserRole.Administrator || currentUser.role === UserRole.TeamLead);
 
     useEffect(() => {
         if (project) {
@@ -219,17 +227,63 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
 
                     {/* Footer / Success Sync */}
                     <div className="h-20 px-10 border-t border-[#1A1C23] flex items-center justify-between bg-[#14151A]/20 shrink-0">
-                        <div className="flex items-center space-x-2">
-                            <Activity className="w-3 h-3 text-[#5E6AD2]" />
-                            <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Awaiting Command Synchrony</span>
+                        <div className="flex items-center space-x-4">
+                            {canDeleteProject && !showDeleteConfirm && (
+                                <button
+                                    onClick={() => setShowDeleteConfirm(true)}
+                                    className="flex items-center space-x-2 px-4 py-2 text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/5 rounded-lg transition-all uppercase tracking-wider"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <span>Decommission</span>
+                                </button>
+                            )}
+                            {showDeleteConfirm && (
+                                <div className="flex items-center space-x-3">
+                                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-red-500/5 border border-red-500/20 rounded-lg">
+                                        <AlertTriangle className="w-3 h-3 text-red-400" />
+                                        <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Confirm deletion?</span>
+                                    </div>
+                                    <button
+                                        onClick={async () => {
+                                            if (project && onDelete) {
+                                                setIsDeleting(true);
+                                                try {
+                                                    await onDelete(project.id);
+                                                } finally {
+                                                    setIsDeleting(false);
+                                                }
+                                            }
+                                        }}
+                                        disabled={isDeleting || !onDelete}
+                                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {isDeleting ? 'Deleting...' : 'Confirm'}
+                                    </button>
+                                    <button
+                                        onClick={() => setShowDeleteConfirm(false)}
+                                        disabled={isDeleting}
+                                        className="px-3 py-1.5 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] rounded-lg transition-all uppercase tracking-wider"
+                                    >
+                                        Cancel
+                                    </button>
+                                </div>
+                            )}
+                            {!showDeleteConfirm && (
+                                <div className="flex items-center space-x-2">
+                                    <Activity className="w-3 h-3 text-[#5E6AD2]" />
+                                    <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Awaiting Command Synchrony</span>
+                                </div>
+                            )}
                         </div>
-                        <button
-                            onClick={onClose}
-                            className="px-10 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center group"
-                        >
-                            <span>Finalize</span>
-                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                        </button>
+                        {!showDeleteConfirm && (
+                            <button
+                                onClick={onClose}
+                                className="px-10 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center group"
+                            >
+                                <span>Finalize</span>
+                                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        )}
                     </div>
                 </motion.div>
             </div>

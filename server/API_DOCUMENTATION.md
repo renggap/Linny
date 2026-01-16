@@ -1021,8 +1021,7 @@ Authorization: Bearer <access_token>
           "created_at": "ISO 8601 timestamp",
           "updated_at": "ISO 8601 timestamp"
         }
-      ],
-      "blockedBy": ["string (issue ID)", ...]
+      ]
     }
   ],
   "pagination": {
@@ -1072,8 +1071,7 @@ Authorization: Bearer <access_token>
         "created_at": "ISO 8601 timestamp",
         "updated_at": "ISO 8601 timestamp"
       }
-    ],
-    "blockedBy": ["string (issue ID)", ...]
+    ]
   }
 }
 ```
@@ -1100,8 +1098,7 @@ Authorization: Bearer <access_token>
   "projectId": "string (required)",
   "startDate": "ISO 8601 timestamp (optional)",
   "dueDate": "ISO 8601 timestamp (optional)",
-  "parentId": "string (optional)",
-  "blockedBy": ["string (issue ID)", ...] (optional)
+  "parentId": "string (optional)"
 }
 ```
 
@@ -1131,8 +1128,7 @@ Authorization: Bearer <access_token>
         "created_at": "ISO 8601 timestamp",
         "updated_at": "ISO 8601 timestamp"
       }
-    ],
-    "blockedBy": ["string (issue ID)", ...]
+    ]
   }
 }
 ```
@@ -1191,8 +1187,7 @@ Authorization: Bearer <access_token>
         "created_at": "ISO 8601 timestamp",
         "updated_at": "ISO 8601 timestamp"
       }
-    ],
-    "blockedBy": ["string (issue ID)", ...]
+    ]
   }
 }
 ```
@@ -1305,35 +1300,6 @@ Authorization: Bearer <access_token>
 
 ### Notes
 - Admin only
-
----
-
-## PUT /api/v1/issues/:id/dependencies
-
-Set issue dependencies.
-
-### Headers
-```
-Authorization: Bearer <access_token>
-```
-
-### Request Body
-```json
-{
-  "blockingIds": ["string (issue ID)", ...]
-}
-```
-
-### Response (200 OK)
-```json
-{
-  "blockedBy": ["string (issue ID)", ...]
-}
-```
-
-### Notes
-- Non-Viewer role required
-- Must be team member
 
 ---
 

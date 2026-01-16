@@ -1,18 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, Eye, Trash2, Calendar, User as UserIcon } from 'lucide-react';
+import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, Eye, Trash2, Calendar, User as UserIcon, Activity, UserCircle } from 'lucide-react';
 import { Issue, Priority, Status, User, Project, Comment, PartialIssue } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
+import { cn } from '../lib/utils';
 
 function formatDateToInput(date: Date | string | undefined): string {
     if (!date) return '';
@@ -54,7 +49,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     issues = [],
     onCreateSubtask,
     onOpenIssue,
-    defaultProjectId
+    defaultProjectId,
+    isPublicView = false
 }) => {
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -63,7 +59,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     const [projectId, setProjectId] = useState<string>('');
     const [startDate, setStartDate] = useState<string>('');
     const [dueDate, setDueDate] = useState<string>('');
-    const [blockedBy, setBlockedBy] = useState<string[]>([]);
     const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
     const [newComment, setNewComment] = useState('');
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
@@ -93,7 +88,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({
             setProjectId(issueData.projectId || (defaultProjectId || projects[0]?.id || ''));
             setStartDate(formatDateToInput(issueData.startDate));
             setDueDate(formatDateToInput(issueData.dueDate));
-            setBlockedBy(issueData.blockedBy || []);
         } else {
             setTitle('');
             setDescription('');
@@ -102,7 +96,6 @@ export const IssueModal: React.FC<IssueModalProps> = ({
             setProjectId(defaultProjectId || projects[0]?.id || '');
             setStartDate('');
             setDueDate('');
-            setBlockedBy([]);
         }
     }, [isOpen, existingIssue, projects, defaultProjectId]);
 
@@ -140,7 +133,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                 title, description, priority, assigneeIds, projectId,
                 startDate: startDate ? new Date(startDate) : undefined,
                 dueDate: dueDate ? new Date(dueDate) : undefined,
-                status: existingIssue?.status ?? Status.Backlog, blockedBy
+                status: existingIssue?.status ?? Status.Backlog
             });
             onClose();
         } catch (error) {
@@ -263,25 +256,29 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     <input
                                         type="text"
                                         placeholder="Issue title"
-                                        className="w-full bg-transparent text-3xl font-bold text-[#E8E8E8] placeholder-[#2C2D35] focus:outline-none tracking-tight leading-tight"
+                                        className="w-full bg-transparent text-3xl font-bold text-[#E8E8E8] placeholder-[#2C2D35] focus:outline-none tracking-tight leading-tight disabled:opacity-50 disabled:cursor-not-allowed"
                                         value={title}
                                         onChange={(e) => setTitle(e.target.value)}
                                         onBlur={handleTitleBlur}
                                         autoFocus={!hasExistingIssueId}
+                                        disabled={isPublicView}
+                                        readOnly={isPublicView}
                                     />
                                     <textarea
                                         ref={descRef}
                                         placeholder="Describe the objective..."
-                                        className="w-full h-auto min-h-[160px] bg-transparent border-none p-0 text-[15px] text-[#C0C4CC] placeholder-[#2C2D35] focus:outline-none resize-none leading-relaxed"
+                                        className="w-full h-auto min-h-[160px] bg-transparent border-none p-0 text-[15px] text-[#C0C4CC] placeholder-[#2C2D35] focus:outline-none resize-none leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                                         value={description}
                                         onChange={(e) => handleInput(e, 'desc')}
                                         onBlur={handleDescriptionSave}
+                                        disabled={isPublicView}
+                                        readOnly={isPublicView}
                                     />
                                 </div>
 
                                 {/* Mention Dropdown Overlay Logic */}
                                 <AnimatePresence>
-                                    {mentionQuery !== null && filteredUsers.length > 0 && (
+                                    {!isPublicView && mentionQuery !== null && filteredUsers.length > 0 && (
                                         <motion.div
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -301,9 +298,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 </AnimatePresence>
 
-                                {hasExistingIssueId && (
+                                {hasExistingIssueId && !(existingIssue as Issue).parentId && (
                                     <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
-                                        {/* Subtasks Section */}
+                                        {/* Subtasks Section - Only shown for parent issues, not subtasks */}
                                         <section className="space-y-4">
                                             <div className="flex items-center justify-between">
                                                 <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
@@ -331,6 +328,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                         <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-[#5E6AD2] transition-colors" />
                                                     </motion.div>
                                                 ))}
+                                                {!isPublicView && (
                                                 <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] rounded-xl hover:border-[#2C2D35] transition-colors">
                                                     <Plus className="w-4 h-4 text-[#3A3C46]" />
                                                     <input
@@ -342,6 +340,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                         onKeyDown={(e) => e.key === 'Enter' && onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle)}
                                                     />
                                                 </div>
+                                                )}
                                             </div>
                                         </section>
 
@@ -364,7 +363,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                         >
                                                             <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name}</span>
+                                                                <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name || 'Unknown User'}</span>
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
                                                             </div>
                                                             <div className="bg-[#14151A]/40 border border-[#1A1C23] rounded-xl p-3.5">
@@ -380,7 +379,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                             </div>
 
                             {/* Comment Input Sticky */}
-                            {hasExistingIssueId && (
+                            {hasExistingIssueId && !isPublicView && (
                                 <div className="p-6 bg-[#0F1014] border-t border-[#1A1C23] shrink-0">
                                     <div className="flex items-center space-x-4 bg-[#14151A] border border-[#22242A] rounded-2xl p-2 focus-within:border-[#5E6AD2]/50 focus-within:ring-4 focus-within:ring-[#5E6AD2]/5 transition-all shadow-inner">
                                         <div className="w-8 h-8 rounded-lg bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center shrink-0">
@@ -428,7 +427,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 </div>
                             )}
 
-                            <div className="space-y-4">
+                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
                                     <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Criticality
                                 </label>
@@ -440,7 +439,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
                                     <UserIcon className="w-3 h-3 mr-2" /> Personnel
                                 </label>
@@ -453,11 +452,12 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                             setAssigneeIds(next);
                                             if (hasExistingIssueId) saveField('assigneeIds', next);
                                         }}
+                                        readOnly={isPublicView}
                                     />
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
                                 <h5 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center justify-between">
                                     <span>Schedule</span>
                                     <Clock className="w-3 h-3" />
@@ -508,31 +508,3 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         </AnimatePresence>
     );
 };
-
-const UserCircle = ({ className }: { className?: string }) => (
-    <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={cn("lucide lucide-circle-user", className)}
-    >
-        <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" /><path d="M16 21v-2a4 4 0 0 0-4-4h-4a4 4 0 0 0-4 4v2" />
-    </svg>
-);
-
-const Activity = ({ className }: { className?: string }) => (
-    <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={cn("lucide lucide-activity", className)}
-    >
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-    </svg>
-);

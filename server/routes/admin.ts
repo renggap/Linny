@@ -15,6 +15,8 @@ import { getQueueStats } from '../jobs/jobQueue.js';
 import { getAnalytics, getAnalyticsSummary, resetAnalytics } from '../middleware/analytics.js';
 import { invalidateCacheKey, clearAllCache, getCacheStats } from '../middleware/cache.js';
 import { asyncHandler } from '../middleware/error.js';
+import { getDatabase } from '../database.js';
+import { invalidateCache } from '../middleware/cache.js';
 
 const router = Router();
 
@@ -93,6 +95,25 @@ router.delete('/cache/:key', authenticate, requireAdmin, asyncHandler(async (req
     }
     invalidateCacheKey(key);
     res.json({ message: `Cache key '${key}' cleared successfully` });
+    return;
+}));
+
+/**
+ * DELETE /api/v1/admin/workspace
+ * Delete entire workspace (Administrator only)
+ * This will delete all teams, projects, issues, comments, and activities
+ * WARNING: This is a destructive operation that cannot be undone
+ */
+router.delete('/workspace', authenticate, requireAdmin, asyncHandler(async (_req: AuthRequest, res: Response) => {
+    const db = await getDatabase();
+
+    // Clear all workspace data
+    await db.clearWorkspace();
+
+    // Clear all caches
+    clearAllCache();
+
+    res.json({ message: 'Workspace deleted successfully' });
     return;
 }));
 

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Layers,
   Search,
@@ -12,18 +11,35 @@ import {
   LayoutGrid,
   Users,
   ChevronRight,
-  Command
+  Command,
+  Crown,
+  Trash2
 } from 'lucide-react';
-import { StatusIcon } from './Icons'; // Keep custom status icons
+import { StatusIcon } from './Icons';
 import { Project, Team, User, UserRole, Status } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { cn } from '../lib/utils';
+import { UserAvatar } from './UserAvatar';
 
-// Utilitiy
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+// Role priority for sorting
+const rolePriority: Record<UserRole, number> = {
+  [UserRole.Administrator]: 0,
+  [UserRole.TeamLead]: 1,
+  [UserRole.Member]: 2,
+  [UserRole.Guest]: 3
+};
+
+// Role badge styles - subtle and consistent with design system
+// Administrator: Gold badge with crown icon only (no text label)
+// Team Lead: Green badge
+// Member: Soft blue badge
+// Guest: Gray badge
+const roleBadgeStyles: Record<UserRole, { bg: string; text: string; label: string; icon?: React.ComponentType<{ className?: string }> }> = {
+  [UserRole.Administrator]: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: '', icon: Crown },
+  [UserRole.TeamLead]: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Lead' },
+  [UserRole.Member]: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Member' },
+  [UserRole.Guest]: { bg: 'bg-gray-500/10', text: 'text-gray-400', label: 'Guest' }
+};
 
 interface SidebarProps {
   currentUser: User;
@@ -47,6 +63,7 @@ interface SidebarProps {
   setStatusFilter: (status: Status | null) => void;
   isSidebarCollapsed: boolean;
   setIsSidebarCollapsed: (collapsed: boolean) => void;
+  onOpenWorkspaceSettings?: () => void;
 }
 
 const SidebarItem = ({
@@ -113,15 +130,37 @@ export const Sidebar: React.FC<SidebarProps> = ({
   statusFilter,
   setStatusFilter,
   isSidebarCollapsed,
-  setIsSidebarCollapsed
+  setIsSidebarCollapsed,
+  onOpenWorkspaceSettings
 }) => {
   const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(false);
   const [isAllIssuesCollapsed, setIsAllIssuesCollapsed] = useState(true);
+  const [showAllMembers, setShowAllMembers] = useState(false);
 
   const teamProjects = projects.filter(p => p.teamId === currentTeam?.id);
 
-  const canCreateContent = currentUser.role !== UserRole.Viewer;
-  const isAdmin = currentUser.role === UserRole.Admin;
+  // Filter users by team members only, then sort by role priority (Administrator -> Team Lead -> Member -> Guest)
+  const sortedTeamUsers = useMemo(() => {
+    const teamMemberIds = currentTeam?.members || [];
+    return users
+      .filter(user => teamMemberIds.includes(user.id))
+      .sort((a, b) => {
+        const priorityA = rolePriority[a.role] ?? 999;
+        const priorityB = rolePriority[b.role] ?? 999;
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        // If same role, sort by name
+        return a.name.localeCompare(b.name);
+      });
+  }, [users, currentTeam]);
+
+  // Limit visible members to 10 when showAllMembers is false
+  const visibleUsers = showAllMembers ? sortedTeamUsers : sortedTeamUsers.slice(0, 10);
+  const hasMoreMembers = sortedTeamUsers.length > 10;
+
+  const canCreateContent = currentUser.role !== UserRole.Guest;
+  const isAdmin = currentUser.role === UserRole.Administrator;
 
   const statusViews = [
     { status: Status.Backlog, label: 'Backlog' },
@@ -211,7 +250,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5 mr-2" />
-                    <span className="text-[12px] font-medium">Create New Team</span>
+                    <span className="text-[12px] font-medium">Create New Workspace</span>
+                  </div>
+                )}
+                {onOpenWorkspaceSettings && (
+                  <div
+                    onClick={() => { onOpenWorkspaceSettings(); setIsTeamMenuOpen(false); }}
+                    className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
+                  >
+                    <Settings className="w-3.5 h-3.5 mr-2" />
+                    <span className="text-[12px] font-medium">Workspace Settings</span>
                   </div>
                 )}
               </motion.div>
@@ -267,17 +315,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               icon={Layers}
               isActive={!selectedProjectId && !statusFilter && !assigneeFilter}
               onClick={() => {
-                setIsAllIssuesCollapsed(!isAllIssuesCollapsed);
-                if (isAllIssuesCollapsed) {
-                  // Expand means we probably want to see specific filters, but clicking main "All Issues" usually resets filters in Linear
-                  // However, let's just toggle collapse here to reveal sub-items
-                } else {
-                  // If collapsing, maybe just collapse
-                }
-                // Default behavior from old sidebar
-                if (isAllIssuesCollapsed) setIsAllIssuesCollapsed(false);
-                else setIsAllIssuesCollapsed(true);
-
+                setIsAllIssuesCollapsed(prev => !prev);
                 setStatusFilter(null);
                 onSelectProject(null);
                 onSelectAssigneeFilter(null);
@@ -367,23 +405,59 @@ export const Sidebar: React.FC<SidebarProps> = ({
               )}
             </div>
             <div className="space-y-0.5">
-              {users.map(user => (
-                <SidebarItem
-                  key={user.id}
-                  label={user.name}
-                  isActive={assigneeFilter === user.id}
-                  onClick={() => onSelectAssigneeFilter(user.id)}
-                  icon={() => (
-                    <div className="w-4 h-4 rounded-full bg-[#2C2D35] overflow-hidden mr-3 ring-1 ring-[#363840]/50 flex items-center justify-center">
-                      {user.avatarUrl ? (
-                        <img src={user.avatarUrl} className="w-full h-full object-cover" alt="" />
-                      ) : (
-                        <span className="text-[8px] font-bold text-[#8A8F98]">{user.name[0]}</span>
-                      )}
-                    </div>
+              {visibleUsers.map(user => {
+                const roleStyle = roleBadgeStyles[user.role] || {
+                  bg: 'bg-[#1A1C23]',
+                  text: 'text-[#8A8F98]',
+                  label: user.role || 'Member'
+                };
+                return (
+                  <SidebarItem
+                    key={user.id}
+                    label={user.name}
+                    isActive={assigneeFilter === user.id}
+                    onClick={() => onSelectAssigneeFilter(user.id)}
+                    icon={() => (
+                      <UserAvatar
+                        name={user.name}
+                        avatarUrl={user.avatarUrl}
+                        size="sm"
+                        className="mr-3"
+                        showRing={true}
+                      />
+                    )}
+                    rightElement={
+                      <span className={cn(
+                        "flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md",
+                        roleStyle.bg,
+                        roleStyle.text,
+                        "border border-[#2C2D35] gap-1"
+                      )}>
+                        {roleStyle.icon && <roleStyle.icon className="w-3 h-3" />}
+                        {roleStyle.label}
+                      </span>
+                    }
+                  />
+                );
+              })}
+              {hasMoreMembers && (
+                <button
+                  onClick={() => setShowAllMembers(!showAllMembers)}
+                  className="w-full flex items-center justify-center px-5 py-2 text-[11px] font-medium text-[#5E6AD2] hover:text-[#7B7BE8] hover:bg-[#1A1C23] transition-all"
+                >
+                  {showAllMembers ? (
+                    <>
+                      <ChevronDown className="w-3 h-3 mr-1 rotate-180" />
+                      Show less
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="w-3 h-3 mr-1" />
+                      Show {sortedTeamUsers.length - 10} more
+                    </>
                   )}
-                />
-              ))}
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -394,14 +468,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={onOpenUserProfile}
             className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] cursor-pointer group transition-all"
           >
-            <div className="w-8 h-8 rounded-full bg-[#1A1C23] border border-[#2C2D35] overflow-hidden mr-3 flex items-center justify-center relative">
-              {currentUser.avatarUrl ? (
-                <img src={currentUser.avatarUrl} className="w-full h-full object-cover" alt="" />
-              ) : (
-                <Users className="w-4 h-4 text-[#5E6068]" />
-              )}
-              <div className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border border-[#1A1C23]" />
-            </div>
+            <UserAvatar
+              name={currentUser.name}
+              avatarUrl={currentUser.avatarUrl}
+              size="lg"
+              className="mr-3"
+            />
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-medium text-[#E8E8E8] truncate">{currentUser.name}</div>
               <div className="text-[10px] text-[#5E6068] font-mono truncate">{currentUser.email}</div>

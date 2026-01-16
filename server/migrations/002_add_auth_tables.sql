@@ -54,6 +54,7 @@ CREATE TABLE IF NOT EXISTS two_factor_auth (
 
 CREATE INDEX IF NOT EXISTS idx_two_factor_auth_user ON two_factor_auth(user_id);
 
--- Add email_verified column to users table
-ALTER TABLE users ADD COLUMN email_verified INTEGER DEFAULT 0;
+-- Add email_verified column to users table (if not already exists)
+-- SQLite doesn't support ALTER TABLE IF NOT EXISTS, so we need to check first
+-- This is handled by the migration runner in TypeScript
 CREATE INDEX IF NOT EXISTS idx_users_email_verified ON users(email_verified);

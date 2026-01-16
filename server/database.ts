@@ -358,6 +358,21 @@ class DatabaseManager {
     this.save();
   }
 
+  async updateTeam(id: string, updates: { name?: string; icon?: string }): Promise<void> {
+    await this.ready();
+    const fields: string[] = [];
+    const values: any[] = [];
+
+    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
+    if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
+
+    if (fields.length === 0) return;
+
+    values.push(id);
+    this.run(`UPDATE teams SET ${fields.join(', ')} WHERE id = ?`, values);
+    this.save();
+  }
+
   // === PROJECT OPERATIONS ===
 
   async createProject(data: Omit<DbProject, 'id' | 'created_at' | 'updated_at'>): Promise<DbProject> {
@@ -568,25 +583,6 @@ class DatabaseManager {
     `, [issueId]);
   }
 
-  // Issue dependencies
-  async setIssueDependencies(issueId: string, blockingIds: string[]): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM issue_dependencies WHERE blocked_id = ?', [issueId]);
-    for (const blockingId of blockingIds) {
-      this.run('INSERT INTO issue_dependencies (blocked_id, blocking_id) VALUES (?, ?)', [issueId, blockingId]);
-    }
-    this.save();
-  }
-
-  async getIssueDependencies(issueId: string): Promise<DbIssue[]> {
-    await this.ready();
-    return this.all(`
-      SELECT i.* FROM issues i
-      JOIN issue_dependencies id ON i.id = id.blocking_id
-      WHERE id.blocked_id = ?
-    `, [issueId]);
-  }
-
   // === COMMENT OPERATIONS ===
 
   async createComment(data: Omit<DbComment, 'id' | 'created_at'>): Promise<DbComment> {
@@ -718,6 +714,27 @@ class DatabaseManager {
   async cleanupExpiredTokens(): Promise<void> {
     await this.ready();
     this.run('DELETE FROM refresh_tokens WHERE expires_at <= datetime("now")');
+    this.save();
+  }
+
+  // === WORKSPACE OPERATIONS ===
+
+  /**
+   * Clear all workspace data (delete all teams, projects, issues, comments, etc.)
+   * This is used for workspace deletion by administrators
+   */
+  async clearWorkspace(): Promise<void> {
+    await this.ready();
+    // Delete all data in order of dependencies (foreign keys)
+    this.run('DELETE FROM notifications');
+    this.run('DELETE FROM activities');
+    this.run('DELETE FROM comments');
+    this.run('DELETE FROM issue_assignees');
+    this.run('DELETE FROM issues');
+    this.run('DELETE FROM project_links');
+    this.run('DELETE FROM projects');
+    this.run('DELETE FROM team_members');
+    this.run('DELETE FROM teams');
     this.save();
   }
 
