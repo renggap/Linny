@@ -1,0 +1,342 @@
+// Prisma Schema for Neo Linear
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum UserRole {
+  Administrator
+  TeamLead
+  Member
+  Guest
+}
+
+enum Status {
+  Backlog
+  Todo
+  InProgress
+  InReview
+  Done
+  Canceled
+}
+
+enum Priority {
+  NoPriority
+  Urgent
+  High
+  Medium
+  Low
+}
+
+enum NotificationType {
+  mention
+  dueDate
+  joinRequest
+}
+
+// Models
+model User {
+  id            String       @id @default(uuid())
+  name          String
+  email         String       @unique
+  passwordHash  String       @map("password_hash")
+  avatarUrl     String       @map("avatar_url")
+  role          UserRole
+  emailVerified Boolean      @default(false) @map("email_verified")
+  createdAt     DateTime     @default(now()) @map("created_at")
+  updatedAt     DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  teamMemberships       TeamMember[]             @relation("UserTeams")
+  ledProjects           Project[]                @relation("ProjectLead")
+  comments              Comment[]
+  notifications         Notification[]           @relation("NotificationRecipient")
+  actedNotifications    Notification[]           @relation("NotificationActor")
+  activities            Activity[]
+  refreshTokens         RefreshToken[]           @relation("UserRefreshTokens")
+  assignedIssues        IssueAssignee[]          @relation("UserAssignments")
+  emailVerificationTokens EmailVerificationToken[]
+  passwordResetTokens   PasswordResetToken[]
+  twoFactorAuth         TwoFactorAuth?
+  joinRequests          JoinRequest[]            @relation("UserJoinRequests")
+
+  @@map("users")
+}
+
+model Team {
+  id        String        @id @default(uuid())
+  name      String
+  icon      String
+  isStealth Boolean       @default(false) @map("is_stealth")
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  members     TeamMember[]   @relation("TeamMembers")
+  projects    Project[]
+  invitations Invitation[]  @relation("TeamInvitations")
+  joinRequests JoinRequest[] @relation("TeamJoinRequests")
+
+  @@map("teams")
+}
+
+model TeamMember {
+  teamId String    @map("team_id")
+  userId String    @map("user_id")
+  role   UserRole  @default(Member)
+
+  // Relations
+  team Team @relation("TeamMembers", fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation("UserTeams", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([teamId, userId])
+  @@map("team_members")
+  @@index([teamId])
+  @@index([userId])
+}
+
+model Project {
+  id          String    @id @default(uuid())
+  name        String
+  identifier  String
+  icon        String
+  teamId      String    @map("team_id")
+  description String?
+  isPublic    Boolean   @default(false) @map("is_public")
+  publicSlug  String?   @unique @map("public_slug")
+  leadId      String?   @map("lead_id")
+  startDate   DateTime? @map("start_date")
+  targetDate  DateTime? @map("target_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  team         Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  lead         User?            @relation("ProjectLead", fields: [leadId], references: [id], onDelete: SetNull)
+  issues       Issue[]
+  links        ProjectLink[]
+  activities   Activity[]
+
+  @@map("projects")
+  @@index([teamId])
+  @@index([publicSlug])
+}
+
+model ProjectLink {
+  id        String   @id @default(uuid())
+  projectId String   @map("project_id")
+  title     String
+  url       String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_links")
+}
+
+model Issue {
+  id        String    @id @default(uuid())
+  identifier String
+  title     String
+  description String?
+  status    Status
+  priority  Priority
+  projectId String    @map("project_id")
+  parentId  String?   @map("parent_id")
+  startDate DateTime? @map("start_date")
+  dueDate   DateTime? @map("due_date")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  project   Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent    Issue?            @relation("IssueHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  subtasks  Issue[]           @relation("IssueHierarchy")
+  comments  Comment[]
+  notifications Notification[]
+  activities Activity[]
+  assignees IssueAssignee[]
+
+  @@map("issues")
+  @@index([projectId])
+  @@index([status])
+  @@index([parentId])
+}
+
+model IssueAssignee {
+  issueId String @map("issue_id")
+  userId  String @map("user_id")
+
+  // Relations
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user  User  @relation("UserAssignments", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([issueId, userId])
+  @@map("issue_assignees")
+  @@index([issueId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  content   String
+  issueId   String   @map("issue_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  issue Issue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("comments")
+  @@index([issueId])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  message   String
+  issueId   String?          @map("issue_id")
+  isRead    Boolean          @default(false) @map("is_read")
+  actorId   String?          @map("actor_id")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user  User  @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
+  issue Issue? @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+  @@index([userId])
+  @@index([userId, isRead])
+}
+
+model Activity {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  type        String
+  projectId   String?   @map("project_id")
+  issueId     String?   @map("issue_id")
+  entityTitle String?   @map("entity_title")
+  description String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  project Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  issue   Issue?   @relation(fields: [issueId], references: [id], onDelete: SetNull)
+
+  @@map("activities")
+  @@index([userId])
+  @@index([projectId])
+  @@index([createdAt])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation("UserRefreshTokens", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+  @@index([userId])
+  @@index([token])
+}
+
+// Authentication-related models
+model EmailVerificationToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verification_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model TwoFactorAuth {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  secret      String
+  backupCodes String?  @map("backup_codes") // JSON array of backup codes
+  enabled     Boolean  @default(false) @map("enabled")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("two_factor_auth")
+  @@index([userId])
+}
+
+model Invitation {
+  id        String   @id @default(uuid())
+  email     String
+  teamId    String?  @map("team_id")
+  role      UserRole @default(Member)
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  accepted  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  team Team? @relation("TeamInvitations", fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+  @@index([email])
+  @@index([token])
+  @@index([expiresAt])
+}
+
+model JoinRequest {
+  id        String   @id @default(uuid())
+  teamId    String   @map("team_id")
+  userId    String   @map("user_id")
+  status    String   @default("pending") // pending, approved, rejected
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  team Team @relation("TeamJoinRequests", fields: [teamId], references: [id], onDelete: Cascade)
+  user User @relation("UserJoinRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("join_requests")
+  @@index([teamId])
+  @@index([userId])
+  @@index([status])
+  @@unique([teamId, userId])
+}

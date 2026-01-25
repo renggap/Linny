@@ -146,20 +146,19 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                 <div className="flex items-center space-x-6">
                                     <UserAvatar
                                         name={currentUser.name}
-                                        avatarUrl={currentUser.avatarUrl}
                                         size="xl"
                                         className="rounded-2xl border-2 border-[#22242A] shadow-2xl"
                                     />
                                     <div>
                                         <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">{currentUser.name}</h2>
-                                        <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em] mt-1">Network Node Identity</p>
+                                        <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em] mt-1">Profile</p>
                                     </div>
                                 </div>
 
                                 <form onSubmit={handleProfileSubmit} className="space-y-8">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Assigned Name</label>
+                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Name</label>
                                             <div className="relative group">
                                                 <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
                                                 <input
@@ -167,13 +166,13 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                                     value={name}
                                                     onChange={(e) => setName(e.target.value)}
                                                     className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all font-medium"
-                                                    placeholder="Specify identity..."
+                                                    placeholder="Enter your name..."
                                                 />
                                             </div>
                                         </div>
 
                                         <div className="space-y-2 opacity-40">
-                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Primary Access Link</label>
+                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Email Address</label>
                                             <div className="relative">
                                                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46]" />
                                                 <input
@@ -188,16 +187,16 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="bg-[#14151A] p-4 rounded-2xl border border-[#22242A]">
-                                            <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] block mb-2">Clearance</span>
+                                            <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] block mb-2">Role</span>
                                             <div className="flex items-center text-[11px] font-bold text-[#C0C4CC] uppercase tracking-wider">
                                                 <ShieldCheck className="w-3.5 h-3.5 mr-2 text-[#5E6AD2]" />
                                                 {currentUser.role}
                                             </div>
                                         </div>
                                         <div className="bg-[#14151A] p-4 rounded-2xl border border-[#22242A]">
-                                            <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] block mb-2">Operating Unit</span>
+                                            <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] block mb-2">Team</span>
                                             <div className="text-[11px] font-bold text-[#C0C4CC] uppercase tracking-wider truncate">
-                                                {currentTeam?.name || 'Isolated'}
+                                                {currentTeam?.name || 'No Team'}
                                             </div>
                                         </div>
                                     </div>
@@ -209,7 +208,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                     >
                                         {isSaving ? <Activity className="w-4 h-4 animate-spin" /> : (
                                             <>
-                                                <span>Update Identification</span>
+                                                <span>Update Profile</span>
                                                 <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover:translate-x-1 transition-transform" />
                                             </>
                                         )}
@@ -219,14 +218,14 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                         ) : (
                             <div className="space-y-8">
                                 <div>
-                                    <h3 className="text-lg font-bold text-[#E8E8E8] tracking-tight">Security Protocol</h3>
-                                    <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em] mt-1">Authorization Maintenance</p>
+                                    <h3 className="text-lg font-bold text-[#E8E8E8] tracking-tight">Security</h3>
+                                    <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em] mt-1">Change Password</p>
                                 </div>
 
                                 <form onSubmit={handlePasswordSubmit} className="space-y-6">
                                     <div className="space-y-4">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Existing Phrase</label>
+                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Current Password</label>
                                             <div className="relative group">
                                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
                                                 <input
@@ -240,7 +239,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">New Phrase</label>
+                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">New Password</label>
                                             <div className="relative group">
                                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
                                                 <input
@@ -254,7 +253,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Verify New Phrase</label>
+                                            <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Confirm New Password</label>
                                             <div className="relative group">
                                                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
                                                 <input
@@ -286,7 +285,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                             className="px-4 py-3 bg-green-500/5 border border-green-500/20 rounded-xl flex items-center space-x-3"
                                         >
                                             <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                            <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">Authorization Updated</span>
+                                            <span className="text-green-400 text-[10px] font-bold uppercase tracking-wider">Password Updated</span>
                                         </motion.div>
                                     )}
 
@@ -297,7 +296,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                     >
                                         {isUpdatingPassword ? <Activity className="w-4 h-4 animate-spin" /> : (
                                             <>
-                                                <span>Transmit Update</span>
+                                                <span>Update Password</span>
                                                 <ArrowRight className="w-3.5 h-3.5 ml-2 group-hover:translate-x-1 transition-transform" />
                                             </>
                                         )}

@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect } from 'react';
-import { Issue, Project, User, Status, ResourceLink } from '../types';
+import React, { useState } from 'react';
+import { Issue, Project, User, Status } from '../types';
 import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
-import { Link } from 'react-router-dom';
+import { Link } from '@tanstack/react-router';
 import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight, Heart, Grid3x3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../lib/utils';
-import { api } from '../services/api';
+import { renderMentionsWithBadges, hasMentions } from '../services/mentionUtils';
 
 type ViewType = 'list' | 'board';
 
@@ -25,17 +25,6 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
     onViewIssue
 }) => {
     const [currentView, setCurrentView] = useState<ViewType>('list');
-    const [projectLinks, setProjectLinks] = useState<ResourceLink[]>([]);
-
-    useEffect(() => {
-        if (project) {
-            api.projects.getLinks(project.id).then(links => {
-                setProjectLinks(links);
-            }).catch(() => {
-                setProjectLinks([]);
-            });
-        }
-    }, [project]);
 
     if (!project) {
         return (
@@ -112,7 +101,13 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
 
                             {project.description ? (
                                 <p className="text-lg text-[#E8E8E8] font-medium leading-relaxed max-w-3xl">
-                                    {project.description}
+                                    {hasMentions(project.description) ? (
+                                        <span className="inline">
+                                            {renderMentionsWithBadges(project.description, users)}
+                                        </span>
+                                    ) : (
+                                        project.description
+                                    )}
                                 </p>
                             ) : (
                                 <p className="text-lg text-[#3A3C46] italic font-medium">
@@ -121,13 +116,13 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                             )}
 
                             {/* Resource Links Section */}
-                            {projectLinks.length > 0 && (
+                            {project.links && project.links.length > 0 && (
                                 <div className="space-y-3 pt-4">
                                     <div className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em]">
                                         Resource Links
                                     </div>
                                     <div className="flex flex-wrap gap-3">
-                                        {projectLinks.map((link) => (
+                                        {project.links.map((link) => (
                                             <a
                                                 key={link.id}
                                                 href={link.url}

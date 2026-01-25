@@ -1,10 +1,16 @@
-import initSqlJs, { Database, SqlJsStatic } from 'sql.js';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { fileURLToPath } from 'url';
-import { join, dirname } from 'path';
+/**
+ * Neo Linear Database Manager
+ *
+ * Refactored to use Prisma ORM with PostgreSQL instead of SQLite/sql.js.
+ *
+ * This module provides a high-level API for database operations that wraps
+ * Prisma Client and maintains backward compatibility with existing code.
+ */
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { PrismaClient } from '@prisma/client';
+import {
+  User, Status, Priority, UserRole
+} from '@prisma/client';
 
 // Types matching the frontend types (without password)
 export interface DbUser {
@@ -14,16 +20,17 @@ export interface DbUser {
   password_hash: string;
   avatar_url: string;
   role: string;
-  email_verified: number;
-  created_at: string;
-  updated_at: string;
+  email_verified: boolean;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface DbTeam {
   id: string;
   name: string;
   icon: string;
-  created_at: string;
+  isStealth: boolean;
+  created_at: Date;
 }
 
 export interface DbProject {
@@ -33,16 +40,13 @@ export interface DbProject {
   icon: string;
   team_id: string;
   description: string | null;
-  is_public: number;
+  is_public: boolean;
   public_slug: string | null;
   lead_id: string | null;
-  leadId?: string | null; // Allow both lead_id and leadId for API compatibility
-  start_date: string | null;
-  startDate?: string | null;
-  target_date: string | null;
-  targetDate?: string | null;
-  created_at: string;
-  updated_at: string;
+  start_date: Date | null;
+  target_date: Date | null;
+  created_at: Date;
+  updated_at: Date;
 }
 
 export interface DbIssue {
@@ -54,10 +58,10 @@ export interface DbIssue {
   priority: string;
   project_id: string;
   parent_id: string | null;
-  created_at: string;
-  updated_at: string;
-  start_date: string | null;
-  due_date: string | null;
+  created_at: Date;
+  updated_at: Date;
+  start_date: Date | null;
+  due_date: Date | null;
 }
 
 export interface DbComment {
@@ -65,7 +69,7 @@ export interface DbComment {
   content: string;
   issue_id: string;
   user_id: string;
-  created_at: string;
+  created_at: Date;
 }
 
 export interface DbNotification {
@@ -74,9 +78,9 @@ export interface DbNotification {
   type: string;
   message: string;
   issue_id: string;
-  is_read: number;
+  is_read: boolean;
   actor_id: string | null;
-  created_at: string;
+  created_at: Date;
 }
 
 export interface DbActivity {
@@ -87,15 +91,15 @@ export interface DbActivity {
   issue_id: string | null;
   entity_title: string | null;
   description: string | null;
-  created_at: string;
+  created_at: Date;
 }
 
 export interface DbRefreshToken {
   id: string;
   user_id: string;
   token: string;
-  expires_at: string;
-  created_at: string;
+  expires_at: Date;
+  created_at: Date;
 }
 
 export interface DbProjectLink {
@@ -103,618 +107,896 @@ export interface DbProjectLink {
   project_id: string;
   title: string;
   url: string;
-  created_at: string;
+  created_at: Date;
+}
+
+/**
+ * Convert Prisma User to DbUser format (for backward compatibility)
+ */
+function toDbUser(user: User): DbUser {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    password_hash: user.passwordHash,
+    avatar_url: user.avatarUrl,
+    role: user.role,
+    email_verified: user.emailVerified,
+    created_at: user.createdAt,
+    updated_at: user.updatedAt
+  };
+}
+
+/**
+ * Convert Prisma Team to DbTeam format
+ */
+function toDbTeam(team: any): DbTeam {
+  return {
+    id: team.id,
+    name: team.name,
+    icon: team.icon,
+    isStealth: team.isStealth || false,
+    created_at: team.createdAt
+  };
+}
+
+/**
+ * Convert Prisma Project to DbProject format
+ */
+function toDbProject(project: any): DbProject {
+  return {
+    id: project.id,
+    name: project.name,
+    identifier: project.identifier,
+    icon: project.icon,
+    team_id: project.teamId,
+    description: project.description,
+    is_public: project.isPublic,
+    public_slug: project.publicSlug,
+    lead_id: project.leadId,
+    start_date: project.startDate,
+    target_date: project.targetDate,
+    created_at: project.createdAt,
+    updated_at: project.updatedAt
+  };
+}
+
+/**
+ * Convert Prisma Issue to DbIssue format
+ */
+function toDbIssue(issue: any): DbIssue {
+  return {
+    id: issue.id,
+    identifier: issue.identifier,
+    title: issue.title,
+    description: issue.description,
+    status: issue.status,
+    priority: issue.priority,
+    project_id: issue.projectId,
+    parent_id: issue.parentId,
+    created_at: issue.createdAt,
+    updated_at: issue.updatedAt,
+    start_date: issue.startDate,
+    due_date: issue.dueDate
+  };
+}
+
+/**
+ * Convert Prisma Comment to DbComment format
+ */
+function toDbComment(comment: any): DbComment {
+  return {
+    id: comment.id,
+    content: comment.content,
+    issue_id: comment.issueId,
+    user_id: comment.userId,
+    created_at: comment.createdAt
+  };
+}
+
+/**
+ * Convert Prisma Notification to DbNotification format
+ */
+function toDbNotification(notification: any): DbNotification {
+  return {
+    id: notification.id,
+    user_id: notification.userId,
+    type: notification.type,
+    message: notification.message,
+    issue_id: notification.issueId,
+    is_read: notification.isRead,
+    actor_id: notification.actorId,
+    created_at: notification.createdAt
+  };
+}
+
+/**
+ * Convert Prisma Activity to DbActivity format
+ */
+function toDbActivity(activity: any): DbActivity {
+  return {
+    id: activity.id,
+    user_id: activity.userId,
+    type: activity.type,
+    project_id: activity.projectId,
+    issue_id: activity.issueId,
+    entity_title: activity.entityTitle,
+    description: activity.description,
+    created_at: activity.createdAt
+  };
+}
+
+/**
+ * Convert Prisma RefreshToken to DbRefreshToken format
+ */
+function toDbRefreshToken(token: any): DbRefreshToken {
+  return {
+    id: token.id,
+    user_id: token.userId,
+    token: token.token,
+    expires_at: token.expiresAt,
+    created_at: token.createdAt
+  };
+}
+
+/**
+ * Convert Prisma ProjectLink to DbProjectLink format
+ */
+function toDbProjectLink(link: any): DbProjectLink {
+  return {
+    id: link.id,
+    project_id: link.projectId,
+    title: link.title,
+    url: link.url,
+    created_at: link.createdAt
+  };
 }
 
 class DatabaseManager {
-  private db: Database | null = null;
-  private dbPath: string;
-  private SQL: SqlJsStatic | null = null;
-  private initPromise: Promise<void> | null = null;
+  public prisma: PrismaClient;
 
-  constructor(dbPath: string = './linear_clone.db') {
-    this.dbPath = join(__dirname, dbPath);
-    this.initPromise = this.initialize();
-  }
-
-  private async initialize(): Promise<void> {
-    if (this.SQL) return;
-
-    // Initialize sql.js
-    const sqlJs = await initSqlJs();
-    this.SQL = sqlJs;
-
-    // Load existing database or create new one
-    if (existsSync(this.dbPath)) {
-      const buffer = readFileSync(this.dbPath);
-      this.db = new sqlJs.Database(buffer);
-      // Run migrations on existing database
-      this.runMigrations();
-      this.save();
+  constructor() {
+    // Use singleton pattern for Prisma Client in development
+    if (process.env.NODE_ENV === 'production') {
+      this.prisma = new PrismaClient();
     } else {
-      this.db = new sqlJs.Database();
-      this.initializeSchema();
-      this.save();
-    }
-
-    // Enable foreign keys
-    this.run('PRAGMA foreign_keys = ON');
-  }
-
-  private initializeSchema(): void {
-    const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf-8');
-    this.exec(schema);
-    this.runMigrations();
-  }
-
-  private runMigrations(): void {
-    const migrationsDir = join(__dirname, 'migrations');
-    const migrationFiles = [
-      '001_add_indexes.sql',
-      '002_add_auth_tables.sql',
-      '003_add_project_links.sql'
-    ];
-
-    for (const file of migrationFiles) {
-      try {
-        const migrationPath = join(migrationsDir, file);
-        if (existsSync(migrationPath)) {
-          const migration = readFileSync(migrationPath, 'utf-8');
-          this.exec(migration);
-          console.log(`Applied migration: ${file}`);
-        }
-      } catch (error) {
-        // Ignore errors - table might already exist
-        console.log(`Migration ${file} already applied or skipped`);
+      // @ts-ignore - global.prisma is used for hot reload in development
+      if (!global.prisma) {
+        // @ts-ignore
+        global.prisma = new PrismaClient();
       }
+      // @ts-ignore
+      this.prisma = global.prisma;
     }
-  }
-
-  // Ensure database is initialized before operations
-  public async ready(): Promise<Database> {
-    if (!this.initPromise) {
-      this.initPromise = this.initialize();
-    }
-    await this.initPromise;
-    if (!this.db) {
-      throw new Error('Database not initialized');
-    }
-    return this.db;
-  }
-
-  // Save database to file
-  save(): void {
-    if (this.db) {
-      const data = this.db.export();
-      const buffer = Buffer.from(data);
-      writeFileSync(this.dbPath, buffer);
-    }
-  }
-
-  // Helper to generate UUID
-  generateId(): string {
-    return crypto.randomUUID();
   }
 
   // Helper to get current timestamp
-  now(): string {
-    return new Date().toISOString();
+  now(): Date {
+    return new Date();
   }
 
-  // Execute SQL without returning results
-  // WARNING: This method does NOT use parameterized queries.
-  // NEVER use this with user input. Only use for static SQL (schema initialization).
-  exec(sql: string): void {
-    if (this.db) {
-      this.db.run(sql);
-    }
-  }
-
-  // Run SQL and return results (parameterized queries)
-  // Always use parameterized queries with ? placeholders to prevent SQL injection
-  run(sql: string, params: any[] = []): any {
-    if (this.db) {
-      return this.db.run(sql, params);
-    }
-    return null;
-  }
-
-  // Get single row (parameterized queries)
-  // Always use parameterized queries with ? placeholders to prevent SQL injection
-  get(sql: string, params: any[] = []): any {
-    if (this.db) {
-      const stmt = this.db.prepare(sql);
-      stmt.bind(params);
-      if (stmt.step()) {
-        return stmt.getAsObject();
-      }
-      stmt.free();
-    }
-    return null;
-  }
-
-  // Get all rows (parameterized queries)
-  // Always use parameterized queries with ? placeholders to prevent SQL injection
-  all(sql: string, params: any[] = []): any[] {
-    const results: any[] = [];
-    if (this.db) {
-      const stmt = this.db.prepare(sql);
-      stmt.bind(params);
-      while (stmt.step()) {
-        results.push(stmt.getAsObject());
-      }
-      stmt.free();
-    }
-    return results;
+  // Save method for backward compatibility (Prisma auto-saves)
+  save(): void {
+    // Prisma handles transactions automatically, no explicit save needed
   }
 
   // === USER OPERATIONS ===
 
   async createUser(data: Omit<DbUser, 'id' | 'created_at' | 'updated_at'>): Promise<DbUser> {
-    await this.ready();
-    const id = this.generateId();
     const now = this.now();
-    this.run(
-      `INSERT INTO users (id, name, email, password_hash, avatar_url, role, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.name, data.email, data.password_hash, data.avatar_url, data.role, now, now]
-    );
-    this.save();
-    return { id, ...data, created_at: now, updated_at: now };
+    const user = await this.prisma.user.create({
+      data: {
+        name: data.name,
+        email: data.email,
+        passwordHash: data.password_hash,
+        avatarUrl: data.avatar_url,
+        role: data.role as UserRole,
+        emailVerified: data.email_verified,
+        createdAt: now,
+        updatedAt: now
+      }
+    });
+    return toDbUser(user);
   }
 
   async getUserById(id: string): Promise<DbUser | null> {
-    await this.ready();
-    return this.get('SELECT * FROM users WHERE id = ?', [id]);
+    const user = await this.prisma.user.findUnique({
+      where: { id }
+    });
+    return user ? toDbUser(user) : null;
   }
 
   async getUserByEmail(email: string): Promise<DbUser | null> {
-    await this.ready();
-    return this.get('SELECT * FROM users WHERE email = ?', [email]);
+    const user = await this.prisma.user.findUnique({
+      where: { email }
+    });
+    return user ? toDbUser(user) : null;
   }
 
   async getAllUsers(): Promise<DbUser[]> {
-    await this.ready();
-    return this.all('SELECT id, name, email, avatar_url, role, created_at, updated_at FROM users');
+    const users = await this.prisma.user.findMany();
+    return users.map(toDbUser);
   }
 
   async updateUser(id: string, updates: Partial<Omit<DbUser, 'id' | 'created_at'>>): Promise<void> {
-    await this.ready();
-    const fields: string[] = [];
-    const values: any[] = [];
+    const data: any = {
+      updatedAt: this.now()
+    };
 
-    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-    if (updates.email !== undefined) { fields.push('email = ?'); values.push(updates.email); }
-    if (updates.avatar_url !== undefined) { fields.push('avatar_url = ?'); values.push(updates.avatar_url); }
-    if (updates.role !== undefined) { fields.push('role = ?'); values.push(updates.role); }
-    if (updates.password_hash !== undefined) { fields.push('password_hash = ?'); values.push(updates.password_hash); }
+    if (updates.name !== undefined) data.name = updates.name;
+    if (updates.email !== undefined) data.email = updates.email;
+    if (updates.avatar_url !== undefined) data.avatarUrl = updates.avatar_url;
+    if (updates.role !== undefined) data.role = updates.role as UserRole;
+    if (updates.password_hash !== undefined) data.passwordHash = updates.password_hash;
+    if (updates.email_verified !== undefined) data.emailVerified = updates.email_verified;
 
-    fields.push('updated_at = ?');
-    values.push(this.now());
-    values.push(id);
-
-    this.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, values);
-    this.save();
+    await this.prisma.user.update({
+      where: { id },
+      data
+    });
   }
 
   async updateUserPassword(id: string, password_hash: string): Promise<void> {
-    await this.ready();
-    this.run('UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?', [password_hash, this.now(), id]);
-    this.save();
+    await this.prisma.user.update({
+      where: { id },
+      data: {
+        passwordHash: password_hash,
+        updatedAt: this.now()
+      }
+    });
   }
 
   async deleteUser(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM users WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.user.delete({
+      where: { id }
+    });
   }
 
   // === TEAM OPERATIONS ===
 
-  async createTeam(data: Omit<DbTeam, 'id' | 'created_at'>): Promise<DbTeam> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run('INSERT INTO teams (id, name, icon, created_at) VALUES (?, ?, ?, ?)', [id, data.name, data.icon, now]);
-    this.save();
-    return { id, ...data, created_at: now };
+  async createTeam(data: { name: string; icon: string }): Promise<DbTeam> {
+    const team = await this.prisma.team.create({
+      data: {
+        name: data.name,
+        icon: data.icon
+      }
+    });
+    return toDbTeam(team);
   }
 
   async getTeamById(id: string): Promise<DbTeam | null> {
-    await this.ready();
-    return this.get('SELECT * FROM teams WHERE id = ?', [id]);
+    const team = await this.prisma.team.findUnique({
+      where: { id }
+    });
+    return team ? toDbTeam(team) : null;
   }
 
   async getAllTeams(): Promise<DbTeam[]> {
-    await this.ready();
-    return this.all('SELECT * FROM teams');
+    const teams = await this.prisma.team.findMany();
+    return teams.map(toDbTeam);
   }
 
   async getTeamMembers(teamId: string): Promise<DbUser[]> {
-    await this.ready();
-    return this.all(`
-      SELECT u.id, u.name, u.email, u.avatar_url, u.role, u.created_at, u.updated_at
-      FROM users u
-      JOIN team_members tm ON u.id = tm.user_id
-      WHERE tm.team_id = ?
-    `, [teamId]);
+    const members = await this.prisma.teamMember.findMany({
+      where: { teamId },
+      include: {
+        user: true
+      }
+    });
+    return members.map(m => toDbUser(m.user));
+  }
+
+  async getTeamMembersWithInfo(teamId: string): Promise<Array<{ id: string; name: string; email: string; avatar_url: string; role: string; created_at: Date; updated_at: Date }>> {
+    const members = await this.prisma.teamMember.findMany({
+      where: { teamId },
+      include: {
+        user: true
+      }
+    });
+    return members.map(m => ({
+      id: m.user.id,
+      name: m.user.name,
+      email: m.user.email,
+      avatar_url: m.user.avatarUrl || '',
+      role: m.user.role,
+      created_at: m.user.createdAt,
+      updated_at: m.user.updatedAt
+    }));
   }
 
   async addTeamMember(teamId: string, userId: string): Promise<void> {
-    await this.ready();
-    this.run('INSERT OR IGNORE INTO team_members (team_id, user_id) VALUES (?, ?)', [teamId, userId]);
-    this.save();
+    await this.prisma.teamMember.create({
+      data: {
+        teamId,
+        userId
+      }
+    }).catch(() => {
+      // Ignore duplicate key errors (member already exists)
+    });
   }
 
   async removeTeamMember(teamId: string, userId: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM team_members WHERE team_id = ? AND user_id = ?', [teamId, userId]);
-    this.save();
+    await this.prisma.teamMember.deleteMany({
+      where: {
+        teamId,
+        userId
+      }
+    });
   }
 
   async deleteTeam(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM teams WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.team.delete({
+      where: { id }
+    });
   }
 
   async updateTeam(id: string, updates: { name?: string; icon?: string }): Promise<void> {
-    await this.ready();
-    const fields: string[] = [];
-    const values: any[] = [];
+    const data: any = {};
+    if (updates.name !== undefined) data.name = updates.name;
+    if (updates.icon !== undefined) data.icon = updates.icon;
 
-    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-    if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
+    if (Object.keys(data).length > 0) {
+      await this.prisma.team.update({
+        where: { id },
+        data
+      });
+    }
+  }
 
-    if (fields.length === 0) return;
+  async getUserTeams(userId: string): Promise<any[]> {
+    const allTeams = await this.prisma.team.findMany();
 
-    values.push(id);
-    this.run(`UPDATE teams SET ${fields.join(', ')} WHERE id = ?`, values);
-    this.save();
+    // Batch load all team members for this user
+    const userMemberships = await this.prisma.teamMember.findMany({
+      where: { userId },
+      select: { teamId: true, role: true }
+    });
+
+    const memberTeamIds = new Set(userMemberships.map(m => m.teamId));
+
+    // Filter: user must be a member of stealth teams, non-stealth teams are visible to all
+    return allTeams.filter(team => {
+      if (!team.isStealth) return true; // Non-stealth teams visible to all
+      return memberTeamIds.has(team.id); // Stealth teams only if member
+    }).map(team => {
+      const membership = userMemberships.find(m => m.teamId === team.id);
+      return {
+        id: team.id,
+        name: team.name,
+        icon: team.icon,
+        isStealth: team.isStealth,
+        createdAt: team.createdAt,
+        // Include the user's role in this team if they're a member
+        userRole: membership?.role || null
+      };
+    });
   }
 
   // === PROJECT OPERATIONS ===
 
   async createProject(data: Omit<DbProject, 'id' | 'created_at' | 'updated_at'>): Promise<DbProject> {
-    await this.ready();
-    const id = this.generateId();
     const now = this.now();
-    this.run(
-      `INSERT INTO projects (id, name, identifier, icon, team_id, description, is_public, public_slug, lead_id, start_date, target_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id, data.name, data.identifier, data.icon, data.team_id,
-        data.description ?? null, data.is_public ? 1 : 0, data.public_slug ?? null,
-        data.lead_id ?? null, data.start_date ?? null, data.target_date ?? null,
-        now, now
-      ]
-    );
-    this.save();
-    return {
-      id, ...data,
-      created_at: now,
-      updated_at: now,
-      is_public: data.is_public ? 1 : 0
-    };
+    const project = await this.prisma.project.create({
+      data: {
+        name: data.name,
+        identifier: data.identifier,
+        icon: data.icon,
+        teamId: data.team_id,
+        description: data.description,
+        isPublic: data.is_public ?? false,
+        publicSlug: data.public_slug,
+        leadId: data.lead_id,
+        startDate: data.start_date,
+        targetDate: data.target_date,
+        createdAt: now,
+        updatedAt: now
+      }
+    });
+    return toDbProject(project);
   }
 
   async getProjectById(id: string): Promise<DbProject | null> {
-    await this.ready();
-    return this.get('SELECT * FROM projects WHERE id = ?', [id]);
+    const project = await this.prisma.project.findUnique({
+      where: { id }
+    });
+    return project ? toDbProject(project) : null;
   }
 
   async getProjectBySlug(slug: string): Promise<DbProject | null> {
-    await this.ready();
-    return this.get('SELECT * FROM projects WHERE public_slug = ? AND is_public = 1', [slug]);
+    console.log('[getProjectBySlug] Querying for slug:', slug);
+    const project = await this.prisma.project.findUnique({
+      where: { publicSlug: slug }
+    });
+    console.log('[getProjectBySlug] Found project:', project ? `${project.name} (publicSlug=${project.publicSlug}, isPublic=${project.isPublic})` : 'null');
+    return project ? toDbProject(project) : null;
   }
 
   async getProjectsByTeam(teamId: string): Promise<DbProject[]> {
-    await this.ready();
-    return this.all('SELECT * FROM projects WHERE team_id = ?', [teamId]);
+    const projects = await this.prisma.project.findMany({
+      where: { teamId }
+    });
+    return projects.map(toDbProject);
   }
 
   async getAllProjects(): Promise<DbProject[]> {
-    await this.ready();
-    return this.all('SELECT * FROM projects');
+    const projects = await this.prisma.project.findMany();
+    return projects.map(toDbProject);
   }
 
   async updateProject(id: string, updates: Partial<Omit<DbProject, 'id' | 'created_at'>>): Promise<void> {
-    await this.ready();
-    const fields: string[] = [];
-    const values: any[] = [];
+    const data: any = {
+      updatedAt: this.now()
+    };
 
-    if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name); }
-    if (updates.identifier !== undefined) { fields.push('identifier = ?'); values.push(updates.identifier); }
-    if (updates.icon !== undefined) { fields.push('icon = ?'); values.push(updates.icon); }
-    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
-    if (updates.is_public !== undefined) { fields.push('is_public = ?'); values.push(updates.is_public ? 1 : 0); }
-    if (updates.public_slug !== undefined) { fields.push('public_slug = ?'); values.push(updates.public_slug); }
-    if (updates.lead_id !== undefined) { fields.push('lead_id = ?'); values.push(updates.lead_id); }
-    if (updates.leadId !== undefined) { fields.push('lead_id = ?'); values.push(updates.leadId); }
-    if (updates.start_date !== undefined) { fields.push('start_date = ?'); values.push(updates.start_date); }
-    if (updates.startDate !== undefined) { fields.push('start_date = ?'); values.push(updates.startDate); }
-    if (updates.target_date !== undefined) { fields.push('target_date = ?'); values.push(updates.target_date); }
-    if (updates.targetDate !== undefined) { fields.push('target_date = ?'); values.push(updates.targetDate); }
+    if (updates.name !== undefined) data.name = updates.name;
+    if (updates.identifier !== undefined) data.identifier = updates.identifier;
+    if (updates.icon !== undefined) data.icon = updates.icon;
+    if (updates.description !== undefined) data.description = updates.description;
+    if (updates.is_public !== undefined) data.isPublic = updates.is_public;
+    if (updates.public_slug !== undefined) data.publicSlug = updates.public_slug;
+    if (updates.lead_id !== undefined) data.leadId = updates.lead_id;
+    if (updates.start_date !== undefined) data.startDate = updates.start_date;
+    if (updates.target_date !== undefined) data.targetDate = updates.target_date;
 
-    fields.push('updated_at = ?');
-    values.push(this.now());
-    values.push(id);
+    console.log('[updateProject] Updating project:', id, 'with data:', JSON.stringify({ isPublic: data.isPublic, publicSlug: data.publicSlug }));
 
-    this.run(`UPDATE projects SET ${fields.join(', ')} WHERE id = ?`, values);
-    this.save();
+    await this.prisma.project.update({
+      where: { id },
+      data
+    });
   }
 
   async deleteProject(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM projects WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.project.delete({
+      where: { id }
+    });
   }
 
   // === PROJECT LINK OPERATIONS ===
 
   async createProjectLink(data: Omit<DbProjectLink, 'id' | 'created_at'>): Promise<DbProjectLink> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run(
-      'INSERT INTO project_links (id, project_id, title, url, created_at) VALUES (?, ?, ?, ?, ?)',
-      [id, data.project_id, data.title, data.url, now]
-    );
-    this.save();
-    return { id, ...data, created_at: now };
+    const link = await this.prisma.projectLink.create({
+      data: {
+        projectId: data.project_id,
+        title: data.title,
+        url: data.url
+      }
+    });
+    return toDbProjectLink(link);
   }
 
   async getProjectLinks(projectId: string): Promise<DbProjectLink[]> {
-    await this.ready();
-    return this.all('SELECT * FROM project_links WHERE project_id = ? ORDER BY created_at ASC', [projectId]);
+    const links = await this.prisma.projectLink.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'asc' }
+    });
+    return links.map(toDbProjectLink);
   }
 
   async updateProjectLink(id: string, updates: Partial<Omit<DbProjectLink, 'id' | 'project_id' | 'created_at'>>): Promise<void> {
-    await this.ready();
-    const fields: string[] = [];
-    const values: any[] = [];
+    const data: any = {};
+    if (updates.title !== undefined) data.title = updates.title;
+    if (updates.url !== undefined) data.url = updates.url;
 
-    if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
-    if (updates.url !== undefined) { fields.push('url = ?'); values.push(updates.url); }
-
-    if (fields.length > 0) {
-      values.push(id);
-      this.run(`UPDATE project_links SET ${fields.join(', ')} WHERE id = ?`, values);
-      this.save();
+    if (Object.keys(data).length > 0) {
+      await this.prisma.projectLink.update({
+        where: { id },
+        data
+      });
     }
   }
 
   async deleteProjectLink(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM project_links WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.projectLink.delete({
+      where: { id }
+    });
   }
 
   // === ISSUE OPERATIONS ===
 
   async createIssue(data: Omit<DbIssue, 'id' | 'created_at' | 'updated_at'>): Promise<DbIssue> {
-    await this.ready();
-    const id = this.generateId();
     const now = this.now();
-    this.run(
-      `INSERT INTO issues (id, identifier, title, description, status, priority, project_id, parent_id, start_date, due_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [
-        id, data.identifier, data.title, data.description ?? null,
-        data.status, data.priority, data.project_id, data.parent_id ?? null,
-        data.start_date ?? null, data.due_date ?? null,
-        now, now
-      ]
-    );
-    this.save();
-    return { id, ...data, created_at: now, updated_at: now };
+    const issue = await this.prisma.issue.create({
+      data: {
+        identifier: data.identifier,
+        title: data.title,
+        description: data.description,
+        status: data.status as Status,
+        priority: data.priority as Priority,
+        projectId: data.project_id,
+        parentId: data.parent_id,
+        startDate: data.start_date ? new Date(data.start_date) : null,
+        dueDate: data.due_date ? new Date(data.due_date) : null,
+        createdAt: now,
+        updatedAt: now
+      }
+    });
+    return toDbIssue(issue);
   }
 
   async getIssueById(id: string): Promise<DbIssue | null> {
-    await this.ready();
-    return this.get('SELECT * FROM issues WHERE id = ?', [id]);
+    const issue = await this.prisma.issue.findUnique({
+      where: { id }
+    });
+    return issue ? toDbIssue(issue) : null;
   }
 
   async getIssuesByProject(projectId: string): Promise<DbIssue[]> {
-    await this.ready();
-    return this.all('SELECT * FROM issues WHERE project_id = ?', [projectId]);
+    const issues = await this.prisma.issue.findMany({
+      where: { projectId }
+    });
+    return issues.map(toDbIssue);
   }
 
   async getIssuesByTeam(teamId: string): Promise<DbIssue[]> {
-    await this.ready();
-    return this.all(`
-      SELECT i.* FROM issues i
-      JOIN projects p ON i.project_id = p.id
-      WHERE p.team_id = ?
-    `, [teamId]);
+    const issues = await this.prisma.issue.findMany({
+      where: {
+        project: {
+          teamId
+        }
+      }
+    });
+    return issues.map(toDbIssue);
   }
 
   async getAllIssues(): Promise<DbIssue[]> {
-    await this.ready();
-    return this.all('SELECT * FROM issues');
+    const issues = await this.prisma.issue.findMany();
+    return issues.map(toDbIssue);
   }
 
   async updateIssue(id: string, updates: Partial<Omit<DbIssue, 'id' | 'created_at'>>): Promise<void> {
-    await this.ready();
-    const fields: string[] = [];
-    const values: any[] = [];
+    const data: any = {
+      updatedAt: this.now()
+    };
 
-    if (updates.identifier !== undefined) { fields.push('identifier = ?'); values.push(updates.identifier); }
-    if (updates.title !== undefined) { fields.push('title = ?'); values.push(updates.title); }
-    if (updates.description !== undefined) { fields.push('description = ?'); values.push(updates.description); }
-    if (updates.status !== undefined) { fields.push('status = ?'); values.push(updates.status); }
-    if (updates.priority !== undefined) { fields.push('priority = ?'); values.push(updates.priority); }
-    if (updates.project_id !== undefined) { fields.push('project_id = ?'); values.push(updates.project_id); }
-    if (updates.parent_id !== undefined) { fields.push('parent_id = ?'); values.push(updates.parent_id); }
-    if (updates.start_date !== undefined) { fields.push('start_date = ?'); values.push(updates.start_date); }
-    if (updates.due_date !== undefined) { fields.push('due_date = ?'); values.push(updates.due_date); }
+    if (updates.identifier !== undefined) data.identifier = updates.identifier;
+    if (updates.title !== undefined) data.title = updates.title;
+    if (updates.description !== undefined) data.description = updates.description;
+    if (updates.status !== undefined) data.status = updates.status as Status;
+    if (updates.priority !== undefined) data.priority = updates.priority as Priority;
+    if (updates.project_id !== undefined) data.projectId = updates.project_id;
+    if (updates.parent_id !== undefined) data.parentId = updates.parent_id;
+    // Convert date-only strings to Date objects for Prisma
+    if (updates.start_date !== undefined) {
+      data.startDate = updates.start_date ? new Date(updates.start_date) : null;
+    }
+    if (updates.due_date !== undefined) {
+      data.dueDate = updates.due_date ? new Date(updates.due_date) : null;
+    }
 
-    fields.push('updated_at = ?');
-    values.push(this.now());
-    values.push(id);
-
-    this.run(`UPDATE issues SET ${fields.join(', ')} WHERE id = ?`, values);
-    this.save();
+    await this.prisma.issue.update({
+      where: { id },
+      data
+    });
   }
 
   async deleteIssue(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM issues WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.issue.delete({
+      where: { id }
+    });
   }
 
   // Issue assignees
   async setIssueAssignees(issueId: string, userIds: string[]): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM issue_assignees WHERE issue_id = ?', [issueId]);
-    for (const userId of userIds) {
-      this.run('INSERT INTO issue_assignees (issue_id, user_id) VALUES (?, ?)', [issueId, userId]);
+    // Delete existing assignees
+    await this.prisma.issueAssignee.deleteMany({
+      where: { issueId }
+    });
+
+    // Add new assignees
+    if (userIds.length > 0) {
+      await this.prisma.issueAssignee.createMany({
+        data: userIds.map(userId => ({ issueId, userId }))
+      });
     }
-    this.save();
   }
 
   async getIssueAssignees(issueId: string): Promise<DbUser[]> {
-    await this.ready();
-    return this.all(`
-      SELECT u.id, u.name, u.email, u.avatar_url, u.role, u.created_at, u.updated_at
-      FROM users u
-      JOIN issue_assignees ia ON u.id = ia.user_id
-      WHERE ia.issue_id = ?
-    `, [issueId]);
+    const assignees = await this.prisma.issueAssignee.findMany({
+      where: { issueId },
+      include: {
+        user: true
+      }
+    });
+    return assignees.map(a => toDbUser(a.user));
   }
 
   // === COMMENT OPERATIONS ===
 
   async createComment(data: Omit<DbComment, 'id' | 'created_at'>): Promise<DbComment> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run('INSERT INTO comments (id, content, issue_id, user_id, created_at) VALUES (?, ?, ?, ?, ?)',
-      [id, data.content, data.issue_id, data.user_id, now]
-    );
-    this.save();
-    return { id, ...data, created_at: now };
+    const comment = await this.prisma.comment.create({
+      data: {
+        content: data.content,
+        issueId: data.issue_id,
+        userId: data.user_id
+      }
+    });
+    return toDbComment(comment);
   }
 
   async getCommentsByIssue(issueId: string): Promise<DbComment[]> {
-    await this.ready();
-    return this.all('SELECT * FROM comments WHERE issue_id = ? ORDER BY created_at ASC', [issueId]);
+    const comments = await this.prisma.comment.findMany({
+      where: { issueId },
+      orderBy: { createdAt: 'asc' }
+    });
+    return comments.map(toDbComment);
   }
 
   async deleteComment(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM comments WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.comment.delete({
+      where: { id }
+    });
   }
 
   // === NOTIFICATION OPERATIONS ===
 
   async createNotification(data: Omit<DbNotification, 'id' | 'created_at'>): Promise<DbNotification> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run(
-      `INSERT INTO notifications (id, user_id, type, message, issue_id, is_read, actor_id, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.user_id, data.type, data.message, data.issue_id, data.is_read ? 1 : 0, data.actor_id ?? null, now]
-    );
-    this.save();
-    return { id, ...data, is_read: data.is_read ? 1 : 0, created_at: now };
+    const notification = await this.prisma.notification.create({
+      data: {
+        userId: data.user_id,
+        type: data.type as any,
+        message: data.message,
+        issueId: data.issue_id,
+        isRead: data.is_read,
+        actorId: data.actor_id
+      }
+    });
+    return toDbNotification(notification);
   }
 
   async getNotificationsByUser(userId: string): Promise<DbNotification[]> {
-    await this.ready();
-    return this.all('SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC', [userId]);
+    const notifications = await this.prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' }
+    });
+    return notifications.map(toDbNotification);
   }
 
   async getUnreadNotificationsByUser(userId: string): Promise<DbNotification[]> {
-    await this.ready();
-    return this.all('SELECT * FROM notifications WHERE user_id = ? AND is_read = 0 ORDER BY created_at DESC', [userId]);
+    const notifications = await this.prisma.notification.findMany({
+      where: {
+        userId,
+        isRead: false
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    return notifications.map(toDbNotification);
   }
 
   async markNotificationRead(id: string): Promise<void> {
-    await this.ready();
-    this.run('UPDATE notifications SET is_read = 1 WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.notification.update({
+      where: { id },
+      data: { isRead: true }
+    });
   }
 
   async markAllNotificationsRead(userId: string): Promise<void> {
-    await this.ready();
-    this.run('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [userId]);
-    this.save();
+    await this.prisma.notification.updateMany({
+      where: { userId },
+      data: { isRead: true }
+    });
   }
 
   async deleteNotification(id: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM notifications WHERE id = ?', [id]);
-    this.save();
+    await this.prisma.notification.delete({
+      where: { id }
+    });
   }
 
   // === ACTIVITY OPERATIONS ===
 
   async createActivity(data: Omit<DbActivity, 'id' | 'created_at'>): Promise<DbActivity> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run(
-      `INSERT INTO activities (id, user_id, type, project_id, issue_id, entity_title, description, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, data.user_id, data.type, data.project_id ?? null, data.issue_id ?? null, data.entity_title ?? null, data.description ?? null, now]
-    );
-    this.save();
-    return { id, ...data, created_at: now };
+    const activity = await this.prisma.activity.create({
+      data: {
+        userId: data.user_id,
+        type: data.type,
+        projectId: data.project_id,
+        issueId: data.issue_id,
+        entityTitle: data.entity_title,
+        description: data.description
+      }
+    });
+    return toDbActivity(activity);
   }
 
   async getActivitiesByUser(userId: string, limit: number = 100): Promise<DbActivity[]> {
-    await this.ready();
-    return this.all('SELECT * FROM activities WHERE user_id = ? ORDER BY created_at DESC LIMIT ?', [userId, limit]);
+    const activities = await this.prisma.activity.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    return activities.map(toDbActivity);
   }
 
   async getActivitiesByProject(projectId: string, limit: number = 100): Promise<DbActivity[]> {
-    await this.ready();
-    return this.all('SELECT * FROM activities WHERE project_id = ? ORDER BY created_at DESC LIMIT ?', [projectId, limit]);
+    const activities = await this.prisma.activity.findMany({
+      where: { projectId },
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    return activities.map(toDbActivity);
   }
 
   async getRecentActivities(limit: number = 500): Promise<DbActivity[]> {
-    await this.ready();
-    return this.all('SELECT * FROM activities ORDER BY created_at DESC LIMIT ?', [limit]);
+    const activities = await this.prisma.activity.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: limit
+    });
+    return activities.map(toDbActivity);
   }
 
   // === REFRESH TOKEN OPERATIONS ===
 
-  async createRefreshToken(userId: string, token: string, expiresAt: string): Promise<DbRefreshToken> {
-    await this.ready();
-    const id = this.generateId();
-    const now = this.now();
-    this.run('INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?, ?)',
-      [id, userId, token, expiresAt, now]
-    );
-    this.save();
-    return { id, user_id: userId, token, expires_at: expiresAt, created_at: now };
+  async createRefreshToken(userId: string, token: string, expiresAt: Date): Promise<DbRefreshToken> {
+    const refreshToken = await this.prisma.refreshToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt
+      }
+    });
+    return toDbRefreshToken(refreshToken);
   }
 
   async getRefreshToken(token: string): Promise<DbRefreshToken | null> {
-    await this.ready();
-    return this.get('SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > datetime("now")', [token]);
+    const refreshToken = await this.prisma.refreshToken.findUnique({
+      where: { token }
+    });
+
+    // Check if token is expired
+    if (refreshToken && refreshToken.expiresAt < new Date()) {
+      await this.prisma.refreshToken.delete({
+        where: { id: refreshToken.id }
+      });
+      return null;
+    }
+
+    return refreshToken ? toDbRefreshToken(refreshToken) : null;
   }
 
   async deleteRefreshToken(token: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM refresh_tokens WHERE token = ?', [token]);
-    this.save();
+    await this.prisma.refreshToken.deleteMany({
+      where: { token }
+    });
   }
 
   async deleteAllRefreshTokensForUser(userId: string): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM refresh_tokens WHERE user_id = ?', [userId]);
-    this.save();
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId }
+    });
   }
 
   // Clean up expired tokens
   async cleanupExpiredTokens(): Promise<void> {
-    await this.ready();
-    this.run('DELETE FROM refresh_tokens WHERE expires_at <= datetime("now")');
-    this.save();
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        expiresAt: {
+          lt: new Date()
+        }
+      }
+    });
+  }
+
+  // === EMAIL VERIFICATION TOKEN OPERATIONS ===
+
+  async createEmailVerificationToken(userId: string, token: string, expiresAt: Date): Promise<void> {
+    await this.prisma.emailVerificationToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt
+      }
+    });
+  }
+
+  async getEmailVerificationToken(token: string): Promise<any | null> {
+    const verificationToken = await this.prisma.emailVerificationToken.findUnique({
+      where: { token }
+    });
+
+    // Check if token is expired
+    if (verificationToken && verificationToken.expiresAt < new Date()) {
+      await this.prisma.emailVerificationToken.delete({
+        where: { id: verificationToken.id }
+      });
+      return null;
+    }
+
+    return verificationToken;
+  }
+
+  async deleteEmailVerificationToken(id: string): Promise<void> {
+    await this.prisma.emailVerificationToken.delete({
+      where: { id }
+    });
+  }
+
+  async deleteEmailVerificationTokensForUser(userId: string): Promise<void> {
+    await this.prisma.emailVerificationToken.deleteMany({
+      where: { userId }
+    });
+  }
+
+  // === PASSWORD RESET TOKEN OPERATIONS ===
+
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<void> {
+    await this.prisma.passwordResetToken.create({
+      data: {
+        userId,
+        token,
+        expiresAt
+      }
+    });
+  }
+
+  async getPasswordResetToken(token: string): Promise<any | null> {
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { token }
+    });
+
+    // Check if token is expired
+    if (resetToken && resetToken.expiresAt < new Date()) {
+      await this.prisma.passwordResetToken.delete({
+        where: { id: resetToken.id }
+      });
+      return null;
+    }
+
+    return resetToken;
+  }
+
+  async deletePasswordResetToken(id: string): Promise<void> {
+    await this.prisma.passwordResetToken.delete({
+      where: { id }
+    });
+  }
+
+  async deletePasswordResetTokensForUser(userId: string): Promise<void> {
+    await this.prisma.passwordResetToken.deleteMany({
+      where: { userId }
+    });
+  }
+
+  // === TWO FACTOR AUTH OPERATIONS ===
+
+  async createTwoFactorAuth(userId: string, secret: string, backupCodes: string[]): Promise<void> {
+    const now = this.now();
+    await this.prisma.twoFactorAuth.upsert({
+      where: { userId },
+      create: {
+        userId,
+        secret,
+        backupCodes: JSON.stringify(backupCodes),
+        enabled: false,
+        createdAt: now,
+        updatedAt: now
+      },
+      update: {
+        secret,
+        backupCodes: JSON.stringify(backupCodes),
+        enabled: false,
+        updatedAt: now
+      }
+    });
+  }
+
+  async getTwoFactorAuth(userId: string): Promise<any | null> {
+    return await this.prisma.twoFactorAuth.findUnique({
+      where: { userId }
+    });
+  }
+
+  async enableTwoFactorAuth(userId: string): Promise<void> {
+    await this.prisma.twoFactorAuth.update({
+      where: { userId },
+      data: { enabled: true, updatedAt: this.now() }
+    });
+  }
+
+  async disableTwoFactorAuth(userId: string): Promise<void> {
+    await this.prisma.twoFactorAuth.delete({
+      where: { userId }
+    });
   }
 
   // === WORKSPACE OPERATIONS ===
@@ -724,26 +1006,104 @@ class DatabaseManager {
    * This is used for workspace deletion by administrators
    */
   async clearWorkspace(): Promise<void> {
-    await this.ready();
     // Delete all data in order of dependencies (foreign keys)
-    this.run('DELETE FROM notifications');
-    this.run('DELETE FROM activities');
-    this.run('DELETE FROM comments');
-    this.run('DELETE FROM issue_assignees');
-    this.run('DELETE FROM issues');
-    this.run('DELETE FROM project_links');
-    this.run('DELETE FROM projects');
-    this.run('DELETE FROM team_members');
-    this.run('DELETE FROM teams');
-    this.save();
+    await this.prisma.notification.deleteMany({});
+    await this.prisma.activity.deleteMany({});
+    await this.prisma.comment.deleteMany({});
+    await this.prisma.issueAssignee.deleteMany({});
+    await this.prisma.issue.deleteMany({});
+    await this.prisma.projectLink.deleteMany({});
+    await this.prisma.project.deleteMany({});
+    await this.prisma.teamMember.deleteMany({});
+    await this.prisma.team.deleteMany({});
+  }
+
+  // === INVITATION OPERATIONS ===
+
+  async createInvitation(email: string, teamId: string, role: UserRole, token: string, expiresAt: Date): Promise<void> {
+    await this.prisma.invitation.create({
+      data: {
+        email,
+        teamId,
+        role,
+        token,
+        expiresAt,
+        accepted: false
+      }
+    });
+  }
+
+  async getInvitationByToken(token: string): Promise<any | null> {
+    const invitation = await this.prisma.invitation.findUnique({
+      where: { token },
+      include: { team: true }
+    });
+
+    // Check if token is expired
+    if (invitation && invitation.expiresAt < new Date()) {
+      await this.prisma.invitation.delete({
+        where: { id: invitation.id }
+      });
+      return null;
+    }
+
+    return invitation;
+  }
+
+  async getPendingInvitationsByEmail(email: string): Promise<any[]> {
+    return await this.prisma.invitation.findMany({
+      where: {
+        email,
+        accepted: false,
+        expiresAt: { gte: new Date() }
+      },
+      include: { team: true }
+    });
+  }
+
+  async markInvitationAccepted(token: string): Promise<void> {
+    await this.prisma.invitation.update({
+      where: { token },
+      data: { accepted: true }
+    });
+  }
+
+  async deleteInvitation(token: string): Promise<void> {
+    await this.prisma.invitation.deleteMany({
+      where: { token }
+    });
+  }
+
+  async deleteInvitationByEmail(email: string, teamId: string): Promise<void> {
+    await this.prisma.invitation.deleteMany({
+      where: { email, teamId }
+    });
+  }
+
+  // === TEAM LEAVING VALIDATION ===
+
+  /**
+   * Count global Administrators who are members of a team.
+   * This is used to prevent the last administrator from leaving a workspace.
+   */
+  async countAdminsInTeam(teamId: string): Promise<number> {
+    const teamMembers = await this.prisma.teamMember.findMany({
+      where: { teamId },
+      include: { user: true }
+    });
+
+    // Count only users with global Administrator role who are team members
+    return teamMembers.filter(tm => tm.user.role === 'Administrator').length;
   }
 
   // Close database connection
-  close(): void {
-    if (this.db) {
-      this.db.close();
-      this.db = null;
-    }
+  async close(): Promise<void> {
+    await this.prisma.$disconnect();
+  }
+
+  // Get Prisma client for direct access (for advanced queries)
+  getPrisma(): PrismaClient {
+    return this.prisma;
   }
 }
 
@@ -752,10 +1112,7 @@ let dbInstance: DatabaseManager | null = null;
 
 export async function getDatabase(): Promise<DatabaseManager> {
   if (!dbInstance) {
-    const dbPath = process.env.DATABASE_PATH || './linear_clone.db';
-    dbInstance = new DatabaseManager(dbPath);
-    // Wait for initialization
-    await dbInstance.ready();
+    dbInstance = new DatabaseManager();
   }
   return dbInstance;
 }

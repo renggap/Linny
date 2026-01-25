@@ -27,19 +27,21 @@ function getAvatarColor(name: string): string {
 }
 
 /**
- * Get initials from a name
+ * Get initials from a name (always 2 letters)
  */
 function getInitials(name: string): string {
   const parts = name.trim().split(' ');
   if (parts.length === 1) {
-    return parts[0].charAt(0).toUpperCase();
+    // For single name, take first 2 characters
+    const namePart = parts[0].toUpperCase();
+    return namePart.substring(0, 2);
   }
+  // For multiple names, take first letter of first and last name
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
 interface UserAvatarProps {
   name: string;
-  avatarUrl?: string | null;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   showRing?: boolean;
@@ -53,13 +55,13 @@ const sizeClasses = {
 };
 
 /**
- * Consistent UserAvatar component that displays either:
- * 1. An image if avatarUrl is provided
- * 2. Initials with a consistent background color based on the name
+ * Consistent UserAvatar component that displays 2-letter initials
+ * with a consistent background color based on the name.
+ *
+ * All avatars use initials only for a unified, consistent appearance.
  */
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   name,
-  avatarUrl,
   size = 'md',
   className,
   showRing = false,
@@ -70,26 +72,14 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   return (
     <div
       className={cn(
-        'rounded-full overflow-hidden flex items-center justify-center font-bold text-white shrink-0',
+        'rounded-full flex items-center justify-center font-bold text-white shrink-0',
         sizeClasses[size],
         bgColor,
         showRing && 'ring-1 ring-[#363840]/50',
         className
       )}
     >
-      {avatarUrl ? (
-        <img
-          src={avatarUrl}
-          alt={name}
-          className="w-full h-full object-cover"
-          onError={(e) => {
-            // Fallback to initials if image fails to load
-            e.currentTarget.style.display = 'none';
-          }}
-        />
-      ) : (
-        <span>{initials}</span>
-      )}
+      <span>{initials}</span>
     </div>
   );
 };

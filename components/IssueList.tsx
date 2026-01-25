@@ -32,6 +32,8 @@ interface IssueListProps {
   onDelete: (issueId: string) => void;
   onStatusChange: (issueId: string, status: Status) => void;
   isPublicView?: boolean;
+  canEdit?: boolean;
+  statusFilter?: Status | null;
 }
 
 const IssueRow: React.FC<{
@@ -42,9 +44,9 @@ const IssueRow: React.FC<{
   onStatusChange: (id: string, status: Status) => void;
   onDragStart: (e: React.DragEvent, issueId: string) => void;
   isDragging: boolean;
-  isPublicView?: boolean;
+  canInteract?: boolean;
   delay?: number;
-}> = ({ issue, users, onEdit, onDelete, onStatusChange, onDragStart, isDragging, isPublicView, delay = 0 }) => {
+}> = ({ issue, users, onEdit, onDelete, onStatusChange, onDragStart, isDragging, canInteract = true, delay = 0 }) => {
 
   const assignees = users.filter((u: User) =>
     issue.assigneeIds.includes(u.id)
@@ -61,7 +63,7 @@ const IssueRow: React.FC<{
 
   const handleAdvanceStatus = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isPublicView) return;
+    if (!canInteract) return;
     onStatusChange(issue.id, getNextStatus(issue.status));
   };
 
@@ -76,15 +78,15 @@ const IssueRow: React.FC<{
         isDragging && "opacity-40 bg-[#1A1C23] border-[#363840]",
         isSubtask && "pl-12 bg-[#14151A]/50"
       )}
-      draggable={!isPublicView}
-      onDragStart={(e) => !isPublicView && onDragStart(e as any, issue.id)}
+      draggable={canInteract}
+      onDragStart={(e) => canInteract && onDragStart(e as any, issue.id)}
       onClick={() => onEdit(issue)}
     >
       {/* Selection/Hover Indicator */}
       <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#5E6AD2] opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {/* Drag Handle */}
-      {!isPublicView && (
+      {canInteract && (
         <div className="mr-3 opacity-0 group-hover:opacity-40 hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing">
           <GripVertical className="w-3.5 h-3.5 text-[#5E6068]" />
         </div>
@@ -140,7 +142,6 @@ const IssueRow: React.FC<{
             <UserAvatar
               key={u.id}
               name={u.name}
-              avatarUrl={u.avatarUrl}
               size="sm"
               className="border border-[#0F1014] ring-1 ring-[#26272F]"
               showRing
@@ -155,7 +156,7 @@ const IssueRow: React.FC<{
       </div>
 
       {/* Hover Actions */}
-      {!isPublicView && (
+      {canInteract && (
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all bg-[#0F1014]/80 backdrop-blur-sm pl-2 rounded-l-lg border-l border-[#22242A]">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(issue); }}
@@ -178,14 +179,17 @@ const IssueRow: React.FC<{
   );
 };
 
-export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onDelete, onStatusChange, isPublicView }) => {
+export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onDelete, onStatusChange, isPublicView = false, canEdit = true, statusFilter }) => {
   const statusOrder = [Status.Backlog, Status.Todo, Status.InProgress, Status.InReview, Status.Done, Status.Canceled];
+
+  // Combine public view and edit permissions
+  const canInteract = !isPublicView && canEdit;
 
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverStatus, setDragOverStatus] = useState<Status | null>(null);
 
   const handleDragStart = (e: React.DragEvent, issueId: string) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     setDraggedIssueId(issueId);
     e.dataTransfer.effectAllowed = 'move';
     // Transparent drag image hack if desired, but native is fine
@@ -197,13 +201,13 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
   };
 
   const handleDragOver = (e: React.DragEvent, status: Status) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     e.preventDefault();
     if (dragOverStatus !== status) setDragOverStatus(status);
   };
 
   const handleDrop = (e: React.DragEvent, status: Status) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     e.preventDefault();
     if (draggedIssueId) onStatusChange(draggedIssueId, status);
     setDraggedIssueId(null);
@@ -217,7 +221,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
     // Don't render empty groups in public view usually, but assuming we keep structure
     // If list is fully empty, we show empty state below.
     if (groupIssues.length === 0 && !isDropTarget && isPublicView) return null;
-    if (groupIssues.length === 0 && !isDropTarget && !isPublicView && status === Status.Canceled) return null; // Hide cancelled if empty
+    if (groupIssues.length === 0 && !isDropTarget && !canInteract && status === Status.Canceled) return null; // Hide cancelled if empty
 
     return (
       <div
@@ -226,8 +230,8 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
           "mb-6 transition-all duration-300 rounded-lg border border-transparent",
           isDropTarget ? "bg-[#1A1C23]/50 border-[#5E6AD2]/30" : ""
         )}
-        onDragOver={(e) => !isPublicView && handleDragOver(e, status)}
-        onDrop={(e) => !isPublicView && handleDrop(e, status)}
+        onDragOver={(e) => canInteract && handleDragOver(e, status)}
+        onDrop={(e) => canInteract && handleDrop(e, status)}
       >
         <div className="flex items-center px-4 py-2 border-b border-[#22242A] mb-0 rounded-t-lg bg-[#0F1014]/50 backdrop-blur-sm sticky top-0 z-20">
           <div className="flex items-center space-x-2">
@@ -242,7 +246,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
           {/* Action to create new in this status could go here */}
         </div>
 
-        <div className="flex flex-col relative min-h-[10px]" onDragEnd={() => !isPublicView && handleDragEnd()}>
+        <div className="flex flex-col relative min-h-[10px]" onDragEnd={() => canInteract && handleDragEnd()}>
           <AnimatePresence>
             {groupIssues.map((issue: Issue, idx) => (
               <IssueRow
@@ -254,7 +258,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
                 onStatusChange={onStatusChange}
                 onDragStart={handleDragStart}
                 isDragging={draggedIssueId === issue.id}
-                isPublicView={isPublicView}
+                canInteract={canInteract}
                 delay={idx * 0.03}
               />
             ))}
@@ -281,10 +285,13 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
     );
   };
 
+  // When statusFilter is set, only show that status group. Otherwise show all.
   const renderedStatuses = useMemo(() => {
-    // If filtering, we might only show relevant groups, but usually standard board/list view shows all relevant active statuses
-    return statusOrder;
-  }, []);
+    return statusFilter ? [statusFilter] : statusOrder;
+  }, [statusFilter]);
+
+  // Debug log to track filtering
+  console.log('[IssueList] statusFilter:', statusFilter, 'statuses to render:', renderedStatuses);
 
   return (
     <div className="flex-1 pb-20 no-scrollbar scroll-smooth bg-[#0F1014] px-6 py-6" onDragEnd={() => !isPublicView && handleDragEnd()}>

@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, Eye, Trash2, Calendar, User as UserIcon, Activity, UserCircle } from 'lucide-react';
-import { Issue, Priority, Status, User, Project, Comment, PartialIssue } from '../types';
+import { Issue, Priority, Status, User, Project, Comment, PartialIssue, UserRole } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
+import { MentionInput } from './MentionInput';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
+import { renderMentionsWithBadges } from '../services/mentionUtils';
 
 function formatDateToInput(date: Date | string | undefined): string {
     if (!date) return '';
@@ -50,8 +52,11 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     onCreateSubtask,
     onOpenIssue,
     defaultProjectId,
-    isPublicView = false
+    isPublicView = false,
+    currentUser
 }) => {
+    // Guest users are read-only, same as public view
+    const canEdit = !isPublicView && currentUser?.role !== UserRole.Guest;
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<Priority>(Priority.NoPriority);
@@ -70,6 +75,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Track if we've already initialized state for this issue
+    const initializedIssueIdRef = useRef<string | null>(null);
+
     const filteredUsers = mentionQuery !== null
         ? users.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
         : [];
@@ -78,17 +86,28 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     const subtasks = hasExistingIssueId ? issues.filter(i => i.parentId === (existingIssue as Issue).id) : [];
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            // Reset initialization when modal closes
+            initializedIssueIdRef.current = null;
+            return;
+        }
+
         if (existingIssue) {
-            const issueData = existingIssue as Partial<Issue>;
-            setTitle(issueData.title || '');
-            setDescription(issueData.description || '');
-            setPriority(issueData.priority || Priority.NoPriority);
-            setAssigneeIds(issueData.assigneeIds || []);
-            setProjectId(issueData.projectId || (defaultProjectId || projects[0]?.id || ''));
-            setStartDate(formatDateToInput(issueData.startDate));
-            setDueDate(formatDateToInput(issueData.dueDate));
+            const issueId = (existingIssue as Issue).id;
+            // Only initialize if we haven't initialized this issue yet
+            if (initializedIssueIdRef.current !== issueId) {
+                const issueData = existingIssue as Partial<Issue>;
+                setTitle(issueData.title || '');
+                setDescription(issueData.description || '');
+                setPriority(issueData.priority || Priority.NoPriority);
+                setAssigneeIds(issueData.assigneeIds || []);
+                setProjectId(issueData.projectId || (defaultProjectId || projects[0]?.id || ''));
+                setStartDate(formatDateToInput(issueData.startDate));
+                setDueDate(formatDateToInput(issueData.dueDate));
+                initializedIssueIdRef.current = issueId;
+            }
         } else {
+            // New issue - reset state
             setTitle('');
             setDescription('');
             setPriority(Priority.NoPriority);
@@ -96,6 +115,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
             setProjectId(defaultProjectId || projects[0]?.id || '');
             setStartDate('');
             setDueDate('');
+            initializedIssueIdRef.current = null;
         }
     }, [isOpen, existingIssue, projects, defaultProjectId]);
 
@@ -104,10 +124,26 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         setSaveStatus('saving');
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         try {
-            await onSave({ id: (existingIssue as Issue).id, [field]: value });
+            const result = await onSave({ id: (existingIssue as Issue).id, [field]: value });
+
+            // Update local state immediately to reflect changes
+            if (field === 'priority') {
+                setPriority(value);
+            }
+            if (field === 'assigneeIds') {
+                setAssigneeIds(value);
+            }
+            if (field === 'startDate') {
+                setStartDate(formatDateToInput(value));
+            }
+            if (field === 'dueDate') {
+                setDueDate(formatDateToInput(value));
+            }
+
             setSaveStatus('saved');
             saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
         } catch (error) {
+            console.error('[IssueModal saveField] Save failed:', error);
             setSaveStatus('error');
             saveTimeoutRef.current = setTimeout(() => setSaveStatus('idle'), 5000);
         }
@@ -261,8 +297,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         onChange={(e) => setTitle(e.target.value)}
                                         onBlur={handleTitleBlur}
                                         autoFocus={!hasExistingIssueId}
-                                        disabled={isPublicView}
-                                        readOnly={isPublicView}
+                                        disabled={!canEdit}
+                                        readOnly={!canEdit}
                                     />
                                     <textarea
                                         ref={descRef}
@@ -271,14 +307,14 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         value={description}
                                         onChange={(e) => handleInput(e, 'desc')}
                                         onBlur={handleDescriptionSave}
-                                        disabled={isPublicView}
-                                        readOnly={isPublicView}
+                                        disabled={!canEdit}
+                                        readOnly={!canEdit}
                                     />
                                 </div>
 
                                 {/* Mention Dropdown Overlay Logic */}
                                 <AnimatePresence>
-                                    {!isPublicView && mentionQuery !== null && filteredUsers.length > 0 && (
+                                    {canEdit && mentionQuery !== null && filteredUsers.length > 0 && (
                                         <motion.div
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
@@ -298,7 +334,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 </AnimatePresence>
 
-                                {hasExistingIssueId && !(existingIssue as Issue).parentId && (
+                                {!(existingIssue as Issue | PartialIssue)?.parentId && (
                                     <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
                                         {/* Subtasks Section - Only shown for parent issues, not subtasks */}
                                         <section className="space-y-4">
@@ -328,18 +364,28 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                         <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-[#5E6AD2] transition-colors" />
                                                     </motion.div>
                                                 ))}
-                                                {!isPublicView && (
-                                                <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] rounded-xl hover:border-[#2C2D35] transition-colors">
-                                                    <Plus className="w-4 h-4 text-[#3A3C46]" />
-                                                    <input
-                                                        type="text"
-                                                        placeholder="Add sub-objective..."
-                                                        className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
-                                                        value={newSubtaskTitle}
-                                                        onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                                        onKeyDown={(e) => e.key === 'Enter' && onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle)}
-                                                    />
-                                                </div>
+                                                {hasExistingIssueId ? (
+                                                    // Existing issue: show the input
+                                                    canEdit && (
+                                                        <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] rounded-xl hover:border-[#2C2D35] transition-colors">
+                                                            <Plus className="w-4 h-4 text-[#3A3C46]" />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Add sub-objective..."
+                                                                className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
+                                                                value={newSubtaskTitle}
+                                                                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                                                onKeyDown={(e) => e.key === 'Enter' && onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle)}
+                                                            />
+                                                        </div>
+                                                    )
+                                                ) : (
+                                                    // New issue: show a message
+                                                    <div className="px-4 py-3 border border-dashed border-[#1A1C23] rounded-xl">
+                                                        <p className="text-[11px] text-[#3A3C46] italic text-center">
+                                                            Sub-objectives can be added after creating this issue
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </section>
@@ -367,7 +413,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
                                                             </div>
                                                             <div className="bg-[#14151A]/40 border border-[#1A1C23] rounded-xl p-3.5">
-                                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">{c.content}</p>
+                                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">
+                                                                    {renderMentionsWithBadges(c.content, users)}
+                                                                </p>
                                                             </div>
                                                         </motion.div>
                                                     );
@@ -379,25 +427,29 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                             </div>
 
                             {/* Comment Input Sticky */}
-                            {hasExistingIssueId && !isPublicView && (
+                            {hasExistingIssueId && canEdit && (
                                 <div className="p-6 bg-[#0F1014] border-t border-[#1A1C23] shrink-0">
-                                    <div className="flex items-center space-x-4 bg-[#14151A] border border-[#22242A] rounded-2xl p-2 focus-within:border-[#5E6AD2]/50 focus-within:ring-4 focus-within:ring-[#5E6AD2]/5 transition-all shadow-inner">
+                                    <div className="flex items-end gap-3">
                                         <div className="w-8 h-8 rounded-lg bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center shrink-0">
                                             <UserCircle className="w-4 h-4 text-[#5E6068]" />
                                         </div>
-                                        <input
-                                            placeholder="Transmit message..."
-                                            className="flex-1 bg-transparent text-sm text-[#E8E8E8] placeholder-[#3A3C46] focus:outline-none py-2"
-                                            value={newComment}
-                                            onChange={(e) => e.target.value.length < 2000 && setNewComment(e.target.value)}
-                                            onKeyDown={(e) => e.key === 'Enter' && submitComment()}
-                                        />
+                                        <div className="flex-1">
+                                            <MentionInput
+                                                value={newComment}
+                                                onChange={setNewComment}
+                                                users={users}
+                                                placeholder="Add a comment..."
+                                                onSubmit={submitComment}
+                                                autoSaveOnBlur={false}
+                                                className="min-h-[60px]"
+                                            />
+                                        </div>
                                         <button
                                             onClick={submitComment}
                                             disabled={!newComment.trim()}
-                                            className="w-8 h-8 flex items-center justify-center bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-20 disabled:grayscale text-white rounded-lg transition-all shadow-lg shadow-[#5E6AD2]/20 group"
+                                            className="w-10 h-10 flex items-center justify-center bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-20 disabled:grayscale text-white rounded-xl transition-all shadow-lg shadow-[#5E6AD2]/20 group"
                                         >
-                                            <Send className="w-3.5 h-3.5 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                            <Send className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                         </button>
                                     </div>
                                 </div>
@@ -427,7 +479,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 </div>
                             )}
 
-                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
+                            <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
                                     <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Criticality
                                 </label>
@@ -439,7 +491,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 </div>
                             </div>
 
-                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
+                            <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
                                     <UserIcon className="w-3 h-3 mr-2" /> Personnel
                                 </label>
@@ -452,12 +504,12 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                             setAssigneeIds(next);
                                             if (hasExistingIssueId) saveField('assigneeIds', next);
                                         }}
-                                        readOnly={isPublicView}
+                                        readOnly={!canEdit}
                                     />
                                 </div>
                             </div>
 
-                            <div className={`space-y-4 ${isPublicView ? 'pointer-events-none opacity-60' : ''}`}>
+                            <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <h5 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center justify-between">
                                     <span>Schedule</span>
                                     <Clock className="w-3 h-3" />
@@ -468,7 +520,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         <DatePicker
                                             value={startDate}
                                             onChange={(d) => {
-                                                const s = d.toISOString().split('T')[0];
+                                                // Use local date components to avoid timezone issues
+                                                const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                                 setStartDate(s);
                                                 if (hasExistingIssueId) saveField('startDate', s);
                                             }}
@@ -480,7 +533,8 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         <DatePicker
                                             value={dueDate}
                                             onChange={(d) => {
-                                                const s = d.toISOString().split('T')[0];
+                                                // Use local date components to avoid timezone issues
+                                                const s = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                                                 setDueDate(s);
                                                 if (hasExistingIssueId) saveField('dueDate', s);
                                             }}

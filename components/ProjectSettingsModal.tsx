@@ -100,7 +100,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     <div className="flex items-center justify-between px-8 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
                         <div className="flex items-center space-x-3">
                             <Settings className="w-4 h-4 text-[#5E6AD2]" />
-                            <h2 className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.3em]">Unit Configuration • {project.identifier}</h2>
+                            <h2 className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.3em]">Project Settings • {project.identifier}</h2>
                         </div>
                         <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
                             <X className="w-5 h-5" />
@@ -116,7 +116,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-[#E8E8E8] tracking-tight leading-none mb-2">{project.name}</h3>
-                                <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.4em]">Segmental Objective Root</p>
+                                <p className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.4em]">Project</p>
                             </div>
                         </div>
 
@@ -126,34 +126,34 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
                                     <FileText className="w-3 h-3 text-[#5E6AD2]" />
                                 </div>
-                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Deployment Manifesto</label>
+                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Description</label>
                             </div>
                             <textarea
                                 value={localDescription}
                                 onChange={(e) => setLocalDescription(e.target.value)}
                                 onBlur={handleSaveDescription}
                                 className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
-                                placeholder="Formalize operational objectives..."
+                                placeholder="Add a project description..."
                             />
                         </div>
 
-                        {/* Access Control & Registry */}
+                        {/* Access Control */}
                         <div className="space-y-6">
                             <div className="flex items-center space-x-3">
                                 <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
                                     <Globe className="w-3 h-3 text-[#5E6AD2]" />
                                 </div>
-                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Registry Access Protocol</label>
+                                <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Public Access</label>
                             </div>
 
                             <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-6 space-y-8 relative overflow-hidden">
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="space-y-1">
-                                        <h4 className="text-sm font-bold text-[#E8E8E8]">Broadcast Visibility</h4>
+                                        <h4 className="text-sm font-bold text-[#E8E8E8]">Visibility</h4>
                                         <div className="flex items-center space-x-2">
                                             <div className={cn("w-1.5 h-1.5 rounded-full", isPublic ? "bg-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.6)]" : "bg-[#3A3C46]")} />
                                             <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-wider">
-                                                {isPublic ? 'Public Relay Active' : 'Restricted Internal Loop'}
+                                                {isPublic ? 'Public' : 'Private'}
                                             </p>
                                         </div>
                                     </div>
@@ -180,7 +180,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                             className="pt-6 border-t border-[#1A1C23] space-y-6 overflow-hidden"
                                         >
                                             <div className="space-y-2">
-                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">Universal Segment Address</span>
+                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">Public URL</span>
                                                 <div className="relative group">
                                                     <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#3A3C46] text-xs font-mono font-bold select-none">/public/</div>
                                                     <input
@@ -194,7 +194,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                             </div>
 
                                             <div className="space-y-2">
-                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">End-Point Signal</span>
+                                                <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">Public Link</span>
                                                 <div className="flex items-center space-x-2 bg-[#0F1014] border border-[#22242A] rounded-xl px-4 py-3 group">
                                                     <div className="flex-1 text-[11px] text-[#5E6068] font-mono truncate">{publicUrl}</div>
                                                     <div className="flex items-center space-x-3">
@@ -234,7 +234,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                     className="flex items-center space-x-2 px-4 py-2 text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/5 rounded-lg transition-all uppercase tracking-wider"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
-                                    <span>Decommission</span>
+                                    <span>Delete</span>
                                 </button>
                             )}
                             {showDeleteConfirm && (
@@ -271,7 +271,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             {!showDeleteConfirm && (
                                 <div className="flex items-center space-x-2">
                                     <Activity className="w-3 h-3 text-[#5E6AD2]" />
-                                    <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Awaiting Command Synchrony</span>
+                                    <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Ready</span>
                                 </div>
                             )}
                         </div>
@@ -280,7 +280,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 onClick={onClose}
                                 className="px-10 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center group"
                             >
-                                <span>Finalize</span>
+                                <span>Done</span>
                                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
                             </button>
                         )}

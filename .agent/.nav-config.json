@@ -1,0 +1,10 @@
+{
+  "version": "5.2.0",
+  "project_name": "neo-linear",
+  "tech_stack": "React 19, TypeScript, Vite, TanStack Query/Router, Zustand, Fastify, Prisma, PostgreSQL",
+  "project_management": "none",
+  "task_prefix": "TASK",
+  "team_chat": "none",
+  "auto_load_navigator": true,
+  "compact_strategy": "conservative"
+}

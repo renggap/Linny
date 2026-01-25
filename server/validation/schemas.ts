@@ -12,16 +12,16 @@ export const passwordSchema = z.string()
 export const emailSchema = z.string()
   .email('Invalid email address')
   .max(255, 'Email must be less than 255 characters')
-  .toLowerCase();
+  .transform((val) => val.toLowerCase());
 
 // Valid user roles
-export const userRoleSchema = z.enum(['Administrator', 'Team Lead', 'Member', 'Guest']);
+export const userRoleSchema = z.enum(['Administrator', 'TeamLead', 'Member', 'Guest']);
 
 // Valid statuses
-export const statusSchema = z.enum(['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled']);
+export const statusSchema = z.enum(['Backlog', 'Todo', 'InProgress', 'InReview', 'Done', 'Canceled']);
 
 // Valid priorities
-export const prioritySchema = z.enum(['No Priority', 'Urgent', 'High', 'Medium', 'Low']);
+export const prioritySchema = z.enum(['NoPriority', 'Urgent', 'High', 'Medium', 'Low']);
 
 // ID validation
 export const idSchema = z.string()
@@ -151,7 +151,8 @@ export const createSubtaskSchema = z.object({
 
 export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment content is required').max(5000, 'Comment must be less than 5000 characters').trim(),
-  issueId: z.string().min(1, 'Issue ID is required')
+  issueId: z.string().min(1, 'Issue ID is required'),
+  teamId: z.string().optional() // Optional teamId for scope validation
 });
 
 // === NOTIFICATION SCHEMAS ===

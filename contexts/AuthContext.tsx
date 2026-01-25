@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, fetchCsrfToken } from '../services/api';
+import { authApi, fetchCsrfToken, onAuthFailure } from '../services/api';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -49,9 +49,34 @@ export function AuthProvider({ children }: AuthProviderProps) {
         const currentUser = await authApi.getCurrentUser();
         console.log('[AuthContext] Session valid, user:', currentUser);
         setUser(currentUser);
-      } catch (e) {
+      } catch (e: any) {
         console.log('[AuthContext] No valid session:', e);
-        // Token is invalid, will be cleared by server
+        // If it's a 401 error, try to refresh the token first
+        if (e.message?.includes('401') || String(e).includes('401')) {
+          console.log('[AuthContext] Got 401, attempting token refresh...');
+          try {
+            // Import refreshAccessToken function
+            const { refreshAccessToken } = await import('../services/api');
+            const refreshed = await refreshAccessToken();
+            if (refreshed) {
+              // Token refreshed successfully, try getCurrentUser again
+              console.log('[AuthContext] Token refreshed, retrying getCurrentUser...');
+              const currentUser = await authApi.getCurrentUser();
+              setUser(currentUser);
+              console.log('[AuthContext] Session restored after refresh');
+            } else {
+              // Refresh failed - clear session completely
+              console.log('[AuthContext] Refresh failed, clearing session');
+              setUser(null);
+            }
+          } catch (refreshError) {
+            console.log('[AuthContext] Token refresh failed:', refreshError);
+            setUser(null);
+          }
+        } else {
+          // Non-401 error, just clear user
+          setUser(null);
+        }
       }
       setIsLoading(false);
     };
@@ -124,6 +149,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Failed to refresh user:', error);
     }
   };
+
+  // Register auth failure callback to clear user state when refresh completely fails
+  useEffect(() => {
+    const unsubscribe = onAuthFailure(() => {
+      console.log('[AuthContext] Auth failure callback triggered, clearing user');
+      setUser(null);
+    });
+    return unsubscribe;
+  }, []);
 
   const value: AuthContextType = {
     user,

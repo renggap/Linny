@@ -1,13 +1,19 @@
-import { Request, Response, NextFunction } from 'express';
+/**
+ * Validation Middleware (Fastify Compatible)
+ *
+ * Validates request body, params, and query against Zod schemas.
+ * Compatible with both Fastify and Express (via @fastify/express).
+ */
+
 import { AnyZodObject, ZodError } from 'zod';
 
 /**
  * Validation middleware factory
  * Validates request body, params, and query against a Zod schema
+ * Compatible with both Fastify and Express
  */
 export function validate(schema: AnyZodObject, target: 'body' | 'params' | 'query' | 'all' = 'body') {
-  return (req: Request, res: Response, next: NextFunction): void | Response => {
-    console.log('[Validation Middleware] Entry - target:', target, 'body keys:', req.body ? Object.keys(req.body) : 'no body');
+  return (req: any, res: any, next?: any): any => {
     let dataToValidate: Record<string, any> = {};
 
     try {
@@ -22,22 +28,30 @@ export function validate(schema: AnyZodObject, target: 'body' | 'params' | 'quer
       }
 
       schema.parse(dataToValidate);
-      next();
+
+      if (next) return next();
+      return;
     } catch (error) {
       if (error instanceof ZodError) {
         // DIAGNOSTIC: Log validation errors
         console.log('[Validation] Failed for', target, '- Data:', JSON.stringify(dataToValidate));
         console.log('[Validation] Errors:', JSON.stringify(error.errors));
 
-        return res.status(400).json({
+        const response = {
           error: 'Validation failed',
           details: error.errors.map(e => ({
             field: e.path.join('.'),
             message: e.message
           }))
-        });
+        };
+
+        if (res.code) {
+          return res.code(400).send(response);
+        }
+        return res.status(400).json(response);
       }
-      return next(error);
+      if (next) return next(error);
+      return;
     }
   };
 }

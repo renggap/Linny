@@ -14,11 +14,13 @@ server/.env.local
 # Logs
 logs/
 *.log
+*.txt
 npm-debug.log*
 yarn-debug.log*
 lerna-debug.log*
 pnpm-debug.log*
 server/logs/
+server/tsc_output.txt
 
 # Build outputs
 dist/
@@ -29,7 +31,7 @@ build/
 *.db
 *.sqlite
 *.sqlite3
-server/linear_clone.db
+server/neo_linear.db
 
 # Uploads and media
 uploads/
@@ -66,9 +68,14 @@ desktop.ini
 .parcel-cache/
 .vite/
 
-# Claude AI
+# Claude AI (preserve .claude/settings.json for Navigator hooks)
 .claude/
+!.claude/settings.json
 .claudeignore
+
+# Navigator context markers and temporary files
+.context-markers/
+.agent/.nav-temp/
 
 # Temporary working directories
 tmpclaude-*

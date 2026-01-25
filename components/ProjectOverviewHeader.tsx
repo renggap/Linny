@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Project, ResourceLink } from '../types';
+import { Project, ResourceLink, User } from '../types';
 import {
     Link2,
     Trash2,
@@ -10,11 +10,14 @@ import {
     ChevronDown,
     Plus,
     Globe,
-    Layout
+    Layout,
+    User as UserIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { renderMentionsWithBadges, hasMentions } from '../services/mentionUtils';
+import { useAddProjectLink, useDeleteProjectLink, useUpdateProject } from '../hooks/useProjects';
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -22,12 +25,13 @@ function cn(...inputs: ClassValue[]) {
 
 interface ProjectOverviewHeaderProps {
     project: Project;
-    onUpdate: (project: Project) => void;
     isExpanded: boolean;
     onToggleExpand: () => void;
+    users?: User[];
+    onUserClick?: (user: User) => void;
 }
 
-export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ project, onUpdate, isExpanded, onToggleExpand }) => {
+export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ project, isExpanded, onToggleExpand, users = [], onUserClick }) => {
     const [isEditingDesc, setIsEditingDesc] = useState(false);
     const [descValue, setDescValue] = useState(project.description || "");
 
@@ -36,36 +40,67 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
     const [newLinkUrl, setNewLinkUrl] = useState("");
     const [isAddingLink, setIsAddingLink] = useState(false);
 
+    // Mutations
+    const updateProjectMutation = useUpdateProject();
+    const addLinkMutation = useAddProjectLink();
+    const deleteLinkMutation = useDeleteProjectLink();
+
     useEffect(() => {
         setDescValue(project.description || "");
     }, [project.description]);
 
-    const handleDescBlur = () => {
-        setIsEditingDesc(false);
+    const handleDescBlur = async () => {
+        // Only save if the value actually changed
         if (descValue !== project.description) {
-            onUpdate({ ...project, description: descValue });
+            try {
+                console.log('[ProjectOverviewHeader] Saving description:', descValue);
+                await updateProjectMutation.mutateAsync({
+                    id: project.id,
+                    updates: { description: descValue }
+                });
+                console.log('[ProjectOverviewHeader] Description saved successfully');
+                // Only close edit mode after successful save
+                setIsEditingDesc(false);
+            } catch (error) {
+                console.error('[ProjectOverviewHeader] Failed to update description:', error);
+                // Keep edit mode open on error so user can retry
+            }
+        } else {
+            // No changes, just close edit mode
+            setIsEditingDesc(false);
         }
     };
 
-    const handleAddLink = () => {
+    const handleAddLink = async () => {
         if (!newLinkTitle || !newLinkUrl) return;
-        const newLink: ResourceLink = {
-            id: Math.random().toString(36).substr(2, 9),
-            title: newLinkTitle,
-            url: newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`
-        };
-
-        const links = project.links || [];
-        onUpdate({ ...project, links: [...links, newLink] });
-
-        setNewLinkTitle("");
-        setNewLinkUrl("");
-        setIsAddingLink(false);
+        try {
+            const url = newLinkUrl.startsWith('http') ? newLinkUrl : `https://${newLinkUrl}`;
+            console.log('[ProjectOverviewHeader] Adding link:', { title: newLinkTitle, url });
+            await addLinkMutation.mutateAsync({
+                projectId: project.id,
+                title: newLinkTitle,
+                url
+            });
+            console.log('[ProjectOverviewHeader] Link added successfully');
+            setNewLinkTitle("");
+            setNewLinkUrl("");
+            setIsAddingLink(false);
+        } catch (error) {
+            console.error('[ProjectOverviewHeader] Failed to add link:', error);
+        }
     };
 
-    const handleDeleteLink = (linkId: string) => {
-        const links = project.links || [];
-        onUpdate({ ...project, links: links.filter(l => l.id !== linkId) });
+    const handleDeleteLink = async (linkId: string) => {
+        try {
+            console.log('[ProjectOverviewHeader] Deleting link:', linkId);
+            await deleteLinkMutation.mutateAsync({
+                projectId: project.id,
+                linkId
+            });
+            console.log('[ProjectOverviewHeader] Link deleted successfully');
+        } catch (error) {
+            console.error('[ProjectOverviewHeader] Failed to delete link:', error);
+        }
     };
 
     return (
@@ -162,7 +197,20 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                         className="text-[13px] text-[#C0C4CC] leading-relaxed cursor-text hover:text-[#E8E8E8] transition-colors min-h-[60px]"
                                         onClick={() => setIsEditingDesc(true)}
                                     >
-                                        {project.description || <span className="text-[#5E6068] italic">No description provided. Click to add details...</span>}
+                                        {project.description ? (
+                                            hasMentions(project.description) ? (
+                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">
+                                                    {renderMentionsWithBadges(project.description, users, (userId: string) => {
+                                                        const user = users.find(u => u.id === userId);
+                                                        onUserClick?.(user!);
+                                                    })}
+                                                </p>
+                                            ) : (
+                                                project.description
+                                            )
+                                        ) : (
+                                            <span className="text-[#5E6068] italic">No description provided. Click to add details...</span>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -184,28 +232,39 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                 </div>
 
                                 <div className="space-y-1">
-                                    <AnimatePresence>
-                                        {(project.links || []).map(link => (
-                                            <motion.div
-                                                key={link.id}
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                exit={{ opacity: 0, height: 0 }}
-                                                className="flex items-center justify-between group py-1.5 px-2 rounded-md hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all"
-                                            >
-                                                <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[12px] text-[#8A8F98] group-hover:text-[#C0C4CC] transition-colors truncate max-w-[85%] font-medium">
-                                                    <Link2 className="w-3 h-3 mr-2.5 text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors" />
-                                                    <span className="truncate">{link.title}</span>
-                                                </a>
-                                                <button
-                                                    onClick={() => handleDeleteLink(link.id)}
-                                                    className="text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                    <div
+                                        className={cn(
+                                            "space-y-1 transition-all duration-300",
+                                            (project.links?.length || 0) > 3 && "max-h-[220px] overflow-y-auto pr-1"
+                                        )}
+                                    >
+                                        <AnimatePresence>
+                                            {(project.links || []).map(link => (
+                                                <motion.div
+                                                    key={link.id}
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    exit={{ opacity: 0, height: 0 }}
+                                                    className="flex items-center justify-between group py-1.5 px-2 rounded-md hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all"
+                                                    style={(project.links?.length || 0) > 3 ? {
+                                                        scrollbarWidth: 'thin',
+                                                        scrollbarColor: '#2C2D35 transparent'
+                                                    } : undefined}
                                                 >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            </motion.div>
-                                        ))}
-                                    </AnimatePresence>
+                                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[12px] text-[#8A8F98] group-hover:text-[#C0C4CC] transition-colors truncate max-w-[85%] font-medium">
+                                                        <Link2 className="w-3 h-3 mr-2.5 text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors" />
+                                                        <span className="truncate">{link.title}</span>
+                                                    </a>
+                                                    <button
+                                                        onClick={() => handleDeleteLink(link.id)}
+                                                        className="text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all p-1"
+                                                    >
+                                                        <Trash2 className="w-3 h-3" />
+                                                    </button>
+                                                </motion.div>
+                                            ))}
+                                        </AnimatePresence>
+                                    </div>
 
                                     {(project.links || []).length === 0 && !isAddingLink && (
                                         <div className="p-4 border border-dashed border-[#22242A] rounded-lg text-center">

@@ -1,5 +1,5 @@
 /**
- * API Client for Linear Clone Backend
+ * API Client for Neo Linear Backend
  *
  * Handles all HTTP requests to the Express server with JWT authentication.
  *
@@ -20,7 +20,9 @@
 
 import { User, UserRole, Team, Project, Status, Priority, Issue, Activity, Comment, Notification } from '../types';
 
-const API_BASE = '/api/v1';
+// Use VITE_API_URL if available (for development), otherwise use relative URL
+// In development, Vite proxies /api to the backend server
+const API_BASE = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1` : '/api/v1';
 
 // Field name transformation helpers
 function transformUser(user: any): User {
@@ -31,16 +33,19 @@ function transformUser(user: any): User {
   } as User;
 }
 
-function transformProject(project: any): Project {
+export function transformProject(project: any, originalProject?: any): Project {
+  // If we have an original project, preserve its teamId to avoid losing it during getByIdWithLinks
+  // Handle both snake_case (from raw API responses) and camelCase (from Prisma responses)
+  const teamId = project.teamId || project.team_id || originalProject?.teamId || originalProject?.team_id;
   return {
     ...project,
-    teamId: project.team_id,
-    isPublic: !!project.is_public,
-    publicSlug: project.public_slug,
-    leadId: project.lead_id,
+    teamId: teamId,
+    isPublic: project.isPublic !== undefined ? project.isPublic : !!project.is_public,
+    publicSlug: project.publicSlug || project.public_slug,
+    leadId: project.leadId || project.lead_id,
     // Keep dates as YYYY-MM-DD strings to avoid timezone display issues
-    startDate: project.start_date ? project.start_date.split('T')[0] : undefined,
-    targetDate: project.target_date ? project.target_date.split('T')[0] : undefined,
+    startDate: project.startDate ? (typeof project.startDate === 'string' ? project.startDate.split('T')[0] : project.startDate) : (project.start_date ? project.start_date.split('T')[0] : undefined),
+    targetDate: project.targetDate ? (typeof project.targetDate === 'string' ? project.targetDate.split('T')[0] : project.targetDate) : (project.target_date ? project.target_date.split('T')[0] : undefined),
     // Include links from server response
     links: project.links || [],
   };
@@ -49,43 +54,39 @@ function transformProject(project: any): Project {
 function transformIssue(issue: any): Issue {
   return {
     ...issue,
-    projectId: issue.project_id,
+    projectId: issue.projectId || issue.project_id,
     assigneeIds: issue.assignees ? issue.assignees.map((a: any) => a.id) : (issue.assigneeIds || issue.assignee_ids || []),
-    startDate: issue.start_date ? new Date(issue.start_date) : undefined,
-    dueDate: issue.due_date ? new Date(issue.due_date) : undefined,
-    parentId: issue.parent_id || undefined,
-    createdAt: new Date(issue.created_at),
-    updatedAt: new Date(issue.updated_at),
+    startDate: issue.startDate ? (issue.startDate instanceof Date ? issue.startDate : new Date(issue.startDate)) : (issue.start_date ? new Date(issue.start_date) : undefined),
+    dueDate: issue.dueDate ? (issue.dueDate instanceof Date ? issue.dueDate : new Date(issue.dueDate)) : (issue.due_date ? new Date(issue.due_date) : undefined),
+    parentId: issue.parentId || issue.parent_id || undefined,
+    createdAt: issue.createdAt ? (issue.createdAt instanceof Date ? issue.createdAt : new Date(issue.createdAt)) : (issue.created_at ? new Date(issue.created_at) : undefined),
+    updatedAt: issue.updatedAt ? (issue.updatedAt instanceof Date ? issue.updatedAt : new Date(issue.updatedAt)) : (issue.updated_at ? new Date(issue.updated_at) : undefined),
   };
 }
 
 function transformComment(comment: any): Comment {
-  return {
-    ...comment,
-    issueId: comment.issue_id,
-    userId: comment.user_id,
-    createdAt: new Date(comment.created_at),
-  };
+  // Server now returns camelCase field names correctly
+  return comment as Comment;
 }
 
 function transformNotification(notification: any): Notification {
   return {
     ...notification,
-    userId: notification.user_id,
-    issueId: notification.issue_id,
-    isRead: !!notification.is_read,
-    createdAt: new Date(notification.created_at),
-    actorId: notification.actor_id || undefined,
+    userId: notification.userId || notification.user_id,
+    issueId: notification.issueId || notification.issue_id,
+    isRead: notification.isRead !== undefined ? notification.isRead : !!notification.is_read,
+    createdAt: notification.createdAt ? (notification.createdAt instanceof Date ? notification.createdAt : new Date(notification.createdAt)) : (notification.created_at ? new Date(notification.created_at) : undefined),
+    actorId: notification.actorId || notification.actor_id || undefined,
   };
 }
 
 function transformActivity(activity: any): Activity {
   return {
     ...activity,
-    userId: activity.user_id,
-    projectId: activity.project_id || undefined,
-    issueId: activity.issue_id || undefined,
-    createdAt: new Date(activity.created_at),
+    userId: activity.userId || activity.user_id,
+    projectId: activity.projectId || activity.project_id || undefined,
+    issueId: activity.issueId || activity.issue_id || undefined,
+    createdAt: activity.createdAt ? (activity.createdAt instanceof Date ? activity.createdAt : new Date(activity.createdAt)) : (activity.created_at ? new Date(activity.created_at) : undefined),
   };
 }
 
@@ -99,14 +100,11 @@ interface QueuedRequest {
 
 let isOnline = navigator.onLine;
 let requestQueue: QueuedRequest[] = [];
+const MAX_QUEUE_SIZE = 100;
+const QUEUE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+let isSyncing = false;
 
 // Types
-interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  details?: any;
-}
-
 interface LoginResponse {
   user: User;
   accessToken: string;
@@ -118,49 +116,73 @@ interface TokenResponse {
   refreshToken: string;
 }
 
-interface PaginatedResponse<T> {
-  items: T[];
-  total?: number;
-  page?: number;
-  pageSize?: number;
-}
+// Helper to get access token from memory or localStorage
+const TOKEN_STORAGE_KEY = 'linear_clone_access_token';
 
-// Helper to get access token from memory
 let accessToken: string | null = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
-function getAccessToken(): string | null {
-  return accessToken;
+// Global auth failure callbacks - triggered when refresh completely fails
+let authFailureCallbacks: Array<() => void> = [];
+
+/**
+ * Register a callback to be invoked when authentication completely fails
+ * (e.g., refresh token is invalid/expired). This allows the app to
+ * redirect to login or clear user state.
+ */
+export function onAuthFailure(callback: () => void): () => void {
+  authFailureCallbacks.push(callback);
+  // Return unsubscribe function
+  return () => {
+    authFailureCallbacks = authFailureCallbacks.filter(cb => cb !== callback);
+  };
 }
 
-// Helper to get refresh token from cookie
-function getRefreshToken(): string | null {
-  // Get from cookie
-  const cookies = document.cookie.split(';');
-  for (const cookie of cookies) {
-    const [name, value] = cookie.trim().split('=');
-    if (name === 'refreshToken') {
-      return value || null;
+/**
+ * Trigger all registered auth failure callbacks.
+ * Called when token refresh completely fails.
+ */
+function triggerAuthFailure(): void {
+  console.log('[api] Authentication failed, triggering callbacks');
+  authFailureCallbacks.forEach(cb => {
+    try {
+      cb();
+    } catch (e) {
+      console.error('[api] Auth failure callback error:', e);
+    }
+  });
+}
+
+export function getAccessToken(): string | null {
+  if (!accessToken) {
+    // Try to restore from localStorage on page load/refresh
+    const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
+    if (stored) {
+      accessToken = stored;
     }
   }
-  return null;
+  return accessToken;
 }
 
 function setAccessToken(token: string): void {
   accessToken = token;
-}
-
-function setTokens(accessToken: string, refreshToken: string): void {
-  // Store access token in memory
-  accessToken = accessToken;
-
-  // Refresh token is already set by server as httpOnly cookie
-  // We don't need to store it in localStorage
+  // Persist to localStorage for refresh scenarios
+  try {
+    localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch (e) {
+    console.warn('Failed to store access token:', e);
+  }
 }
 
 function clearTokens(): void {
   accessToken = null;
+  // Clear from localStorage
+  try {
+    localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch (e) {
+    console.warn('Failed to clear access token:', e);
+  }
   // Clear cookie (will be done by server on logout)
 }
 
@@ -179,6 +201,16 @@ function handleOnline(): void {
 }
 
 function queueRequest(method: string, url: string, options?: RequestInit): void {
+  // Check queue size limit
+  if (requestQueue.length >= MAX_QUEUE_SIZE) {
+    console.warn(`📦 Queue full (${MAX_QUEUE_SIZE}), dropping oldest request: ${method} ${url}`);
+    requestQueue.shift(); // Remove oldest request
+  }
+
+  // Remove expired requests before adding new one
+  const now = Date.now();
+  requestQueue = requestQueue.filter(req => now - req.timestamp < QUEUE_TTL_MS);
+
   const request: QueuedRequest = {
     method,
     url,
@@ -186,40 +218,68 @@ function queueRequest(method: string, url: string, options?: RequestInit): void 
     timestamp: Date.now()
   };
   requestQueue.push(request);
-  console.log(`📦 Queued request: ${method} ${url}`);
+  console.log(`📦 Queued request: ${method} ${url} (queue size: ${requestQueue.length})`);
 }
 
 async function syncQueuedRequests(): Promise<void> {
-  if (requestQueue.length === 0) return;
+  if (requestQueue.length === 0 || isSyncing) return;
+
+  isSyncing = true;
 
   console.log(`🔄 Syncing ${requestQueue.length} queued requests...`);
+
+  // Filter out expired requests
+  const now = Date.now();
+  const validRequests = requestQueue.filter(req => now - req.timestamp < QUEUE_TTL_MS);
+  const expiredCount = requestQueue.length - validRequests.length;
+
+  if (expiredCount > 0) {
+    console.log(`🗑️ Removed ${expiredCount} expired requests`);
+  }
+  requestQueue = validRequests;
 
   const queue = [...requestQueue];
   requestQueue = [];
 
   for (const request of queue) {
     try {
-      await fetch(`${API_BASE}${request.url}`, {
+      const fullUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${API_BASE}${request.url}` : `${API_BASE}${request.url}`;
+      await fetch(fullUrl, {
         ...request.options,
         credentials: 'include'
       });
       console.log(`✅ Synced: ${request.method} ${request.url}`);
     } catch (error) {
       console.error(`❌ Failed to sync: ${request.method} ${request.url}`, error);
-      // Re-queue failed requests
-      requestQueue.push(request);
+      // Only re-queue if we haven't exceeded the limit and request is not expired
+      if (now - request.timestamp < QUEUE_TTL_MS && requestQueue.length < MAX_QUEUE_SIZE) {
+        requestQueue.push(request);
+      }
     }
   }
 
   if (requestQueue.length > 0) {
     console.log(`⚠️ ${requestQueue.length} requests still queued`);
   }
+
+  isSyncing = false;
 }
 
 // Listen for online/offline events
+let offlineListenerAdded = false;
 if (typeof window !== 'undefined') {
   window.addEventListener('offline', handleOffline);
   window.addEventListener('online', handleOnline);
+  offlineListenerAdded = true;
+}
+
+// Export cleanup function to remove event listeners
+export function cleanup(): void {
+  if (offlineListenerAdded && typeof window !== 'undefined') {
+    window.removeEventListener('offline', handleOffline);
+    window.removeEventListener('online', handleOnline);
+    offlineListenerAdded = false;
+  }
 }
 
 // CSRF Token Management
@@ -234,8 +294,9 @@ export function setCsrfToken(token: string): void {
 }
 
 export async function fetchCsrfToken(): Promise<string> {
-  const response = await fetch('/api/csrf-token');
-  const data = await response.json();
+  const csrfUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/csrf-token` : '/api/csrf-token';
+  const response = await fetch(csrfUrl);
+  const data = await handleResponse<{ csrfToken: string }>(response);
   csrfToken = data.csrfToken || null;
   if (!csrfToken) {
     throw new Error('Failed to fetch CSRF token');
@@ -244,7 +305,7 @@ export async function fetchCsrfToken(): Promise<string> {
 }
 
 // Helper to make authenticated requests
-async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
+async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0): Promise<Response> {
   // Check if offline
   if (!isOnline && navigator.onLine === false) {
     const method = options?.method || 'GET';
@@ -253,14 +314,19 @@ async function fetchWithAuth(url: string, options?: RequestInit): Promise<Respon
   }
 
   const token = getAccessToken();
+  const method = (options?.method || 'GET').toUpperCase();
+
+  // Only set Content-Type for methods that typically have a body AND when there's actually a body
+  // DELETE, GET, and POST without body should not have Content-Type header
+  const methodsWithBody = ['POST', 'PUT', 'PATCH'];
+  const hasBody = options?.body !== undefined;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(methodsWithBody.includes(method) && hasBody && { 'Content-Type': 'application/json' }),
     ...(token && { Authorization: `Bearer ${token}` }),
     ...(options?.headers as Record<string, string> || {})
   };
 
   // Add CSRF token for state-changing methods
-  const method = (options?.method || 'GET').toUpperCase();
   const stateChangingMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
 
   if (stateChangingMethods.includes(method)) {
@@ -286,15 +352,16 @@ async function fetchWithAuth(url: string, options?: RequestInit): Promise<Respon
       csrfToken = newCsrfToken;
     }
 
-    // Handle 401 Unauthorized - try to refresh token
-    if (response.status === 401 && !url.includes('/auth/refresh')) {
+    // Handle 401 Unauthorized - try to refresh token (only retry once)
+    if (response.status === 401 && !url.includes('/auth/refresh') && retryCount === 0) {
       console.log(`Got 401 for ${url}, attempting to refresh token...`);
       const refreshed = await refreshAccessToken();
       if (refreshed) {
-        // Retry original request with new token
-        return fetchWithAuth(url, options);
+        // Retry original request with new token (only once)
+        return fetchWithAuth(url, options, retryCount + 1);
       } else {
-        // Refresh failed, throw error
+        // Refresh failed - trigger auth failure callbacks and throw error
+        triggerAuthFailure();
         throw new Error('Authentication failed. Please log in again.');
       }
     }
@@ -310,17 +377,20 @@ async function fetchWithAuth(url: string, options?: RequestInit): Promise<Respon
         // Get current access token for the retry
         const currentToken = getAccessToken();
         // Create new options with updated CSRF token and Authorization header
+        // Only include Content-Type for methods that typically have a body
+        const retryHeaders: Record<string, string> = {
+          ...(methodsWithBody.includes(method) && { 'Content-Type': 'application/json' }),
+          'X-CSRF-Token': csrfToken || '',
+          ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
+        };
         const retryOptions: RequestInit = {
           ...options,
-          headers: {
-            ...(options?.headers as Record<string, string> || {}),
-            'X-CSRF-Token': csrfToken || '',
-            ...(currentToken ? { Authorization: `Bearer ${currentToken}` } : {})
-          },
+          headers: retryHeaders,
           credentials: 'include'
         };
         // Retry original request with new CSRF token
-        return fetch(`${API_BASE}${url}`, retryOptions);
+        const fullUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${API_BASE}${url}` : `${API_BASE}${url}`;
+        return fetch(fullUrl, retryOptions);
       }
     }
 
@@ -351,8 +421,11 @@ async function refreshAccessToken(): Promise<boolean> {
     return refreshPromise;
   }
 
-  // Mark as refreshing and create the refresh promise
+  // Mark as refreshing IMMEDIATELY before any async operation
+  // This prevents race conditions from multiple simultaneous 401 responses
   isRefreshing = true;
+
+  // Create the refresh promise
   refreshPromise = (async () => {
     try {
       // Fetch CSRF token first if not present
@@ -361,11 +434,11 @@ async function refreshAccessToken(): Promise<boolean> {
       }
 
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
         'X-CSRF-Token': csrfToken || ''
       };
 
-      const response = await fetch(`${API_BASE}/auth/refresh`, {
+      const refreshUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `${API_BASE}/auth/refresh`;
+      const response = await fetch(refreshUrl, {
         method: 'POST',
         headers,
         credentials: 'include' // Include httpOnly cookie automatically
@@ -381,18 +454,22 @@ async function refreshAccessToken(): Promise<boolean> {
         const data: TokenResponse = await response.json();
         setAccessToken(data.accessToken);
         // Refresh token is already set by server as httpOnly cookie
+        console.log('[api] Token refreshed successfully');
         return true;
+      } else {
+        // Handle 401/403 from refresh endpoint - token is truly invalid
+        console.log('[api] Refresh failed:', response.status);
+        return false;
       }
-    } catch {
-      // Refresh failed
+    } catch (error) {
+      // Network error or other failure
+      console.log('[api] Refresh error:', error);
+      return false;
     } finally {
-      // Clear the refresh lock
+      // Clear the refresh lock AFTER the promise completes
       isRefreshing = false;
       refreshPromise = null;
     }
-
-    clearTokens();
-    return false;
   })();
 
   return refreshPromise;
@@ -400,10 +477,27 @@ async function refreshAccessToken(): Promise<boolean> {
 
 // Handle API response
 async function handleResponse<T>(response: Response): Promise<T> {
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType && contentType.includes('application/json');
+
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || error.message || `HTTP ${response.status}`);
+    if (isJson) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || error.message || `HTTP ${response.status}`);
+    } else {
+      const text = await response.text().catch(() => 'No error details');
+      if (response.status === 500 && (text.includes('ECONNREFUSED') || text.includes('Error: connect ECONNREFUSED'))) {
+        throw new Error('Backend server is unreachable. Please ensure the server is running on port 3001.');
+      }
+      throw new Error(`Server error (${response.status}): ${text.substring(0, 100)}`);
+    }
   }
+
+  if (!isJson) {
+    const text = await response.text().catch(() => 'No content');
+    throw new Error(`Expected JSON but got ${contentType || 'unknown'}: ${text.substring(0, 100)}`);
+  }
+
   return response.json();
 }
 
@@ -421,7 +515,8 @@ export const authApi = {
       'X-CSRF-Token': csrfToken || ''
     };
 
-    const response = await fetch(`${API_BASE}/auth/login`, {
+    const loginUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/login` : `${API_BASE}/auth/login`;
+    const response = await fetch(loginUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify({ email, password }),
@@ -434,7 +529,7 @@ export const authApi = {
       if (error.error?.toLowerCase().includes('csrf')) {
         // Refresh CSRF token and retry
         await fetchCsrfToken();
-        const retryResponse = await fetch(`${API_BASE}/auth/login`, {
+        const retryResponse = await fetch(loginUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -461,7 +556,7 @@ export const authApi = {
     return data;
   },
 
-  async register(name: string, email: string, password: string): Promise<LoginResponse> {
+  async register(name: string, email: string, password: string, inviteToken?: string): Promise<LoginResponse> {
     // Fetch CSRF token first if not present
     if (!csrfToken) {
       await fetchCsrfToken();
@@ -472,10 +567,11 @@ export const authApi = {
       'X-CSRF-Token': csrfToken || ''
     };
 
-    const response = await fetch(`${API_BASE}/auth/register`, {
+    const registerUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/register` : `${API_BASE}/auth/register`;
+    const response = await fetch(registerUrl, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ name, email, password }),
+      body: JSON.stringify({ name, email, password, inviteToken }),
       credentials: 'include' // Include cookies
     });
 
@@ -485,13 +581,13 @@ export const authApi = {
       if (error.error?.toLowerCase().includes('csrf')) {
         // Refresh CSRF token and retry
         await fetchCsrfToken();
-        const retryResponse = await fetch(`${API_BASE}/auth/register`, {
+        const retryResponse = await fetch(registerUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-CSRF-Token': csrfToken || ''
           },
-          body: JSON.stringify({ name, email, password }),
+          body: JSON.stringify({ name, email, password, inviteToken }),
           credentials: 'include'
         });
         const data = await handleResponse<LoginResponse>(retryResponse);
@@ -521,11 +617,11 @@ export const authApi = {
     }
 
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
       'X-CSRF-Token': csrfToken || ''
     };
 
-    await fetch(`${API_BASE}/auth/logout`, {
+    const logoutUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/logout` : `${API_BASE}/auth/logout`;
+    await fetch(logoutUrl, {
       method: 'POST',
       headers,
       credentials: 'include' // Include cookies
@@ -615,13 +711,13 @@ export const teamsApi = {
     return data.team;
   },
 
-  async addMember(teamId: string, userId: string): Promise<string[]> {
+  async addMember(teamId: string, userId: string, role?: UserRole): Promise<{ members: string[]; membersWithRoles: Array<{ id: string; role: string }> }> {
     const response = await fetchWithAuth(`/teams/${teamId}/members`, {
       method: 'POST',
-      body: JSON.stringify({ userId })
+      body: JSON.stringify({ userId, role: role || 'Member' })
     });
-    const data = await handleResponse<{ members: string[] }>(response);
-    return data.members;
+    const data = await handleResponse<{ members: string[]; membersWithRoles: Array<{ id: string; role: string }> }>(response);
+    return { members: data.members, membersWithRoles: data.membersWithRoles };
   },
 
   async removeMember(teamId: string, userId: string): Promise<string[]> {
@@ -630,13 +726,24 @@ export const teamsApi = {
     return team.members;
   },
 
-  async update(id: string, updates: { name?: string; icon?: string }): Promise<Team> {
+  async update(id: string, updates: { name?: string; icon?: string; isStealth?: boolean }): Promise<Team> {
     const response = await fetchWithAuth(`/teams/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates)
     });
     const data = await handleResponse<{ team: Team }>(response);
     return data.team;
+  },
+
+  async delete(id: string): Promise<void> {
+    await fetchWithAuth(`/teams/${id}`, { method: 'DELETE' });
+  },
+
+  async leaveTeam(teamId: string): Promise<void> {
+    const response = await fetchWithAuth(`/teams/${teamId}/leave`, {
+      method: 'POST'
+    });
+    await handleResponse<{ message: string }>(response);
   }
 };
 
@@ -666,7 +773,8 @@ export const projectsApi = {
 
   async getPublicBySlug(slug: string): Promise<{ project: Project; issues: Issue[]; users: User[] } | null> {
     try {
-      const response = await fetch(`${API_BASE}/projects/public/${slug}`);
+      const publicUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/projects/public/${slug}` : `${API_BASE}/projects/public/${slug}`;
+      const response = await fetch(publicUrl);
       if (!response.ok) return null;
       const data = await handleResponse<{ project: any; issues: any[]; users: any[] }>(response);
       return {
@@ -820,13 +928,16 @@ export const issuesApi = {
     startDate?: string;
     dueDate?: string;
     parentId?: string;
-  }): Promise<Issue> {
+  }): Promise<{ issue: Issue; activity?: Activity }> {
     const response = await fetchWithAuth('/issues', {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    const res = await handleResponse<{ issue: any }>(response);
-    return transformIssue(res.issue);
+    const res = await handleResponse<{ issue: any; activity?: any }>(response);
+    return {
+      issue: transformIssue(res.issue),
+      activity: res.activity ? transformActivity(res.activity) : undefined
+    };
   },
 
   async update(id: string, updates: Partial<Issue>): Promise<Issue> {
@@ -849,12 +960,16 @@ export const issuesApi = {
   },
 
   async updateStatus(id: string, status: Status): Promise<Issue> {
+    console.log('[api.issues.updateStatus] Sending request:', { id, status });
     const response = await fetchWithAuth(`/issues/${id}/status`, {
       method: 'POST',
       body: JSON.stringify({ status })
     });
+    console.log('[api.issues.updateStatus] Response status:', response.status);
     const data = await handleResponse<{ issue: any }>(response);
-    return transformIssue(data.issue);
+    const transformed = transformIssue(data.issue);
+    console.log('[api.issues.updateStatus] Transformed issue:', transformed);
+    return transformed;
   },
 
   async createSubtask(parentId: string, title: string): Promise<Issue> {
@@ -876,13 +991,16 @@ export const commentsApi = {
     return data.comments.map(transformComment);
   },
 
-  async create(content: string, issueId: string): Promise<Comment> {
+  async create(content: string, issueId: string): Promise<{ comment: Comment; activity?: Activity }> {
     const response = await fetchWithAuth('/comments', {
       method: 'POST',
       body: JSON.stringify({ content, issueId })
     });
-    const data = await handleResponse<{ comment: any }>(response);
-    return transformComment(data.comment);
+    const data = await handleResponse<{ comment: any; activity?: any }>(response);
+    return {
+      comment: transformComment(data.comment),
+      activity: data.activity ? transformActivity(data.activity) : undefined
+    };
   }
 };
 
@@ -908,14 +1026,128 @@ export const notificationsApi = {
 // ===== ACTIVITIES API =====
 
 export const activitiesApi = {
-  async getAll(filters?: { projectId?: string; limit?: number }): Promise<Activity[]> {
+  async getAll(filters?: { teamId?: string; projectId?: string; limit?: number }): Promise<Activity[]> {
     const params = new URLSearchParams();
+    if (filters?.teamId) params.append('teamId', filters.teamId);
     if (filters?.projectId) params.append('projectId', filters.projectId);
     if (filters?.limit) params.append('limit', filters.limit.toString());
     const query = params.toString() ? `?${params}` : '';
     const response = await fetchWithAuth(`/activities${query}`);
     const data = await handleResponse<{ activities: any[] }>(response);
     return data.activities.map(transformActivity);
+  },
+
+  async create(data: {
+    user_id: string;
+    type: string;
+    project_id?: string;
+    issue_id?: string;
+    entity_title?: string;
+    description?: string;
+  }): Promise<Activity> {
+    const response = await fetchWithAuth('/activities', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    const res = await handleResponse<{ activity: any }>(response);
+    return transformActivity(res.activity);
+  }
+};
+
+// ===== INVITATIONS API =====
+
+export const invitationsApi = {
+  async sendInvite(email: string, teamId: string, role: UserRole): Promise<{ message: string; email: string; teamName: string; role: string } | { message: string; user: any }> {
+    const response = await fetchWithAuth('/invitations/send', {
+      method: 'POST',
+      body: JSON.stringify({ email, teamId, role })
+    });
+    return await handleResponse<any>(response);
+  },
+
+  async checkInvite(token: string): Promise<{ team: any; role: string; email: string } | null> {
+    try {
+      const checkUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/invitations/check/${token}` : `${API_BASE}/invitations/check/${token}`;
+      const response = await fetch(checkUrl);
+      if (!response.ok) return null;
+      return await handleResponse<{ team: any; role: string; email: string }>(response);
+    } catch {
+      return null;
+    }
+  },
+
+  async acceptInvite(token: string): Promise<{ message: string; user?: User; team?: any; role?: string; needsRegistration?: boolean }> {
+    const response = await fetchWithAuth('/invitations/accept', {
+      method: 'POST',
+      body: JSON.stringify({ token })
+    });
+    return await handleResponse<any>(response);
+  },
+
+  async getPending(): Promise<{ id: string; teamName: string; teamId: string; role: string; expiresAt: string }[]> {
+    const response = await fetchWithAuth('/invitations/pending');
+    const data = await handleResponse<{ invitations: any[] }>(response);
+    return data.invitations;
+  }
+};
+
+// ===== JOIN REQUESTS API =====
+
+export interface JoinRequest {
+  id: string;
+  teamId: string;
+  userId: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  team: {
+    id: string;
+    name: string;
+    icon: string;
+  };
+  user?: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string;
+    role: string;
+  };
+}
+
+export const joinRequestsApi = {
+  async createJoinRequest(teamId: string): Promise<JoinRequest> {
+    const response = await fetchWithAuth('/join-requests', {
+      method: 'POST',
+      body: JSON.stringify({ teamId })
+    });
+    const data = await handleResponse<{ joinRequest: any }>(response);
+    return data.joinRequest;
+  },
+
+  async getAll(): Promise<JoinRequest[]> {
+    const response = await fetchWithAuth('/join-requests');
+    const data = await handleResponse<{ joinRequests: any[] }>(response);
+    return data.joinRequests;
+  },
+
+  async getMyRequests(): Promise<JoinRequest[]> {
+    const response = await fetchWithAuth('/join-requests/my');
+    const data = await handleResponse<{ joinRequests: any[] }>(response);
+    return data.joinRequests;
+  },
+
+  async approve(requestId: string): Promise<{ message: string; members: string[]; membersWithRoles: Array<{ id: string; role: string }> }> {
+    const response = await fetchWithAuth(`/join-requests/${requestId}/approve`, {
+      method: 'POST'
+    });
+    return await handleResponse<any>(response);
+  },
+
+  async reject(requestId: string): Promise<{ message: string }> {
+    const response = await fetchWithAuth(`/join-requests/${requestId}`, {
+      method: 'DELETE'
+    });
+    return await handleResponse<any>(response);
   }
 };
 
@@ -948,8 +1180,14 @@ export const api = {
   comments: commentsApi,
   notifications: notificationsApi,
   activities: activitiesApi,
+  invitations: invitationsApi,
+  joinRequests: joinRequestsApi,
   admin: adminApi
 };
+
+// Export auth-related helper functions for use in AuthContext
+// Note: getAccessToken is already exported above as a function
+export { refreshAccessToken, clearTokens };
 
 // Export offline status and queue for UI
 export function getOfflineStatus(): { isOnline: boolean; queuedRequests: number } {

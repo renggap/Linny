@@ -21,17 +21,18 @@ interface BoardViewProps {
   onStatusChange: (issueId: string, status: Status) => void;
   onCreateIssue?: (status: Status) => void;
   isPublicView?: boolean;
+  canEdit?: boolean;
   statusFilter?: Status | null;
 }
 
-const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, isPublicView, delay = 0 }: {
+const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, canInteract, delay = 0 }: {
   issue: Issue;
   users: User[];
   onEdit: (i: Issue) => void;
   onDelete: (id: string) => void;
   onDragStart: (e: React.DragEvent, id: string) => void;
   isDragging: boolean;
-  isPublicView?: boolean;
+  canInteract?: boolean;
   delay?: number;
 }) => {
   const assignees = users.filter(u => issue.assigneeIds.includes(u.id));
@@ -43,8 +44,8 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, is
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.2, delay }}
-      draggable={!isPublicView}
-      onDragStart={(e) => !isPublicView && onDragStart(e as any, issue.id)}
+      draggable={canInteract}
+      onDragStart={(e) => canInteract && onDragStart(e as any, issue.id)}
       onClick={() => onEdit(issue)}
       className={cn(
         "group relative bg-[#14151A] border border-[#22242A] hover:border-[#2C2D35] rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-xl hover:shadow-black/20",
@@ -83,14 +84,13 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, is
         <div className="flex -space-x-1.5">
           {assignees.length > 0 ? (
             assignees.slice(0, 3).map((u, i) => (
-              <UserAvatar
-                key={u.id}
-                name={u.name}
-                avatarUrl={u.avatarUrl}
-                size="sm"
-                className="border border-[#14151A] ring-1 ring-[#22242A]"
-                style={{ zIndex: 3 - i }}
-              />
+              <div key={u.id} style={{ zIndex: 3 - i }}>
+                <UserAvatar
+                  name={u.name}
+                  size="sm"
+                  className="border border-[#14151A] ring-1 ring-[#22242A]"
+                />
+              </div>
             ))
           ) : (
             <div className="w-5 h-5 rounded-full border border-dashed border-[#22242A] flex items-center justify-center">
@@ -100,7 +100,7 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, is
         </div>
       </div>
 
-      {!isPublicView && (
+      {canInteract && (
         <button
           onClick={(e) => { e.stopPropagation(); onDelete(issue.id); }}
           className="absolute top-2 right-2 p-1 text-[#2C2D35] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all rounded"
@@ -112,9 +112,15 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, is
   );
 };
 
-export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onDelete, onStatusChange, onCreateIssue, isPublicView, statusFilter }) => {
+export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onDelete, onStatusChange, onCreateIssue, isPublicView = false, canEdit = true, statusFilter }) => {
+  // Combine public view and edit permissions
+  const canInteract = !isPublicView && canEdit;
   const allStatuses = [Status.Backlog, Status.Todo, Status.InProgress, Status.InReview, Status.Done, Status.Canceled];
+  // When statusFilter is set, only show that status column. Otherwise show all.
   const statuses = statusFilter ? [statusFilter] : allStatuses;
+
+  // Debug log to track filtering
+  console.log('[BoardView] statusFilter:', statusFilter, 'statuses to render:', statuses);
   const [draggedIssueId, setDraggedIssueId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<Status | null>(null);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -136,24 +142,33 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
   };
 
   const handleDragStart = (e: React.DragEvent, issueId: string) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     setDraggedIssueId(issueId);
     e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent, status: Status) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     e.preventDefault();
     if (dragOverColumn !== status) setDragOverColumn(status);
   };
 
   const handleDrop = (e: React.DragEvent, status: Status) => {
-    if (isPublicView) return;
+    if (!canInteract) return;
     e.preventDefault();
     setDragOverColumn(null);
     if (draggedIssueId) {
+      console.log('[BoardView] Dropping issue', draggedIssueId, 'to status', status);
       onStatusChange(draggedIssueId, status);
       setDraggedIssueId(null);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent, status: Status) => {
+    if (!canInteract) return;
+    // Only clear dragOverColumn if leaving the column itself, not entering a child element
+    if (e.currentTarget === e.target) {
+      setDragOverColumn(null);
     }
   };
 
@@ -176,7 +191,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
               )}
               onDragOver={(e) => handleDragOver(e, status)}
               onDrop={(e) => handleDrop(e, status)}
-              onDragLeave={() => setDragOverColumn(null)}
+              onDragLeave={(e) => handleDragLeave(e, status)}
             >
               {/* Column Header */}
               <div className="flex items-center justify-between mb-4 px-2 group/header">
@@ -187,7 +202,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
                   <span className="text-[12px] font-semibold text-[#E8E8E8] tracking-tight">{status}</span>
                   <span className="text-[10px] bg-[#1A1C23] px-2 py-0.5 rounded-full text-[#5E6068] font-mono font-bold border border-[#22242A]">{columnIssues.length}</span>
                 </div>
-                {!isPublicView && onCreateIssue && (
+                {canInteract && onCreateIssue && (
                   <button
                     onClick={() => onCreateIssue(status)}
                     className="p-1 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1A1C23] rounded transition-all opacity-0 group-hover/header:opacity-100"
@@ -209,7 +224,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
                       onDelete={onDelete}
                       onDragStart={handleDragStart}
                       isDragging={draggedIssueId === issue.id}
-                      isPublicView={isPublicView}
+                      canInteract={canInteract}
                       delay={idx * 0.05}
                     />
                   ))}

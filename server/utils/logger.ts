@@ -51,7 +51,7 @@ const consoleFormat = winston.format.combine(
 export const logger = winston.createLogger({
     level: process.env.LOG_LEVEL || LogLevel.INFO,
     format: logFormat,
-    defaultMeta: { service: 'linear-clone-api' },
+    defaultMeta: { service: 'neo-linear-api' },
     transports: [
         // Write all logs to console
         new winston.transports.Console({

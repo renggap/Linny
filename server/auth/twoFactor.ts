@@ -33,8 +33,8 @@ export interface TwoFactorSetup {
  */
 export function generateSecret(): string {
     return speakeasy.generateSecret({
-        name: 'Linear Clone',
-        issuer: 'Linear Clone'
+        name: 'Neo Linear',
+        issuer: 'Neo Linear'
     }).base32;
 }
 
@@ -56,8 +56,8 @@ export function generateBackupCodes(count: number = 10): string[] {
 export async function generateQRCode(secret: string, email: string): Promise<string> {
     const otpauthUrl = speakeasy.otpauthURL({
         secret,
-        label: `Linear Clone (${email})`,
-        issuer: 'Linear Clone',
+        label: `Neo Linear (${email})`,
+        issuer: 'Neo Linear',
         encoding: 'base32'
     });
 

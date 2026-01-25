@@ -1,7 +1,8 @@
 
 import React, { useMemo } from 'react';
-import { Issue, User } from '../types';
+import { Issue, User, Status } from '../types';
 import { StatusIcon } from './Icons';
+import { UserAvatar } from './UserAvatar';
 import { UserCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
@@ -16,6 +17,7 @@ interface TimelineViewProps {
   issues: Issue[];
   users: User[];
   onEdit: (issue: Issue) => void;
+  statusFilter?: Status | null;
 }
 
 const CELL_WIDTH = 56;
@@ -23,7 +25,14 @@ const HEADER_HEIGHT = 56;
 const ROW_HEIGHT = 48;
 const SIDEBAR_WIDTH = 280;
 
-export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdit }) => {
+export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdit, statusFilter }) => {
+  // When statusFilter is set, only show issues with that status
+  const filteredIssues = useMemo(() => {
+    return statusFilter ? issues.filter(i => i.status === statusFilter) : issues;
+  }, [issues, statusFilter]);
+
+  // Debug log to track filtering
+  console.log('[TimelineView] statusFilter:', statusFilter, 'filtered issues count:', filteredIssues.length);
 
   const { startDate, totalDays, dates } = useMemo(() => {
     if (issues.length === 0) {
@@ -65,18 +74,18 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
   }, [issues]);
 
   const sortedIssues = useMemo(() => {
-    const issueMap = new Map(issues.map(i => [i.id, i]));
+    const issueMap = new Map(filteredIssues.map(i => [i.id, i]));
     const organized: { issue: Issue; level: number }[] = [];
-    const visibleRoots = issues.filter(i => !i.parentId || !issueMap.has(i.parentId));
+    const visibleRoots = filteredIssues.filter(i => !i.parentId || !issueMap.has(i.parentId));
 
     visibleRoots.forEach(root => {
       organized.push({ issue: root, level: 0 });
-      const children = issues.filter(i => i.parentId === root.id);
+      const children = filteredIssues.filter(i => i.parentId === root.id);
       children.forEach(child => organized.push({ issue: child, level: 1 }));
     });
 
     return organized;
-  }, [issues]);
+  }, [filteredIssues]);
 
   const getPosition = (date: Date) => {
     const d = new Date(date);
@@ -138,12 +147,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
                 <div className="ml-2 flex-shrink-0">
                   {issue.assigneeIds.length > 0 ? (
                     <div className="flex -space-x-1">
-                      {users.filter(u => issue.assigneeIds.includes(u.id)).slice(0, 1).map(u => (
-                        <img
+                      {users.filter(u => issue.assigneeIds.includes(u.id)).slice(0, 3).map(u => (
+                        <UserAvatar
                           key={u.id}
-                          src={u.avatarUrl}
-                          alt=""
-                          className="w-4 h-4 rounded-full ring-1 ring-[#22242A]"
+                          name={u.name}
+                          avatarUrl={u.avatarUrl}
+                          size="sm"
+                          className="ring-1 ring-[#22242A]"
                         />
                       ))}
                     </div>

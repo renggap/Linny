@@ -6,7 +6,7 @@
 
 ## Overview
 
-Create a comprehensive seed script that populates the Linear Clone database with realistic mock data for a digital agency called "Neo Digital" with Indonesian users and Bahasa Indonesia content.
+Create a comprehensive seed script that populates the Neo Linear database with realistic mock data for a digital agency called "Neo Digital" with Indonesian users and Bahasa Indonesia content.
 
 ## File Structure
 

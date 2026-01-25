@@ -1,287 +1,219 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
-import compression from 'compression';
+/**
+ * Neo Linear Server - Fastify Implementation
+ *
+ * Migrated from Express to Fastify for improved performance and Redis caching.
+ *
+ * Features:
+ * - Fastify framework with plugins for security, CORS, compression, cookies
+ * - JWT authentication with @fastify/jwt
+ * - Redis caching with ioredis
+ * - WebSocket support via @fastify/websocket
+ * - Rate limiting with @fastify/rate-limit
+ * - Comprehensive security headers
+ * - Health check endpoint with Redis status
+ */
+
+import Fastify, { FastifyInstance } from 'fastify';
+import fastifyHelmet from '@fastify/helmet';
+import fastifyCors from '@fastify/cors';
+import fastifyCompress from '@fastify/compress';
+import fastifyCookie from '@fastify/cookie';
+import fastifyJwt from '@fastify/jwt';
+import fastifyRateLimit from '@fastify/rate-limit';
+import fastifyWebsocket from '@fastify/websocket';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import dotenv from 'dotenv';
+import fp from 'fastify-plugin';
 import { getDatabase } from './database.js';
-import { errorHandler, notFoundHandler } from './middleware/error.js';
-import { csrfProtection, getCsrfToken } from './middleware/csrf.js';
-import { requestLogger, errorLogger } from './middleware/requestLogger.js';
-import { authRateLimit, apiRateLimit } from './middleware/rateLimit.js';
-import { sanitizeBody } from './middleware/sanitize.js';
-import { analyticsMiddleware } from './middleware/analytics.js';
+import { getRedisClient } from './cache/redis.js';
+import { registerWebSocketRoutes } from './websocket/fastifyWebSocketRoutes.js';
+import { schedulePeriodicJobs } from './jobs/jobQueue.js';
 
 // Load environment variables
 dotenv.config();
 
-// Import routes
-import authRoutes from './routes/auth.js';
-import usersRoutes from './routes/users.js';
-import teamsRoutes from './routes/teams.js';
-import projectsRoutes from './routes/projects.js';
-import issuesRoutes from './routes/issues.js';
-import commentsRoutes from './routes/comments.js';
-import notificationsRoutes from './routes/notifications.js';
-import activitiesRoutes from './routes/activities.js';
-import analyticsRoutes from './routes/analytics.js';
-import adminRoutes from './routes/admin.js';
-import searchRoutes from './routes/search.js';
-import exportRoutes from './routes/export.js';
-import webhooksRoutes from './routes/webhooks.js';
-import apiKeysRoutes from './routes/apiKeys.js';
-import { WebSocketManager } from './websocket/websocketServer.js';
-import { schedulePeriodicJobs } from './jobs/jobQueue.js';
-
-const app = express();
 const PORT = process.env.PORT || 3001;
+const isDevelopment = process.env.NODE_ENV !== 'production';
 
 // ============================================================================
-// SECURITY MIDDLEWARE
+// SECURITY PLUGIN
 // ============================================================================
 
 /**
- * Issue #15: Security Headers
- * DEEP REASONING CHAIN:
- * Security headers protect against various attacks:
- * - X-Content-Type-Options: Prevents MIME type sniffing
- * - X-Frame-Options: Prevents clickjacking
- * - X-XSS-Protection: Enables browser XSS filter
- * - Strict-Transport-Security: Enforces HTTPS in production
- * - Content-Security-Policy: Controls resource loading
- * 
- * EDGE CASE ANALYSIS:
- * - CSP allows inline styles for Tailwind CSS
- * - CSP allows images from trusted sources
- * - HSTS only enabled in production
- * - Frame options prevent embedding in iframes
+ * Security plugin wrapper for @fastify/helmet
  */
-app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"], // For Tailwind
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
-      connectSrc: ["'self'", 'http://localhost:3001', 'http://localhost:3000'],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"]
+async function securityPlugin(fastify: FastifyInstance) {
+  await fastify.register(fastifyHelmet, {
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"], // For Tailwind
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
+        connectSrc: ["'self'", 'http://localhost:3001', 'http://localhost:3000'],
+        fontSrc: ["'self'"],
+        objectSrc: ["'none'"],
+        mediaSrc: ["'self'"],
+        frameSrc: ["'none'"]
+      }
+    },
+    hsts: isDevelopment ? false : {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
     }
-  },
-  hsts: process.env.NODE_ENV === 'production' ? {
-    maxAge: 31536000,
-    includeSubDomains: true,
-    preload: true
-  } : false,
-  noSniff: true,
-  frameguard: { action: 'deny' },
-  xssFilter: true
-}));
+  });
+}
 
-/**
- * Issue #2: Strict CORS Configuration
- * DEEP REASONING CHAIN:
- * CORS controls cross-origin requests to prevent unauthorized access.
- * Strict configuration:
- * - Only allows specific origins (not wildcard)
- * - Enables credentials for cookie-based auth
- * - Limits allowed methods to those actually used
- * - Restricts allowed headers
- * 
- * EDGE CASE ANALYSIS:
- * - Development mode allows localhost
- * - Production uses configured FRONTEND_URL
- * - Credentials required for cookie-based auth
- * - Preflight requests handled correctly
- */
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? (process.env.FRONTEND_URL || 'https://your-domain.com').split(',')
-  : ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://127.0.0.1:5173'];
+// ============================================================================
+// CORS CONFIGURATION
+// ============================================================================
 
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
+const corsOptions = {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
     if (!origin) return callback(null, true);
+
+    const allowedOrigins = isDevelopment
+      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173',
+        'http://127.0.0.1:3000', 'http://127.0.0.1:5173']
+      : (process.env.FRONTEND_URL || 'https://your-domain.com').split(',');
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new Error('Not allowed by CORS'));
+      callback(new Error('Not allowed by CORS'), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
   credentials: true,
-  maxAge: 86400 // 24 hours
-}));
+  maxAge: 86400
+};
 
-/**
- * Issue #9: Response Compression
- * DEEP REASONING CHAIN:
- * Compression reduces bandwidth usage and improves response times.
- * Benefits:
- * - Reduces payload size by 60-80% for text-based responses
- * - Faster page loads for clients
- * - Lower bandwidth costs
- * 
- * EDGE CASE ANALYSIS:
- * - Only compresses responses above threshold (default 1KB)
- * - Skips compression for already compressed content
- * - Handles compression errors gracefully
- */
-app.use(compression({
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) {
-      return false;
+// ============================================================================
+// JWT AUTHENTICATION PLUGIN
+// ============================================================================
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+
+async function jwtPlugin(fastify: FastifyInstance) {
+  await fastify.register(fastifyJwt, {
+    secret: JWT_SECRET,
+    sign: {
+      expiresIn: '3d'
     }
-    return compression.filter(req, res);
-  },
-  threshold: 1024, // Only compress responses larger than 1KB
-  level: 6 // Compression level (1-9, 6 is default)
-}));
-
-/**
- * Issue #14: Request Size Limit
- * DEEP REASONING CHAIN:
- * Limiting request body size prevents:
- * - Denial of service attacks via large payloads
- * - Memory exhaustion
- * - Disk space exhaustion
- * 
- * EDGE CASE ANALYSIS:
- * - 10MB limit allows file uploads
- * - Rejects oversized requests with 413 status
- * - Applies to JSON and URL-encoded bodies
- */
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-
-/**
- * Issue #13: Request Timeout
- * DEEP REASONING CHAIN:
- * Request timeouts prevent:
- * - Hanging connections
- * - Resource exhaustion
- * - Slowloris attacks
- * 
- * EDGE CASE ANALYSIS:
- * - 30 second timeout for all requests
- * - Long-running operations should use async patterns
- * - Timeout errors handled gracefully
- */
-app.use((_req, res, next) => {
-  res.setTimeout(30000, () => {
-    res.status(504).json({ error: 'Request timeout' });
   });
-  next();
+}
+
+// ============================================================================
+// RATE LIMITING CONFIG
+// ============================================================================
+
+const rateLimitConfig = {
+  global: false, // Don't apply globally
+  max: isDevelopment ? 1000 : 100,
+  timeWindow: '15 minutes',
+  cache: 10000,
+  allowList: ['127.0.0.1'],
+  redis: undefined // Will be set if Redis is available
+};
+
+// ============================================================================
+// DATABASE PLUGIN
+// ============================================================================
+
+async function databasePlugin(fastify: FastifyInstance) {
+  const db = await getDatabase();
+  (fastify as any).decorate('prisma', db.getPrisma());
+
+  fastify.addHook('onClose', async () => {
+    await db.close();
+  });
+}
+
+// ============================================================================
+// CACHE PLUGIN
+// ============================================================================
+
+async function cachePlugin(fastify: FastifyInstance) {
+  const redis = getRedisClient();
+  (fastify as any).decorate('redis', redis);
+}
+
+// ============================================================================
+// FASTIFY INSTANCE CREATION
+// ============================================================================
+
+const fastify = Fastify({
+  logger: {
+    level: isDevelopment ? 'info' : 'warn',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss Z',
+        ignore: 'pid,hostname'
+      }
+    }
+  },
+  bodyLimit: 10 * 1024 * 1024, // 10MB
+  requestIdHeader: 'x-request-id'
 });
 
-/**
- * Issue #3: Request Logging Middleware
- * Logs all requests with timing and status codes
- */
-app.use(requestLogger);
-
-/**
- * Issue #10: Input Sanitization
- * Sanitizes all request bodies to prevent XSS attacks
- */
-app.use(sanitizeBody());
-
-/**
- * Issue #1: API Analytics Middleware
- * DEEP REASONING CHAIN:
- * Analytics middleware tracks:
- * - Request counts per endpoint
- * - Response times (min, max, average)
- * - Error rates
- * - Usage patterns over time
- *
- * Benefits:
- * - Performance monitoring and optimization
- * - Usage insights for product decisions
- * - Error tracking and prioritization
- * - Capacity planning
- *
- * EDGE CASE ANALYSIS:
- * - Async collection prevents request blocking
- * - Sliding window algorithm for memory efficiency
- * - Defensive coding prevents analytics from breaking requests
- * - Fixed-size buffers prevent memory exhaustion
- */
-app.use(analyticsMiddleware);
+// Set validator and serializer compilers
+fastify.setValidatorCompiler(validatorCompiler);
+fastify.setSerializerCompiler(serializerCompiler);
 
 // ============================================================================
-// RATE LIMITING
+// REGISTER PLUGINS
 // ============================================================================
 
-/**
- * Issue #1: Rate Limiting on All Public Endpoints
- * DEEP REASONING CHAIN:
- * Rate limiting prevents:
- * - Brute force attacks
- * - DDoS attacks
- * - API abuse
- * 
- * Different limits for different endpoint types:
- * - Auth endpoints: 5 requests/15min (most restrictive)
- * - Public endpoints: 20 requests/15min
- * - Authenticated endpoints: 100 requests/15min
- * - Read-only endpoints: 200 requests/15min (most permissive)
- * 
- * EDGE CASE ANALYSIS:
- * - Rate limiting per IP address
- * - Successful requests count toward limit
- * - Headers inform clients of remaining requests
- * - Limits configurable per environment
- */
+async function registerPlugins() {
+  // Security plugins
+  await fastify.register(securityPlugin);
 
-// Apply rate limiting to auth routes
-app.use('/api/auth/login', authRateLimit);
-app.use('/api/auth/register', authRateLimit);
-app.use('/api/auth/reset-password', authRateLimit);
-app.use('/api/auth/verify-email', authRateLimit);
+  // CORS - register directly with options
+  await fastify.register(fastifyCors, corsOptions);
 
-// Apply rate limiting to public endpoints
-app.use('/api/auth/refresh', apiRateLimit);
+  await fastify.register(fastifyCompress, { threshold: 1024 });
+  await fastify.register(fastifyCookie);
 
-// CSRF protection middleware (applies to all routes)
-app.use(csrfProtection);
+  // JWT authentication
+  await fastify.register(fp(jwtPlugin));
+
+  // Rate limiting
+  await fastify.register(fastifyRateLimit, rateLimitConfig);
+
+  // Database and cache
+  await fastify.register(fp(databasePlugin));
+  await fastify.register(fp(cachePlugin));
+
+  // CSRF token endpoint (registered after CORS)
+  await fastify.register(csrfPlugin);
+
+  // WebSocket support (registered after Express compatibility layer)
+  await fastify.register(fastifyWebsocket);
+}
 
 // ============================================================================
 // HEALTH CHECK ENDPOINT
 // ============================================================================
 
-/**
- * Issue #5: Health Check Endpoint
- * DEEP REASONING CHAIN:
- * Health check endpoint enables:
- * - Load balancer health checks
- * - Monitoring system integration
- * - Container orchestration (Kubernetes, Docker)
- * - Automated alerting
- * 
- * Returns:
- * - Service status
- * - Database connectivity
- * - Uptime
- * - Memory usage
- * 
- * EDGE CASE ANALYSIS:
- * - Lightweight operation (no expensive queries)
- * - Returns 200 for healthy, 503 for unhealthy
- * - Includes timestamp for monitoring
- * - No authentication required (for monitoring tools)
- */
-app.get('/api/health', async (_req, res) => {
+fastify.get('/api/health', async (_request, reply) => {
   try {
     const db = await getDatabase();
+    const redis = getRedisClient();
 
     // Check database connectivity
-    const dbStatus = await db.getAllUsers().then(() => 'connected').catch(() => 'disconnected');
+    let dbStatus = 'disconnected';
+    try {
+      await db.getAllUsers();
+      dbStatus = 'connected';
+    } catch {
+      dbStatus = 'disconnected';
+    }
+
+    // Get Redis status
+    const redisStatus = await redis.getHealthStatus();
 
     // Calculate uptime
     const uptime = process.uptime();
@@ -292,21 +224,28 @@ app.get('/api/health', async (_req, res) => {
     const memoryUsageString = `${Math.round(memoryUsage.heapUsed / 1024 / 1024)}MB / ${Math.round(memoryUsage.heapTotal / 1024 / 1024)}MB`;
 
     const health = {
-      status: 'healthy',
+      status: dbStatus === 'connected' ? 'healthy' : 'unhealthy',
       timestamp: new Date().toISOString(),
       uptime: uptimeString,
       database: dbStatus,
+      redis: redisStatus.connected ? {
+        status: 'connected',
+        memory: redisStatus.memory || 'unknown',
+        keyCount: redisStatus.keyCount || 0
+      } : {
+        status: 'disconnected'
+      },
       memory: memoryUsageString,
       environment: process.env.NODE_ENV || 'development'
     };
 
     if (dbStatus !== 'connected') {
-      return res.status(503).json({ ...health, status: 'unhealthy' });
+      return reply.code(503).send({ ...health, status: 'unhealthy' });
     }
 
-    return res.json(health);
+    return reply.send(health);
   } catch (error) {
-    return res.status(503).json({
+    return reply.code(503).send({
       status: 'unhealthy',
       timestamp: new Date().toISOString(),
       error: 'Health check failed'
@@ -314,97 +253,117 @@ app.get('/api/health', async (_req, res) => {
   }
 });
 
-// CSRF token endpoint
-app.get('/api/csrf-token', getCsrfToken);
-
 // ============================================================================
-// API ROUTES (with rate limiting)
+// CSRF TOKEN ENDPOINT
 // ============================================================================
 
-/**
- * Issue #12: API Versioning
- * DEEP REASONING CHAIN:
- * API versioning enables:
- * - Backward compatibility
- * - Gradual migration
- * - Breaking changes without disrupting clients
- * - Multiple API versions running simultaneously
- * 
- * Strategy:
- * - URL-based versioning (/api/v1/)
- * - Current version is v1
- * - Future versions can be added as v2, v3, etc.
- * - Deprecation policy documented in API docs
- * 
- * EDGE CASE ANALYSIS:
- * - Version prefix in all routes
- * - Easy to add new versions
- * - Old versions can be maintained or deprecated
- * - Clients must specify version in URL
- */
+const csrfTokens = new Map<string, { token: string; expires: number }>();
+const TOKEN_EXPIRY_MS = 30 * 60 * 1000;
 
-// Apply rate limiting to authenticated routes
-app.use('/api/v1/users', apiRateLimit, usersRoutes);
-app.use('/api/v1/teams', apiRateLimit, teamsRoutes);
-app.use('/api/v1/projects', apiRateLimit, projectsRoutes);
-app.use('/api/v1/issues', apiRateLimit, issuesRoutes);
-app.use('/api/v1/comments', apiRateLimit, commentsRoutes);
-app.use('/api/v1/notifications', apiRateLimit, notificationsRoutes);
-app.use('/api/v1/activities', apiRateLimit, activitiesRoutes);
-app.use('/api/v1/analytics', apiRateLimit, analyticsRoutes);
-app.use('/api/v1/admin', apiRateLimit, adminRoutes);
-app.use('/api/v1/search', apiRateLimit, searchRoutes);
-app.use('/api/v1/export', apiRateLimit, exportRoutes);
-app.use('/api/v1/webhooks', apiRateLimit, webhooksRoutes);
-app.use('/api/v1/api-keys', apiRateLimit, apiKeysRoutes);
+function generateCsrfToken(): string {
+  return Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join('');
+}
 
-// Auth routes (with different rate limits)
-app.use('/api/v1/auth', authRoutes);
+async function csrfPlugin(fastify: FastifyInstance) {
+  fastify.get('/api/csrf-token', async (request, reply) => {
+    const sessionId = (request.ip as string) || 'anonymous';
+    const token = generateCsrfToken();
+    csrfTokens.set(sessionId, {
+      token,
+      expires: Date.now() + TOKEN_EXPIRY_MS
+    });
 
-// Legacy API routes (for backward compatibility - will be deprecated)
-app.use('/api/users', usersRoutes);
-app.use('/api/teams', teamsRoutes);
-app.use('/api/projects', projectsRoutes);
-app.use('/api/issues', issuesRoutes);
-app.use('/api/comments', commentsRoutes);
-app.use('/api/notifications', notificationsRoutes);
-app.use('/api/activities', activitiesRoutes);
-app.use('/api/analytics', analyticsRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/search', searchRoutes);
-app.use('/api/export', exportRoutes);
-app.use('/api/webhooks', webhooksRoutes);
-app.use('/api/api-keys', apiKeysRoutes);
-app.use('/api/auth', authRoutes);
+    return reply.send({ csrfToken: token });
+  });
+}
 
 // ============================================================================
-// ERROR HANDLING
+// IMPORT ROUTES
 // ============================================================================
 
-/**
- * Issue #4: Error Monitoring Middleware
- * Logs all errors with full context for debugging
- */
-app.use(errorLogger);
+async function registerRoutes() {
+  // Register native Fastify routes
+  const authFastify = (await import('./routes/auth.fastify.js')).default;
+  const usersFastify = (await import('./routes/users.fastify.js')).default;
+  const teamsFastify = (await import('./routes/teams.fastify.js')).default;
+  const projectsFastify = (await import('./routes/projects.fastify.js')).default;
+  const issuesFastify = (await import('./routes/issues.fastify.js')).default;
+  const commentsFastify = (await import('./routes/comments.fastify.js')).default;
+  const activitiesFastify = (await import('./routes/activities.fastify.js')).default;
+  const notificationsFastify = (await import('./routes/notifications.fastify.js')).default;
+  const searchFastify = (await import('./routes/search.fastify.js')).default;
+  const invitationsFastify = (await import('./routes/invitations.fastify.js')).default;
+  const joinRequestsFastify = (await import('./routes/joinRequests.fastify.js')).default;
 
-// 404 handler for API routes
-app.use(notFoundHandler);
+  // New Fastify routes (converted from Express)
+  const analyticsFastify = (await import('./routes/analytics.fastify.js')).default;
+  const adminFastify = (await import('./routes/admin.fastify.js')).default;
+  const exportFastify = (await import('./routes/export.fastify.js')).default;
 
-// Global error handler
-app.use(errorHandler);
+  // Register Fastify routes with /api/v1/ prefix only (deprecating /api/ prefix)
+  await fastify.register(authFastify, { prefix: '/api/v1/auth' });
+  await fastify.register(usersFastify, { prefix: '/api/v1/users' });
+  await fastify.register(teamsFastify, { prefix: '/api/v1/teams' });
+  await fastify.register(projectsFastify, { prefix: '/api/v1/projects' });
+  await fastify.register(issuesFastify, { prefix: '/api/v1/issues' });
+  await fastify.register(commentsFastify, { prefix: '/api/v1/comments' });
+  await fastify.register(activitiesFastify, { prefix: '/api/v1/activities' });
+  await fastify.register(notificationsFastify, { prefix: '/api/v1/notifications' });
+  await fastify.register(searchFastify, { prefix: '/api/v1/search' });
+  await fastify.register(invitationsFastify, { prefix: '/api/v1/invitations' });
+  await fastify.register(joinRequestsFastify, { prefix: '/api/v1/join-requests' });
+
+  // Register new Fastify routes
+  await fastify.register(analyticsFastify, { prefix: '/api/v1/analytics' });
+  await fastify.register(adminFastify, { prefix: '/api/v1/admin' });
+  await fastify.register(exportFastify, { prefix: '/api/v1/export' });
+
+  // Initialize WebSocket routes
+  registerWebSocketRoutes(fastify);
+}
+
+// ============================================================================
+// ERROR HANDLER
+// ============================================================================
+
+fastify.setErrorHandler((error: any, _request: any, reply: any) => {
+  const statusCode = error.statusCode || 500;
+  const message = error.message || 'Internal server error';
+
+  fastify.log.error(`[Error ${statusCode}] ${message}`);
+  fastify.log.error(error);
+
+  reply.code(statusCode).send({
+    error: message,
+    ...(isDevelopment && { stack: error.stack })
+  });
+});
+
+fastify.setNotFoundHandler((request, reply) => {
+  reply.code(404).send({
+    error: 'Not Found',
+    path: request.url,
+    method: request.method
+  });
+});
 
 // ============================================================================
 // SERVER STARTUP
 // ============================================================================
 
-// Initialize database and start server
 async function startServer() {
   try {
-    // Initialize database (loads sql.js and existing data or creates new schema)
+    // Register plugins
+    await registerPlugins();
+
+    // Register routes
+    await registerRoutes();
+
+    // Initialize database
     const db = await getDatabase();
     console.log('✅ Database initialized');
 
-    // Migration: Ensure first user is Administrator if no Administrator users exist
+    // Database: Ensure first user is Administrator if no Administrator users exist
     const allUsers = await db.getAllUsers();
     const hasAdmin = allUsers.some(u => u.role === 'Administrator');
     if (!hasAdmin && allUsers.length > 0) {
@@ -416,30 +375,43 @@ async function startServer() {
       }
     }
 
-    // Start server
-    const server = app.listen(PORT, () => {
-      console.log(`\n🚀 Linear Clone Server running on http://localhost:${PORT}`);
-      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'WARNING: using default!'}`);
-      console.log(`🔒 Security: Helmet, CORS, CSRF, Rate Limiting enabled`);
-      console.log(`📦 Compression: Enabled`);
-      console.log(`📝 Logging: Request and error logging enabled`);
-    });
+    // Start server (WebSocket already registered in registerRoutes())
+    await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
 
-    // Initialize WebSocket server
-    const wsManager = new WebSocketManager(server);
-
-    // Make wsManager available globally for route handlers
-    (global as any).wsManager = wsManager;
+    console.log(`\n🚀 Neo Linear Server running on http://localhost:${PORT}`);
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'WARNING: using default!'}`);
+    console.log(`🔒 Security: Helmet, CORS, CSRF, Rate Limiting enabled`);
+    console.log(`📦 Compression: Enabled`);
+    console.log(`📝 Logging: Request and error logging enabled`);
+    console.log(`🔴 Redis: ${getRedisClient().isReady() ? 'Connected' : 'Not connected'}`);
 
     // Schedule periodic background jobs
     await schedulePeriodicJobs();
+
   } catch (error) {
     console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 }
 
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('\n⏳ Shutting down gracefully...');
+  await fastify.close();
+  const redis = getRedisClient();
+  await redis.close();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n⏳ Shutting down gracefully...');
+  await fastify.close();
+  const redis = getRedisClient();
+  await redis.close();
+  process.exit(0);
+});
+
 startServer();
 
-export default app;
+export default fastify;

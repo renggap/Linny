@@ -86,7 +86,7 @@ export function generateVerificationEmailHTML(token: string): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Linear Clone</h1>
+          <h1>Neo Linear</h1>
         </div>
         <div class="content">
           <h2>Verify Your Email Address</h2>
@@ -128,7 +128,7 @@ export function generatePasswordResetEmailHTML(token: string): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Linear Clone</h1>
+          <h1>Neo Linear</h1>
         </div>
         <div class="content">
           <h2>Reset Your Password</h2>
@@ -169,7 +169,7 @@ export function generate2FASetupEmailHTML(secret: string, backupCodes: string[])
     <body>
       <div class="container">
         <div class="header">
-          <h1>Linear Clone</h1>
+          <h1>Neo Linear</h1>
         </div>
         <div class="content">
           <h2>Two-Factor Authentication Setup</h2>
@@ -187,6 +187,50 @@ export function generate2FASetupEmailHTML(secret: string, backupCodes: string[])
         </div>
         <div class="footer">
           <p>Keep these codes secure. Each code can only be used once.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Generate team invitation email HTML
+ */
+export function generateInvitationEmailHTML(teamName: string, role: string, inviteToken: string): string {
+    const inviteUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/accept-invite?token=${inviteToken}`;
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #5E6AD2; color: white; padding: 20px; text-align: center; }
+        .content { padding: 30px 20px; background: #f9f9f9; }
+        .button { display: inline-block; padding: 12px 30px; background: #5E6AD2; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+        .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1>Neo Linear</h1>
+        </div>
+        <div class="content">
+          <h2>You're Invited to Join ${teamName}</h2>
+          <p>You have been invited to join the <strong>${teamName}</strong> team as a <strong>${role}</strong>.</p>
+          <p>To accept this invitation and join the workspace, click the button below:</p>
+          <center><a href="${inviteUrl}" class="button">Accept Invitation</a></center>
+          <p>Or copy and paste this link into your browser:</p>
+          <p style="word-break: break-all; color: #5E6AD2;">${inviteUrl}</p>
+          <p>This invitation will expire in 7 days.</p>
+        </div>
+        <div class="footer">
+          <p>If you don't have an account yet, you'll be able to create one after clicking the link.</p>
+          <p>If you didn't expect this invitation, you can safely ignore this email.</p>
         </div>
       </div>
     </body>

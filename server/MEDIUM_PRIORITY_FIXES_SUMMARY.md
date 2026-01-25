@@ -1,7 +1,7 @@
 # Medium-Priority Issues Fixes - PHASE 3
 
 ## Overview
-This document summarizes all 18 medium-priority fixes implemented for the Linear Clone project.
+This document summarizes all 18 medium-priority fixes implemented for the Neo Linear project.
 
 ## Completed Fixes
 

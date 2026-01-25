@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { BrowserRouter } from 'react-router-dom';
+import { RouterProvider } from '@tanstack/react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthProvider } from './contexts/AuthContext';
-import App from './App';
+import { queryClient } from './services/queryClient';
+import { router } from './router';
 import './index.css';
 
 console.log('[index.tsx] App loading...');
@@ -17,11 +19,11 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <ErrorBoundary>
-      <BrowserRouter>
+      <QueryClientProvider client={queryClient}>
         <AuthProvider>
-          <App />
+          <RouterProvider router={router} />
         </AuthProvider>
-      </BrowserRouter>
+      </QueryClientProvider>
     </ErrorBoundary>
   </React.StrictMode>
 );

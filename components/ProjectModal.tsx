@@ -45,13 +45,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
     const newName = e.target.value;
     setName(newName);
     if (!identifier && newName.length >= 3) {
-      const suggestedId = newName.substring(0, 3).toUpperCase().replace(/[^A-Z]/g, '');
+      // Create suggested ID from the first 3 alphanumeric characters
+      const suggestedId = newName.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 3);
       if (suggestedId.length === 3) setIdentifier(suggestedId);
     }
   };
 
   const handleIdentifierChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    const val = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
     setIdentifier(val);
   };
 
@@ -114,25 +115,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
                 className="mb-8 p-4 bg-red-500/5 border border-red-500/20 rounded-xl text-[11px] text-red-400 font-bold flex items-center space-x-3 uppercase tracking-wider"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span>Exception: {error}</span>
+                <span>Error: {error}</span>
               </motion.div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-8">
               <div className="grid grid-cols-4 gap-6">
                 <div className="col-span-3 space-y-3">
-                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Object Name</label>
+                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Project Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={handleNameChange}
                     className="w-full bg-[#14151A] border border-[#22242A] rounded-xl px-5 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] font-medium"
-                    placeholder="Optimization Protocol"
+                    placeholder="Project Name"
                     autoFocus
                   />
                 </div>
                 <div className="space-y-3">
-                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Key-ID</label>
+                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Identifier</label>
                   <input
                     type="text"
                     value={identifier}
@@ -145,7 +146,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
               </div>
 
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Visual Marker</label>
+                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Icon</label>
                 <div className="flex items-center space-x-6 p-1 bg-[#14151A] border border-[#22242A] rounded-2xl">
                   <div className="w-16 h-16 bg-[#0F1014] border border-[#1A1C23] rounded-xl flex items-center justify-center text-3xl shrink-0 shadow-inner">
                     {icon}
@@ -167,7 +168,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
 
               <div className="pt-8 border-t border-[#1A1C23] flex items-center justify-between">
                 <div className="flex items-center space-x-3 bg-[#14151A] px-3 py-1.5 rounded-full border border-[#22242A]">
-                  <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Protocol</span>
+                  <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Team</span>
                   <div className="h-3 w-px bg-[#22242A]" />
                   <span className="text-[10px] font-bold text-[#C0C4CC] uppercase tracking-tighter">{currentTeam.name}</span>
                 </div>
@@ -177,14 +178,14 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
                     onClick={handleClose}
                     className="text-[11px] font-bold text-[#5E6068] hover:text-[#E8E8E8] transition-colors uppercase tracking-widest"
                   >
-                    Abort
+                    Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={!name || identifier.length !== 3 || isSubmitting}
                     className="px-8 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center space-x-2 group"
                   >
-                    <span>{isSubmitting ? 'Syncing...' : 'Initialize'}</span>
+                    <span>{isSubmitting ? 'Creating...' : 'Create Project'}</span>
                     <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                   </button>
                 </div>

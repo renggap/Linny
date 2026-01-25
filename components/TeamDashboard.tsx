@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { Issue, Status, User, Project, Team, Priority, UserRole } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
+import { UserAvatar } from './UserAvatar';
+import { useUIStore } from '../stores/uiStore';
+import { useNavigate } from '@tanstack/react-router';
 import {
     Target,
     Activity,
@@ -8,9 +11,10 @@ import {
     Layout,
     ArrowUpRight,
     CheckCircle2,
-
+    EyeOff,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ActivityFeed } from './ActivityFeed';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -64,11 +68,204 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
         variants={itemVariants}
         className="group relative p-5 bg-[#14151A] rounded-xl border border-[#26272F] hover:border-[#3A3C46] transition-all duration-300 overflow-hidden"
     >
+        {/* Animated decorative background */}
+        <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500">
+            <motion.div
+                className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl"
+                style={{ background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)') }}
+                animate={{
+                    scale: [1, 1.2, 1],
+                    rotate: [0, 90, 0],
+                }}
+                transition={{
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+            />
+            <motion.div
+                className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full blur-2xl"
+                style={{ background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)') }}
+                animate={{
+                    scale: [1.2, 1, 1.2],
+                    rotate: [90, 0, 90],
+                }}
+                transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                }}
+            />
+        </div>
+
+        {/* Animated gradient mesh overlay */}
+        <motion.div
+            className="absolute inset-0 opacity-0 group-hover:opacity-[0.03] transition-opacity duration-700"
+            style={{
+                background: `radial-gradient(circle at 30% 30%, ${color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                    (color?.includes('amber') ? '245, 158, 11' :
+                     color?.includes('emerald') ? '16, 185, 129' :
+                     color?.includes('indigo') ? '129, 140, 248' : '94, 106, 210')}, transparent) 0%, transparent 50%)`
+            }}
+            animate={{
+                backgroundPosition: ['0% 0%', '100% 100%', '0% 0%']
+            }}
+            transition={{
+                duration: 15,
+                repeat: Infinity,
+                ease: "linear"
+            }}
+        />
+
+        {/* Floating particles */}
+        {Array.from({ length: 3 }).map((_, i) => (
+            <motion.div
+                key={`particle-${i}`}
+                className="absolute w-1 h-1 rounded-full opacity-20 group-hover:opacity-40 transition-opacity duration-500"
+                style={{
+                    background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                        (color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                         color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                         color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)')
+                }}
+                initial={{
+                    x: `${Math.random() * 100}%`,
+                    y: `${Math.random() * 100}%`
+                }}
+                animate={{
+                    y: [0, -20, 0],
+                    x: [0, Math.random() * 10 - 5, 0],
+                    opacity: [0.1, 0.3, 0.1]
+                }}
+                transition={{
+                    duration: 4 + i,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                    delay: i * 0.5
+                }}
+            />
+        ))}
+
+        {/* Animated geometric shapes */}
+        <motion.div
+            className="absolute top-4 right-4 w-2 h-2 rounded-sm opacity-10 group-hover:opacity-20"
+            style={{
+                background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)')
+            }}
+            animate={{
+                rotate: [0, 45, 90, 45, 0],
+                scale: [1, 1.2, 1],
+            }}
+            transition={{
+                duration: 6,
+                repeat: Infinity,
+                ease: "easeInOut"
+            }}
+        />
+
+        {/* Small circle shape */}
+        <motion.div
+            className="absolute bottom-6 left-6 w-1.5 h-1.5 rounded-full opacity-15 group-hover:opacity-30"
+            style={{
+                background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
+                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)')
+            }}
+            animate={{
+                scale: [1, 1.5, 1],
+                opacity: [0.15, 0.3, 0.15],
+            }}
+            transition={{
+                duration: 3,
+                repeat: Infinity,
+                ease: "easeInOut"
+            }}
+        />
+
+        {/* Triangle shape using clip-path */}
+        <motion.div
+            className="absolute top-1/2 right-8 w-0 h-0 opacity-10 group-hover:opacity-20"
+            style={{
+                borderLeft: '4px solid transparent',
+                borderRight: '4px solid transparent',
+                borderBottom: `6px solid ${color?.includes('amber') ? '#F59E0B' :
+                                    color?.includes('emerald') ? '#10B981' :
+                                    color?.includes('indigo') ? '#818CF8' : '#5E6AD2'}`
+            }}
+            animate={{
+                rotate: [0, 180, 360],
+                y: [0, -5, 0],
+            }}
+            transition={{
+                duration: 8,
+                repeat: Infinity,
+                ease: "linear"
+            }}
+        />
+
+        {/* Animated sparkle/star */}
+        <motion.svg
+            className="absolute bottom-4 right-12 w-3 h-3 opacity-10 group-hover:opacity-20"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{
+                stroke: color?.includes('amber') ? '#F59E0B' :
+                       color?.includes('emerald') ? '#10B981' :
+                       color?.includes('indigo') ? '#818CF8' : '#5E6AD2'
+            }}
+        >
+            <motion.path
+                d="M12 2L15 9L22 12L15 15L12 22L9 15L2 12L9 9L12 2Z"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                animate={{
+                    rotate: [0, 360],
+                    scale: [1, 1.1, 1],
+                }}
+                transition={{
+                    duration: 10,
+                    repeat: Infinity,
+                    ease: "linear"
+                }}
+            />
+        </motion.svg>
+
+        {/* Diamond shape */}
+        <motion.div
+            className="absolute top-8 left-8 w-2 h-2 opacity-10 group-hover:opacity-20"
+            style={{
+                background: color?.includes('amber') ? '#F59E0B' :
+                           color?.includes('emerald') ? '#10B981' :
+                           color?.includes('indigo') ? '#818CF8' : '#5E6AD2',
+                transform: 'rotate(45deg)'
+            }}
+            animate={{
+                y: [0, 8, 0],
+                rotate: [45, 225, 45],
+            }}
+            transition={{
+                duration: 5,
+                repeat: Infinity,
+                ease: "easeInOut"
+            }}
+        />
+
         <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
             <ArrowUpRight className="w-4 h-4 text-[#4C4F59]" />
         </div>
 
-        <div className="flex flex-col justify-between h-full space-y-4">
+        <div className="flex flex-col justify-between h-full space-y-4 relative z-10">
             <div className="flex items-center space-x-3">
                 <div className={cn("p-2 rounded-lg bg-[#1D1E24] border border-[#2C2D35] group-hover:scale-105 transition-transform duration-300", color)}>
                     <Icon className="w-4 h-4" />
@@ -95,10 +292,29 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
 );
 
 export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, users, projects }) => {
+    const ui = useUIStore();
+    const navigate = useNavigate();
+
+    // Helper function to create team slug (lowercase with hyphens)
+    const toTeamSlug = (teamName: string) => teamName.toLowerCase().replace(/\s+/g, '-');
+
+    // Helper function to create project identifier slug (lowercase)
+    const toProjectSlug = (identifier: string) => identifier.toLowerCase();
+
+    // Handle project click - navigate to project URL
+    const handleProjectClick = (project: Project) => {
+        const teamSlug = toTeamSlug(team.name);
+        const projectSlug = toProjectSlug(project.identifier);
+        navigate({ to: `/team/${teamSlug}/project/${projectSlug}` });
+    };
 
     // Memoized Data Calculation (Preserved logic, cleaner implementation)
     const stats = useMemo(() => {
-        const total = issues.length;
+        // Issues are already filtered by teamId in useIssues hook
+        // No need for additional filtering by projects array
+        const teamIssues = issues;
+
+        const total = teamIssues.length;
         const byStatus: Record<Status, number> = {
             [Status.Backlog]: 0, [Status.Todo]: 0, [Status.InProgress]: 0,
             [Status.InReview]: 0, [Status.Done]: 0, [Status.Canceled]: 0,
@@ -108,12 +324,18 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
             [Priority.Low]: 0, [Priority.NoPriority]: 0,
         };
 
-        issues.forEach(issue => {
+        teamIssues.forEach(issue => {
             if (byStatus[issue.status] !== undefined) byStatus[issue.status]++;
             if (byPriority[issue.priority] !== undefined) byPriority[issue.priority]++;
         });
 
-        const completionRate = total > 0 ? Math.round((byStatus[Status.Done] / total) * 100) : 0;
+        // Completion rate: Exclude Backlog and Canceled from calculation
+        // Only include: Todo, InProgress, InReview, Done
+        const activeStatuses = [Status.Todo, Status.InProgress, Status.InReview, Status.Done];
+        const completionTotal = activeStatuses.reduce((sum, status) => sum + byStatus[status], 0);
+        const completionRate = completionTotal > 0
+            ? Math.round((byStatus[Status.Done] / completionTotal) * 100)
+            : 0;
         const activeCount = byStatus[Status.InProgress] + byStatus[Status.InReview];
 
         // Sort users by activity - only show team members (excluding guests)
@@ -121,29 +343,33 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
         const activeMembers = users
             .filter(user => teamMemberIds.includes(user.id) && user.role !== UserRole.Guest)
             .map(user => {
-                const userIssues = issues.filter(i => i.assigneeIds.includes(user.id));
-                const done = userIssues.filter(i => i.status === Status.Done).length;
+                const userIssues = teamIssues.filter(i => i.assigneeIds.includes(user.id));
+                // Exclude Backlog and Canceled from user completion calculation
+                const userActiveIssues = userIssues.filter(i => activeStatuses.includes(i.status));
+                const done = userActiveIssues.filter(i => i.status === Status.Done).length;
                 return {
                     user,
-                    total: userIssues.length,
+                    total: userActiveIssues.length, // Only count active issues (excludes Backlog/Canceled)
                     done,
-                    completion: userIssues.length > 0 ? Math.round((done / userIssues.length) * 100) : 0
+                    completion: userActiveIssues.length > 0 ? Math.round((done / userActiveIssues.length) * 100) : 0
                 };
             }).sort((a, b) => b.total - a.total).slice(0, 5);
 
-        // Sort projects
+        // Sort projects - show all team projects with their issue counts, not just those with issues
         const activeProjects = projects.map(p => {
-            const pIssues = issues.filter(i => i.projectId === p.id);
-            const pDone = pIssues.filter(i => i.status === Status.Done).length;
+            const pIssues = teamIssues.filter(i => i.projectId === p.id);
+            // Exclude Backlog and Canceled from project progress calculation
+            const pActiveIssues = pIssues.filter(i => activeStatuses.includes(i.status));
+            const pDone = pActiveIssues.filter(i => i.status === Status.Done).length;
             return {
                 ...p,
-                total: pIssues.length,
-                progress: pIssues.length > 0 ? Math.round((pDone / pIssues.length) * 100) : 0
+                total: pActiveIssues.length, // Only count active issues (excludes Backlog/Canceled)
+                progress: pActiveIssues.length > 0 ? Math.round((pDone / pActiveIssues.length) * 100) : 0
             }
-        }).sort((a, b) => b.total - a.total).slice(0, 3);
+        }).sort((a, b) => b.total - a.total); // Show all projects, sorted by issue count
 
         return { total, byStatus, byPriority, completionRate, activeCount, activeMembers, activeProjects };
-    }, [issues, users, projects]);
+    }, [issues, users, projects, team]);
 
     if (!team) return null;
 
@@ -161,8 +387,11 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         <div className="w-12 h-12 rounded-xl bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center text-xl shadow-lg shadow-black/20">
                             {team.icon || <Layout className="w-5 h-5 text-[#8A8F98]" />}
                         </div>
-                        <div>
+                        <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-semibold tracking-tight text-white mb-0.5">{team.name}</h1>
+                            {team.isStealth && (
+                                <EyeOff className="w-5 h-5 text-[#5E6068]" title="Stealth workspace - only visible to members" />
+                            )}
                         </div>
                     </div>
                 </motion.header>
@@ -176,7 +405,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         color="text-amber-500"
                     />
                     <StatCard
-                        label="Velocity"
+                        label="Total Issues"
                         value={stats.total}
                         icon={Zap}
                         color="text-[#5E6AD2]"
@@ -189,7 +418,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                     />
                     <StatCard
                         label="Active Projects"
-                        value={projects.length}
+                        value={stats.activeProjects.length}
                         icon={Target}
                         color="text-indigo-400"
                     />
@@ -244,6 +473,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                     <motion.div
                                         key={p.id}
                                         whileHover={{ x: 4 }}
+                                        onClick={() => handleProjectClick(p)}
                                         className="flex items-center justify-between p-4 bg-[#14151A] border border-[#26272F] rounded-lg hover:border-[#3A3C46] transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center space-x-4">
@@ -277,28 +507,66 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         <motion.section variants={itemVariants} className="space-y-4">
                             <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Team Velocity</h3>
                             <div className="bg-[#14151A] border border-[#26272F] rounded-xl overflow-hidden">
-                                {stats.activeMembers.map((stat) => (
-                                    <div
-                                        key={stat.user.id}
-                                        className="flex items-center justify-between p-3 border-b border-[#22242A] last:border-0 hover:bg-[#1A1C23] transition-colors"
-                                    >
-                                        <div className="flex items-center space-x-3">
-                                            <div className="relative">
-                                                <img src={stat.user.avatarUrl} alt="" className="w-8 h-8 rounded-full bg-[#2C2D35]" />
-                                                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#0F1014] rounded-full flex items-center justify-center">
-                                                    <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                                {stats.activeMembers.map((stat) => {
+                                    // Determine completion color
+                                    const completionColor = stat.completion >= 75 ? 'bg-emerald-500' :
+                                                          stat.completion >= 50 ? 'bg-amber-500' :
+                                                          stat.completion >= 25 ? 'bg-orange-500' : 'bg-red-500';
+                                    const completionGlow = stat.completion >= 75 ? 'shadow-emerald-500/50' :
+                                                           stat.completion >= 50 ? 'shadow-amber-500/50' :
+                                                           stat.completion >= 25 ? 'shadow-orange-500/50' : 'shadow-red-500/50';
+
+                                    return (
+                                        <div
+                                            key={stat.user.id}
+                                            className="flex items-center justify-between p-3 border-b border-[#22242A] last:border-0 hover:bg-[#1A1C23] transition-colors"
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <UserAvatar
+                                                    name={stat.user.name}
+                                                    size="lg"
+                                                />
+                                                <div>
+                                                    <div className="text-[13px] font-medium text-[#E8E8E8]">{stat.user.name}</div>
+                                                    <div className="text-[10px] text-[#8A8F98]">{stat.total} Issues</div>
                                                 </div>
                                             </div>
-                                            <div>
-                                                <div className="text-[13px] font-medium text-[#E8E8E8]">{stat.user.name}</div>
-                                                <div className="text-[10px] text-[#8A8F98]">{stat.total} Issues</div>
+                                            <div className="flex items-center space-x-2">
+                                                {/* Completion Indicator Ring */}
+                                                <div className="relative">
+                                                    <svg className="w-8 h-8 transform -rotate-90" viewBox="0 0 32 32">
+                                                        <circle
+                                                            cx="16"
+                                                            cy="16"
+                                                            r="14"
+                                                            fill="none"
+                                                            stroke="#26272F"
+                                                            strokeWidth="3"
+                                                        />
+                                                        <circle
+                                                            cx="16"
+                                                            cy="16"
+                                                            r="14"
+                                                            fill="none"
+                                                            stroke={stat.completion >= 75 ? '#10B981' :
+                                                                   stat.completion >= 50 ? '#F59E0B' :
+                                                                   stat.completion >= 25 ? '#F97316' : '#EF4444'}
+                                                            strokeWidth="3"
+                                                            strokeDasharray={`${(stat.completion / 100) * 88} 88`}
+                                                            strokeLinecap="round"
+                                                            className="transition-all duration-500"
+                                                        />
+                                                    </svg>
+                                                    {/* Inner dot */}
+                                                    <div className={`absolute inset-0 flex items-center justify-center`}>
+                                                        <div className={`w-2 h-2 rounded-full ${completionColor} ${completionGlow} shadow-lg`} />
+                                                    </div>
+                                                </div>
+                                                <span className="text-[12px] font-mono text-[#C0C4CC]">{stat.completion}%</span>
                                             </div>
                                         </div>
-                                        <div className="w-12 text-right">
-                                            <span className="text-[12px] font-mono text-[#C0C4CC]">{stat.completion}%</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </motion.section>
 
@@ -328,6 +596,14 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </motion.section>
+
+                        {/* Recent Activity Feed */}
+                        <motion.section variants={itemVariants} className="space-y-4">
+                            <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Recent Activity</h3>
+                            <div className="bg-[#14151A] border border-[#26272F] rounded-xl p-4 max-h-[400px overflow-y-auto no-scrollbar">
+                                <ActivityFeed users={users} />
                             </div>
                         </motion.section>
 

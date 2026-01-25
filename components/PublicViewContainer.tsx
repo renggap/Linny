@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation } from '@tanstack/react-router';
 import { api } from '../services/api';
-import { Project, Issue, User, Comment } from '../types';
+import { Project, Issue, User } from '../types';
 import { PublicProjectView } from './PublicProjectView';
 import { IssueModal } from './IssueModal';
 
@@ -13,7 +13,6 @@ export const PublicViewContainer: React.FC = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [editingIssue, setEditingIssue] = useState<Issue | undefined>(undefined);
     const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
-    const [comments, setComments] = useState<Comment[]>([]);
 
     useEffect(() => {
         const fetchPublicData = async () => {
@@ -33,15 +32,6 @@ export const PublicViewContainer: React.FC = () => {
         };
         fetchPublicData();
     }, [location.pathname]);
-
-    const fetchComments = async (issueId: string) => {
-        try {
-            const commentsData = await api.comments.getByIssue(issueId);
-            setComments(commentsData);
-        } catch (error) {
-            console.error('Failed to fetch comments', error);
-        }
-    };
 
     if (isLoading) {
         return (
@@ -63,7 +53,6 @@ export const PublicViewContainer: React.FC = () => {
                 onViewIssue={async (issue: Issue) => {
                     setEditingIssue(issue);
                     setIsIssueModalOpen(true);
-                    await fetchComments(issue.id);
                 }}
             />
             <IssueModal
@@ -73,16 +62,13 @@ export const PublicViewContainer: React.FC = () => {
                 users={users}
                 projects={[]}
                 existingIssue={editingIssue}
-                comments={comments}
                 currentUser={null}
-                onAddComment={() => { }}
                 issues={issues}
                 onCreateSubtask={() => { }}
                 onOpenIssue={(issueId: string) => {
                     const issue = issues.find((i: Issue) => i.id === issueId);
                     if (issue) {
                         setEditingIssue(issue);
-                        fetchComments(issue.id);
                     }
                 }}
                 defaultProjectId={null}

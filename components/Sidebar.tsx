@@ -1,4 +1,5 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   Layers,
   Search,
@@ -9,62 +10,33 @@ import {
   Globe,
   X,
   LayoutGrid,
-  Users,
   ChevronRight,
   Command,
   Crown,
-  Trash2
+  Loader2,
+  EyeOff
 } from 'lucide-react';
 import { StatusIcon } from './Icons';
-import { Project, Team, User, UserRole, Status } from '../types';
+import { Team, User, UserRole, Status } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../lib/utils';
 import { UserAvatar } from './UserAvatar';
+import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
+import { useUIStore } from '../stores/uiStore';
+import { useAuth } from '../contexts/AuthContext';
+import { useTeams } from '../hooks/useTeams';
+import { useProjects } from '../hooks/useProjects';
+import { useUsers } from '../hooks/useUsers';
+import { useMyJoinRequests } from '../hooks/useJoinRequests';
+import { api } from '../services/api';
+import { canCreateContent, isGlobalAdministrator, getEffectiveRole } from '../lib/roleUtils';
 
-// Role priority for sorting
-const rolePriority: Record<UserRole, number> = {
-  [UserRole.Administrator]: 0,
-  [UserRole.TeamLead]: 1,
-  [UserRole.Member]: 2,
-  [UserRole.Guest]: 3
-};
-
-// Role badge styles - subtle and consistent with design system
-// Administrator: Gold badge with crown icon only (no text label)
-// Team Lead: Green badge
-// Member: Soft blue badge
-// Guest: Gray badge
 const roleBadgeStyles: Record<UserRole, { bg: string; text: string; label: string; icon?: React.ComponentType<{ className?: string }> }> = {
-  [UserRole.Administrator]: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: '', icon: Crown },
+  [UserRole.Administrator]: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Admin' },
   [UserRole.TeamLead]: { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'Lead' },
   [UserRole.Member]: { bg: 'bg-blue-500/10', text: 'text-blue-400', label: 'Member' },
   [UserRole.Guest]: { bg: 'bg-gray-500/10', text: 'text-gray-400', label: 'Guest' }
 };
-
-interface SidebarProps {
-  currentUser: User;
-  users: User[];
-  teams: Team[];
-  projects: Project[];
-  currentTeam: Team | undefined;
-  onSwitchTeam: (teamId: string) => void;
-  onCreateIssue: () => void;
-  onCreateProject: () => void;
-  onCreateTeam: () => void;
-  onSelectProject: (projectId: string | null) => void;
-  onLogout: () => void;
-  onOpenUserManagement: () => void;
-  selectedProjectId: string | null;
-  assigneeFilter: string | null;
-  onSelectAssigneeFilter: (userId: string | null) => void;
-  onOpenUserProfile: () => void;
-  onOpenProjectSettings: (project: Project) => void;
-  statusFilter: Status | null;
-  setStatusFilter: (status: Status | null) => void;
-  isSidebarCollapsed: boolean;
-  setIsSidebarCollapsed: (collapsed: boolean) => void;
-  onOpenWorkspaceSettings?: () => void;
-}
 
 const SidebarItem = ({
   icon: Icon,
@@ -109,58 +81,43 @@ const SidebarItem = ({
   </motion.div>
 );
 
-export const Sidebar: React.FC<SidebarProps> = ({
-  currentUser,
-  users,
-  teams,
-  projects,
-  currentTeam,
-  onSwitchTeam,
-  onCreateIssue,
-  onCreateProject,
-  onCreateTeam,
-  onSelectProject,
-  onLogout,
-  onOpenUserManagement,
-  selectedProjectId,
-  assigneeFilter,
-  onSelectAssigneeFilter,
-  onOpenUserProfile,
-  onOpenProjectSettings,
-  statusFilter,
-  setStatusFilter,
-  isSidebarCollapsed,
-  setIsSidebarCollapsed,
-  onOpenWorkspaceSettings
-}) => {
+export const Sidebar: React.FC = () => {
+  const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
+  const ui = useUIStore();
+  const { data: teams = [] } = useTeams();
+  const { data: projects = [] } = useProjects(ui.currentTeamId);
+  const { data: users = [] } = useUsers();
+  const { data: joinRequests = [] } = useMyJoinRequests();
+
   const [isTeamMenuOpen, setIsTeamMenuOpen] = useState(false);
   const [isAllIssuesCollapsed, setIsAllIssuesCollapsed] = useState(true);
-  const [showAllMembers, setShowAllMembers] = useState(false);
+  const [joiningTeamId, setJoiningTeamId] = useState<string | null>(null);
 
-  const teamProjects = projects.filter(p => p.teamId === currentTeam?.id);
+  const currentTeam = teams.find(t => t.id === ui.currentTeamId);
+  const sortedTeamUsers = useWorkspaceMembers(currentTeam, users);
 
-  // Filter users by team members only, then sort by role priority (Administrator -> Team Lead -> Member -> Guest)
-  const sortedTeamUsers = useMemo(() => {
-    const teamMemberIds = currentTeam?.members || [];
-    return users
-      .filter(user => teamMemberIds.includes(user.id))
-      .sort((a, b) => {
-        const priorityA = rolePriority[a.role] ?? 999;
-        const priorityB = rolePriority[b.role] ?? 999;
-        if (priorityA !== priorityB) {
-          return priorityA - priorityB;
-        }
-        // If same role, sort by name
-        return a.name.localeCompare(b.name);
-      });
-  }, [users, currentTeam]);
+  // Helper to check if user has a pending join request for a team
+  const hasPendingJoinRequest = (teamId: string) => {
+    return joinRequests.some(req => req.teamId === teamId && req.status === 'pending');
+  };
 
-  // Limit visible members to 10 when showAllMembers is false
-  const visibleUsers = showAllMembers ? sortedTeamUsers : sortedTeamUsers.slice(0, 10);
-  const hasMoreMembers = sortedTeamUsers.length > 10;
+  const getTeamSpecificRole = (user: User, team: Team | undefined): UserRole | null => {
+    if (!team?.membersWithRoles) return null;
+    const memberWithRole = team.membersWithRoles.find(m => m.id === user.id);
+    return memberWithRole?.role ?? null;
+  };
 
-  const canCreateContent = currentUser.role !== UserRole.Guest;
-  const isAdmin = currentUser.role === UserRole.Administrator;
+  const visibleUsers = sortedTeamUsers;
+
+  // Check if user can create content based on team-specific role
+  const canCreateContentCheck = canCreateContent(currentUser, currentTeam);
+  const isAdmin = isGlobalAdministrator(currentUser);
+
+  const isTeamMember = (team: Team): boolean => {
+    if (isAdmin) return true; // Admins can access all visible teams
+    return team.members?.includes(currentUser?.id || '') || false;
+  };
 
   const statusViews = [
     { status: Status.Backlog, label: 'Backlog' },
@@ -171,16 +128,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { status: Status.Canceled, label: 'Canceled' },
   ];
 
+  if (!currentUser) return null;
+
   return (
     <>
       <AnimatePresence>
-        {!isSidebarCollapsed && (
+        {!ui.isSidebarCollapsed && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-40 md:hidden"
-            onClick={() => setIsSidebarCollapsed(true)}
+            onClick={() => ui.setSidebarCollapsed(true)}
           />
         )}
       </AnimatePresence>
@@ -188,18 +147,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <aside
         className={cn(
           "w-[240px] bg-[#0F1014] border-r border-[#22242A] flex flex-col h-full select-none z-50 transition-all duration-300",
-          isSidebarCollapsed ? "hidden md:flex" : "fixed inset-y-0 left-0 flex shadow-2xl md:static md:shadow-none"
+          ui.isSidebarCollapsed ? "hidden md:flex" : "fixed inset-y-0 left-0 flex shadow-2xl md:static md:shadow-none"
         )}
       >
-        {/* Mobile Close Button */}
         <button
           className="absolute top-3 right-3 p-1.5 text-[#5E6068] hover:text-[#E8E8E8] md:hidden"
-          onClick={() => setIsSidebarCollapsed(true)}
+          onClick={() => ui.setSidebarCollapsed(true)}
         >
           <X className="w-5 h-5" />
         </button>
 
-        {/* Team Switcher Header */}
         <div className="relative shrink-0 z-40 px-3 pt-4 pb-2">
           <div
             onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
@@ -211,10 +168,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <span className="ml-3 font-medium text-[13px] text-[#E8E8E8] tracking-tight truncate flex-1">
               {currentTeam?.name || 'Select Team'}
             </span>
+            {currentTeam?.isStealth && (
+              <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-1" title="Stealth workspace - only visible to members" />
+            )}
             <ChevronDown className={cn("w-3.5 h-3.5 text-[#5E6068] transition-transform duration-200", isTeamMenuOpen && "rotate-180")} />
           </div>
 
-          {/* Team Dropdown */}
           <AnimatePresence>
             {isTeamMenuOpen && (
               <motion.div
@@ -227,54 +186,99 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <div className="px-3 py-2 bg-[#1A1C23]/50 border-b border-[#26272F]">
                   <span className="text-[10px] font-semibold text-[#5E6068] uppercase tracking-wider">Switch Team</span>
                 </div>
-                <div className="max-h-[200px] overflow-y-auto py-1">
-                  {teams.map(team => (
-                    <div
-                      key={team.id}
-                      onClick={() => { onSwitchTeam(team.id); setIsTeamMenuOpen(false); }}
-                      className={cn(
-                        "flex items-center px-3 py-2 cursor-pointer transition-colors border-l-2",
-                        currentTeam?.id === team.id
-                          ? "bg-[#1A1C23] border-[#5E6AD2] text-white"
-                          : "border-transparent text-[#8A8F98] hover:bg-[#15161A] hover:text-[#C0C4CC]"
-                      )}
-                    >
-                      <span className="text-sm">{team.icon}</span>
-                      <span className="ml-3 text-[13px] font-medium">{team.name}</span>
-                    </div>
-                  ))}
+                <div className="max-h-[250px] overflow-y-auto py-1">
+                  {teams.map(team => {
+                    const isMember = isTeamMember(team);
+                    const hasPendingRequest = hasPendingJoinRequest(team.id);
+                    return (
+                      <div key={team.id}>
+                        <div
+                          onClick={async () => {
+                            if (isMember) {
+                              ui.setCurrentTeamId(team.id);
+                              ui.setSelectedProjectId(null);
+                              ui.setStatusFilter(null);
+                              ui.setAssigneeFilter(null);
+                              ui.setSearchQuery('');
+                              setIsTeamMenuOpen(false);
+                              // useURLSync will handle the navigation automatically
+                            } else if (!hasPendingRequest) {
+                              // If not a member and no pending request, handle join/apply
+                              try {
+                                setJoiningTeamId(team.id);
+                                await api.joinRequests.createJoinRequest(team.id);
+                              } catch (err: any) {
+                                alert(err.message || 'Failed to submit join request');
+                              } finally {
+                                setJoiningTeamId(null);
+                              }
+                            }
+                            // If has pending request, do nothing (already applied)
+                          }}
+                          className={cn(
+                            "flex items-center px-3 py-2 transition-colors border-l-2",
+                            ui.currentTeamId === team.id
+                              ? "bg-[#1A1C23] border-[#5E6AD2] text-white"
+                              : "border-transparent text-[#8A8F98]",
+                            !isMember && !hasPendingRequest && "hover:bg-[#15161A] hover:text-[#C0C4CC] cursor-pointer",
+                            hasPendingRequest && "cursor-default opacity-70"
+                          )}
+                        >
+                          <span className="text-sm">{team.icon}</span>
+                          <span className={cn("ml-3 text-[13px] font-medium flex-1", !isMember && "opacity-60")}>
+                            {team.name}
+                          </span>
+                          {team.isStealth && (
+                            <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-2" title="Stealth workspace - only visible to members" />
+                          )}
+                          {!isMember && (
+                            <div className="flex items-center gap-2">
+                              {joiningTeamId === team.id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5E6AD2]" />
+                              ) : hasPendingRequest ? (
+                                <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                  Pending
+                                </span>
+                              ) : (
+                                <span className="text-[10px] bg-[#5E6AD2]/10 text-[#5E6AD2] px-1.5 py-0.5 rounded border border-[#5E6AD2]/20">
+                                  Join
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
                 {isAdmin && (
                   <div
-                    onClick={() => { onCreateTeam(); setIsTeamMenuOpen(false); }}
+                    onClick={() => { ui.setTeamModalOpen(true); setIsTeamMenuOpen(false); }}
                     className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
                   >
                     <Plus className="w-3.5 h-3.5 mr-2" />
                     <span className="text-[12px] font-medium">Create New Workspace</span>
                   </div>
                 )}
-                {onOpenWorkspaceSettings && (
-                  <div
-                    onClick={() => { onOpenWorkspaceSettings(); setIsTeamMenuOpen(false); }}
-                    className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
-                  >
-                    <Settings className="w-3.5 h-3.5 mr-2" />
-                    <span className="text-[12px] font-medium">Workspace Settings</span>
-                  </div>
-                )}
+                <div
+                  onClick={() => { ui.setWorkspaceSettingsOpen(true); setIsTeamMenuOpen(false); }}
+                  className="flex items-center px-3 py-2.5 border-t border-[#26272F] hover:bg-[#1A1C23] cursor-pointer text-[#8A8F98] hover:text-[#E8E8E8] transition-colors"
+                >
+                  <Settings className="w-3.5 h-3.5 mr-2" />
+                  <span className="text-[12px] font-medium">Workspace Settings</span>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* Create Issue Action */}
         <div className="px-5 mb-6">
           <button
-            onClick={onCreateIssue}
-            disabled={!canCreateContent}
+            onClick={() => ui.setIssueModalOpen(true)}
+            disabled={!canCreateContentCheck}
             className={cn(
               "w-full flex items-center justify-between px-3 py-1.5 rounded-lg border transition-all text-left group shadow-lg shadow-black/20",
-              canCreateContent
+              canCreateContentCheck
                 ? "bg-[#1A1C23] border-[#2C2D35] text-[#C0C4CC] hover:border-[#3A3C46] hover:bg-[#202229] hover:text-white"
                 : "opacity-40 cursor-not-allowed border-transparent bg-[#1A1C23]"
             )}
@@ -291,19 +295,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto px-1 space-y-6 no-scrollbar">
-
-          {/* Navigation */}
           <nav className="space-y-0.5">
             <SidebarItem
               label="Search..."
               icon={Search}
               isActive={false}
-              className="mb-4" // spacer
+              className="mb-4"
               onClick={() => {
-                // Focus existing search input logic if needed, or open global search
-                // For now just consistent UI
                 const input = document.querySelector('header input') as HTMLInputElement;
                 if (input) input.focus();
               }}
@@ -313,12 +312,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <SidebarItem
               label="All Issues"
               icon={Layers}
-              isActive={!selectedProjectId && !statusFilter && !assigneeFilter}
+              isActive={!ui.selectedProjectId && !ui.statusFilter && !ui.assigneeFilter && !ui.searchQuery}
               onClick={() => {
                 setIsAllIssuesCollapsed(prev => !prev);
-                setStatusFilter(null);
-                onSelectProject(null);
-                onSelectAssigneeFilter(null);
+                ui.setStatusFilter(null);
+                ui.setSelectedProjectId(null);
+                ui.setAssigneeFilter(null);
+                ui.setSearchQuery('');
               }}
               rightElement={
                 <ChevronRight
@@ -333,7 +333,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  transition={{ duration: 0.2 }}
                   className="overflow-hidden space-y-0.5"
                 >
                   {statusViews.map(view => (
@@ -341,11 +340,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       key={view.status}
                       indent
                       label={view.label}
-                      isActive={statusFilter === view.status}
+                      isActive={ui.statusFilter === view.status}
                       onClick={() => {
-                        setStatusFilter(view.status);
-                        onSelectProject(null);
-                        onSelectAssigneeFilter(null);
+                        ui.setStatusFilter(view.status);
+                        ui.setSelectedProjectId(null);
+                        ui.setAssigneeFilter(null);
+                        ui.setSearchQuery('');
                       }}
                       icon={({ className }: { className?: string }) => (
                         <div className="mr-3 ml-0.5">
@@ -359,134 +359,111 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </AnimatePresence>
           </nav>
 
-          {/* Projects */}
           <div className="pt-2">
             <div className="px-5 mb-2 flex items-center justify-between group">
               <span className="text-[11px] font-semibold text-[#5E6068] uppercase tracking-wider">Projects</span>
-              {canCreateContent && (
-                <button onClick={onCreateProject} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
+              {canCreateContentCheck && (
+                <button onClick={() => ui.setProjectModalOpen(true)} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             <div className="space-y-0.5">
-              {teamProjects.map(project => (
+              {projects.map(project => (
                 <SidebarItem
                   key={project.id}
                   label={project.name}
                   icon={() => <span className="text-base mr-3 opacity-80 leading-none">{project.icon}</span>}
-                  isActive={selectedProjectId === project.id}
-                  onClick={() => onSelectProject(project.id)}
+                  isActive={ui.selectedProjectId === project.id}
+                  onClick={() => {
+                    ui.setSelectedProjectId(project.id);
+                    ui.setStatusFilter(null);
+                    ui.setAssigneeFilter(null);
+                    ui.setSearchQuery('');
+                    // useURLSync will handle the navigation automatically
+                  }}
                   rightElement={
                     <div className="flex items-center">
                       {project.isPublic && <Globe className="w-3 h-3 text-[#5E6068] mr-2" />}
                       <Settings
-                        onClick={(e) => { e.stopPropagation(); onOpenProjectSettings(project); }}
+                        onClick={(e) => { e.stopPropagation(); ui.setProjectSettingsOpen(true, project); }}
                         className="w-3.5 h-3.5 text-[#5E6068] hover:text-[#E8E8E8] opacity-0 group-hover:opacity-100 transition-opacity"
                       />
                     </div>
                   }
                 />
               ))}
-              {teamProjects.length === 0 && (
-                <div className="px-5 py-2 text-xs text-[#5E6068] italic">No projects found</div>
-              )}
             </div>
           </div>
 
-          {/* Team Members */}
           <div className="pt-2">
             <div className="px-5 mb-2 flex items-center justify-between group">
               <span className="text-[11px] font-semibold text-[#5E6068] uppercase tracking-wider">Your Team</span>
               {isAdmin && (
-                <button onClick={onOpenUserManagement} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
+                <button onClick={() => ui.setUserManagementOpen(true)} className="opacity-0 group-hover:opacity-100 text-[#8A8F98] hover:text-[#E8E8E8] transition-all">
                   <Settings className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
             <div className="space-y-0.5">
               {visibleUsers.map(user => {
-                const roleStyle = roleBadgeStyles[user.role] || {
-                  bg: 'bg-[#1A1C23]',
-                  text: 'text-[#8A8F98]',
-                  label: user.role || 'Member'
-                };
+                // Get the effective role for this user in the current team context
+                const effectiveRole = getEffectiveRole(user, currentTeam);
+
+                // Only show badge if role is not Member (default role)
+                if (effectiveRole === UserRole.Member) {
+                  return (
+                    <SidebarItem
+                      key={user.id}
+                      label={user.name}
+                      isActive={ui.assigneeFilter === user.id}
+                      onClick={() => ui.setAssigneeFilter(user.id)}
+                      icon={() => <UserAvatar name={user.name} size="sm" className="mr-3" showRing={true} />}
+                    />
+                  );
+                }
+
+                const roleStyle = roleBadgeStyles[effectiveRole];
+                const showCrownOnly = effectiveRole === UserRole.Administrator;
+
                 return (
                   <SidebarItem
                     key={user.id}
                     label={user.name}
-                    isActive={assigneeFilter === user.id}
-                    onClick={() => onSelectAssigneeFilter(user.id)}
-                    icon={() => (
-                      <UserAvatar
-                        name={user.name}
-                        avatarUrl={user.avatarUrl}
-                        size="sm"
-                        className="mr-3"
-                        showRing={true}
-                      />
-                    )}
+                    isActive={ui.assigneeFilter === user.id}
+                    onClick={() => ui.setAssigneeFilter(user.id)}
+                    icon={() => <UserAvatar name={user.name} size="sm" className="mr-3" showRing={true} />}
                     rightElement={
-                      <span className={cn(
-                        "flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md",
-                        roleStyle.bg,
-                        roleStyle.text,
-                        "border border-[#2C2D35] gap-1"
-                      )}>
-                        {roleStyle.icon && <roleStyle.icon className="w-3 h-3" />}
-                        {roleStyle.label}
+                      <span className={cn("flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md", roleStyle.bg, roleStyle.text, "border border-[#2C2D35] gap-1")}>
+                        {showCrownOnly && <Crown className="w-3 h-3 text-amber-400" />}
+                        {!showCrownOnly && roleStyle.label}
                       </span>
                     }
                   />
                 );
               })}
-              {hasMoreMembers && (
-                <button
-                  onClick={() => setShowAllMembers(!showAllMembers)}
-                  className="w-full flex items-center justify-center px-5 py-2 text-[11px] font-medium text-[#5E6AD2] hover:text-[#7B7BE8] hover:bg-[#1A1C23] transition-all"
-                >
-                  {showAllMembers ? (
-                    <>
-                      <ChevronDown className="w-3 h-3 mr-1 rotate-180" />
-                      Show less
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="w-3 h-3 mr-1" />
-                      Show {sortedTeamUsers.length - 10} more
-                    </>
-                  )}
-                </button>
-              )}
             </div>
           </div>
         </div>
 
-        {/* User Profile Footer */}
         <div className="mt-auto px-3 py-3 border-t border-[#22242A] bg-[#0F1014]/50 backdrop-blur-sm">
           <div
-            onClick={onOpenUserProfile}
+            onClick={() => ui.setUserProfileOpen(true)}
             className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] cursor-pointer group transition-all"
           >
-            <UserAvatar
-              name={currentUser.name}
-              avatarUrl={currentUser.avatarUrl}
-              size="lg"
-              className="mr-3"
-            />
+            <UserAvatar name={currentUser.name} size="lg" className="mr-3" />
             <div className="flex-1 min-w-0">
               <div className="text-[13px] font-medium text-[#E8E8E8] truncate">{currentUser.name}</div>
               <div className="text-[10px] text-[#5E6068] font-mono truncate">{currentUser.email}</div>
             </div>
             <button
-              onClick={(e) => { e.stopPropagation(); onLogout(); }}
+              onClick={async (e) => { e.stopPropagation(); await api.auth.logout(); window.location.href = '/'; }}
               className="p-1.5 rounded-md hover:bg-[#2C2D35] text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
-
       </aside>
     </>
   );

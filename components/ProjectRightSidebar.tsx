@@ -1,9 +1,11 @@
 
 import React, { useMemo, useState } from 'react';
-import { Project, Issue, User, Status, Activity, Priority, UserRole } from '../types';
+import { Project, Issue, User, Status, Activity, Priority, UserRole, Team } from '../types';
 import { Clock, Users, BarChart3, Target, Calendar } from 'lucide-react';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
+import { UserAvatar } from './UserAvatar';
+import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -18,9 +20,14 @@ interface ProjectRightSidebarProps {
     issues: Issue[];
     users: User[];
     workspaceUsers?: User[];
+    team?: Team;
     activities: Activity[];
     onUpdate: (project: Project) => void;
+    onOpenIssue?: (issueId: string) => void;
 }
+
+// Active statuses for completion calculation (excludes Backlog and Canceled)
+const ACTIVE_STATUSES = [Status.Todo, Status.InProgress, Status.InReview, Status.Done];
 
 const ProgressBar = ({ percentage, color = "bg-[#5E6AD2]" }: { percentage: number, color?: string }) => (
     <div className="h-1.5 w-full bg-[#1A1C23] rounded-full overflow-hidden">
@@ -38,33 +45,48 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
     issues,
     users,
     workspaceUsers,
+    team,
     activities,
-    onUpdate
+    onUpdate,
+    onOpenIssue
 }) => {
     const [visibleCount, setVisibleCount] = useState(8);
 
+    // Use centralized workspace members hook for consistent filtering
+    const teamMembers = useWorkspaceMembers(team, users);
+
     const projectIssues = useMemo(() => issues.filter(i => i.projectId === project.id), [issues, project.id]);
 
-    // Progress Calculation
-    const totalIssues = projectIssues.length;
-    const completedIssues = projectIssues.filter(i => i.status === Status.Done || i.status === Status.Canceled).length;
-    const activeIssues = projectIssues.filter(i => i.status !== Status.Done && i.status !== Status.Canceled).length;
+    // Progress Calculation - Exclude Backlog and Canceled
+    // Only include: Todo, InProgress, InReview, Done
+    const activeProjectIssues = projectIssues.filter(i => ACTIVE_STATUSES.includes(i.status));
 
-    const completionPercentage = totalIssues > 0 ? Math.round((completedIssues / totalIssues) * 100) : 0;
+    const completedIssues = activeProjectIssues.filter(i => i.status === Status.Done).length;
+    const activeIssues = projectIssues.filter(i => i.status === Status.InProgress || i.status === Status.InReview).length;
+    const totalIssues = activeProjectIssues.length; // Exclude Backlog and Canceled from total
 
-    // Member Progress (Contributors - excluding Guests)
+    const completionPercentage = activeProjectIssues.length > 0
+        ? Math.round((completedIssues / activeProjectIssues.length) * 100)
+        : 0;
+
+    // Member Progress (Contributors - using centralized team members filtering)
+    const teamMemberIds = useMemo(() => new Set(teamMembers.map(m => m.id)), [teamMembers]);
+
     const memberProgress = useMemo(() => {
         const memberStats = new Map<string, { total: number, completed: number }>();
 
         projectIssues.forEach(issue => {
+            // Exclude Backlog and Canceled from member progress
+            if (!ACTIVE_STATUSES.includes(issue.status)) return;
+
             issue.assigneeIds.forEach(assigneeId => {
                 const user = users.find(u => u.id === assigneeId);
-                // Skip Guests - they cannot be contributors
-                if (!user || user.role === UserRole.Guest) return;
+                // Only include team members (excludes guests and non-team users)
+                if (!user || !teamMemberIds.has(user.id)) return;
 
                 const stats = memberStats.get(assigneeId) || { total: 0, completed: 0 };
                 stats.total++;
-                if (issue.status === Status.Done || issue.status === Status.Canceled) {
+                if (issue.status === Status.Done) {
                     stats.completed++;
                 }
                 memberStats.set(assigneeId, stats);
@@ -76,7 +98,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
             percentage: Math.round((stats.completed / stats.total) * 100),
             count: stats.total
         })).sort((a, b) => b.count - a.count);
-    }, [projectIssues, users]);
+    }, [projectIssues, users, teamMemberIds]);
 
     // Filter Activities
     const filteredActivities = useMemo(() => {
@@ -107,6 +129,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                             <div className="bg-[#14151A] rounded-xl border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
                                 <UserSelect
                                     users={workspaceUsers || users}
+                                    filteredUsers={teamMembers}
                                     selectedUserIds={project.leadId ? [project.leadId] : []}
                                     onSelect={(id) => {
                                         onUpdate({ id: project.id, leadId: id } as Project);
@@ -198,11 +221,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                     >
                                         <div className="flex items-center justify-between mb-2">
                                             <div className="flex items-center space-x-3">
-                                                <img
-                                                    src={user.avatarUrl}
-                                                    className="w-5 h-5 rounded-full ring-1 ring-[#22242A] group-hover:ring-[#5E6AD2]/50 transition-all"
-                                                    alt=""
-                                                />
+                                                <UserAvatar name={user.name} size="sm" showRing={true} />
                                                 <span className="text-xs font-medium text-[#C0C4CC] group-hover:text-[#E8E8E8] transition-colors">{user.name}</span>
                                             </div>
                                             <span className="text-[10px] font-mono text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors">{percentage}%</span>
@@ -237,6 +256,8 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                     <div className="space-y-6 relative before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-px before:bg-[#22242A]">
                         {visibleActivities.map((activity, idx) => {
                             const user = users.find(u => u.id === activity.userId);
+                            const issue = activity.issueId ? issues.find(i => i.id === activity.issueId) : null;
+                            const issueIdentifier = issue?.identifier || activity.entityTitle;
                             return (
                                 <motion.div
                                     key={activity.id}
@@ -246,18 +267,19 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                     className="flex gap-4 relative"
                                 >
                                     <div className="z-10 bg-[#0F1014] p-0.5">
-                                        <img
-                                            src={user?.avatarUrl}
-                                            className="w-3.5 h-3.5 rounded-full ring-1 ring-[#22242A]"
-                                            alt=""
-                                        />
+                                        <UserAvatar name={user?.name || 'Unknown'} size="sm" showRing={true} />
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[11px] text-[#8A8F98] leading-relaxed">
                                             <span className="font-bold text-[#C0C4CC] mr-1">{user?.name}</span>
                                             {activity.description}
-                                            {activity.issueId && (
-                                                <span className="text-[#5E6AD2] ml-1 font-bold hover:underline cursor-pointer">#{activity.entityTitle}</span>
+                                            {activity.issueId && issueIdentifier && (
+                                                <span
+                                                    className="text-[#5E6AD2] ml-1 font-bold hover:underline cursor-pointer"
+                                                    onClick={() => onOpenIssue?.(activity.issueId!)}
+                                                >
+                                                    #{issueIdentifier}
+                                                </span>
                                             )}
                                         </p>
                                         <span className="text-[9px] text-[#3A3C46] font-bold uppercase mt-1 block">

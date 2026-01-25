@@ -1,5 +1,5 @@
 {
-  "name": "linear-clone",
+  "name": "neo-linear",
   "private": true,
   "version": "1.0.4",
   "type": "module",
@@ -10,9 +10,8 @@
     "build": "vite build",
     "build:server": "cd server && npm run build",
     "preview": "vite preview",
-    "migrate": "tsx server/migrate.ts",
-    "seed": "tsx server/seed/index.ts",
-    "seed:force": "tsx server/seed/index.ts --force",
+    "seed": "tsx server/seed.ts",
+    "seed:force": "tsx server/seed.ts",
     "lint": "eslint . --ext .ts,.tsx",
     "lint:fix": "eslint . --ext .ts,.tsx --fix",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,html}\"",
@@ -20,13 +19,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.19",
+    "@tanstack/react-router": "^1.151.3",
     "clsx": "^2.1.1",
     "framer-motion": "^12.26.2",
     "lucide-react": "^0.468.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-router-dom": "^7.1.5",
-    "tailwind-merge": "^3.4.0"
+    "react": "^19.1.4",
+    "react-dom": "^19.1.4",
+    "tailwind-merge": "^3.4.0",
+    "zustand": "^5.0.10",
+    "@neo-linear/contracts": "file:./packages/contracts"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

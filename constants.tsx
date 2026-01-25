@@ -13,7 +13,7 @@ export const MOCK_TEAMS: Team[] = [
 ];
 
 export const MOCK_PROJECTS: Project[] = [
-  { id: 'p1', name: 'Linear Clone', identifier: 'LIN', icon: '⚡', teamId: 't1', isPublic: true, publicSlug: 'linear-clone' },
+  { id: 'p1', name: 'Neo Linear', identifier: 'NEO', icon: '⚡', teamId: 't1', isPublic: true, publicSlug: 'neo-linear' },
   { id: 'p2', name: 'Mobile App', identifier: 'MOB', icon: '📱', teamId: 't1' },
   { id: 'p3', name: 'Q3 Roadmap', identifier: 'Q3R', icon: '🗺️', teamId: 't2' },
   { id: 'p4', name: 'Public Demo', identifier: 'PUB', icon: '🌐', teamId: 't1', isPublic: true, publicSlug: 'public-demo' },
@@ -27,7 +27,7 @@ const twoWeeks = new Date(today); twoWeeks.setDate(today.getDate() + 14);
 export const INITIAL_ISSUES: Issue[] = [
   {
     id: '1',
-    identifier: 'LIN-101',
+    identifier: 'NEO-101',
     title: 'Implement authentication flow',
     description: 'We need to support Google and GitHub OAuth. @Sarah Chen please review.',
     status: Status.InProgress,
@@ -41,7 +41,7 @@ export const INITIAL_ISSUES: Issue[] = [
   },
   {
     id: '2',
-    identifier: 'LIN-102',
+    identifier: 'NEO-102',
     title: 'Fix alignment on sidebar',
     description: 'The sidebar is off by 2px on Safari.',
     status: Status.Todo,

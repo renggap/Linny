@@ -1,5 +1,5 @@
 {
-  "name": "Linear Clone",
-  "description": "A high-fidelity clone of the Linear issue tracking app with modern React and TypeScript.",
+  "name": "Neo Linear",
+  "description": "An enhanced version of the Linear issue tracking app with modern React and TypeScript.",
   "requestFramePermissions": []
 }

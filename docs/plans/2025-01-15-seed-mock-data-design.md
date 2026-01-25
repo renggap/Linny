@@ -1,4 +1,4 @@
-# Seed Mock Data Design for Linear Clone
+# Seed Mock Data Design for Neo Linear
 
 **Date:** 2025-01-15
 **Status:** Design Approved
@@ -6,7 +6,7 @@
 
 ## Overview
 
-This document describes the comprehensive mock data seeding strategy for the Linear Clone application. The data will showcase a fully functional full-service digital agency called "Neo Digital" based in Indonesia.
+This document describes the comprehensive mock data seeding strategy for the Neo Linear application. The data will showcase a fully functional full-service digital agency called "Neo Digital" based in Indonesia.
 
 ## Agency Profile
 

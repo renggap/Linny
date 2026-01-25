@@ -18,7 +18,13 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
         if (!dateValue) return new Date();
         if (dateValue instanceof Date) return dateValue;
         const match = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-        if (match) return new Date(parseInt(match[1]), parseInt(match[2]) - 1, parseInt(match[3]));
+        if (match) {
+            // Use UTC to avoid timezone issues
+            const year = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            const day = parseInt(match[3]);
+            return new Date(Date.UTC(year, month, day));
+        }
         return new Date(dateValue);
     };
 
@@ -71,7 +77,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
     };
 
     const handleSelectDate = (day: number) => {
-        onChange(new Date(currentYear, currentMonth, day));
+        onChange(new Date(Date.UTC(currentYear, currentMonth, day)));
         setIsOpen(false);
     };
 

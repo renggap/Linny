@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { User, UserRole } from '../types';
+import { UserAvatar } from './UserAvatar';
 import { ChevronDown, Check } from 'lucide-react';
 
 interface UserSelectProps {
@@ -10,6 +11,12 @@ interface UserSelectProps {
     placeholder?: string;
     className?: string;
     readOnly?: boolean;
+    /**
+     * Optional pre-filtered users to use instead of internal filtering.
+     * When provided, this takes precedence over the default guest filtering.
+     * Use this to pass users filtered by a centralized hook like useWorkspaceMembers.
+     */
+    filteredUsers?: User[];
 }
 
 export const UserSelect: React.FC<UserSelectProps> = ({
@@ -18,7 +25,8 @@ export const UserSelect: React.FC<UserSelectProps> = ({
     onSelect,
     placeholder = "Assign User",
     className,
-    readOnly = false
+    readOnly = false,
+    filteredUsers,
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -27,9 +35,9 @@ export const UserSelect: React.FC<UserSelectProps> = ({
 
     const selectedUsers = users.filter(u => (selectedUserIds || []).includes(u.id));
 
-    // Filter out Guests from the available users for assignment
+    // Use filteredUsers if provided, otherwise filter out Guests from the available users
     // Guests cannot be assigned to issues
-    const assignableUsers = users.filter(u => u.role !== UserRole.Guest);
+    const assignableUsers = filteredUsers || users.filter(u => u.role !== UserRole.Guest);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -94,23 +102,15 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                             {selectedUsers.slice(0, 3).map((user, i) => (
                                 <div
                                     key={user.id}
-                                    className="w-5 h-5 rounded-full border border-[#25262B] ring-1 ring-[#363840] bg-[#5E6AD2] flex items-center justify-center text-[8px] font-semibold text-white"
-                                    style={{ zIndex: selectedUsers.length - i }}
+                                    className="relative"
+                                    style={{ zIndex: selectedUsers.length - i, width: '20px', height: '20px' }}
                                     title={user.name}
                                 >
-                                    {user.avatarUrl ? (
-                                        <img
-                                            src={user.avatarUrl}
-                                            alt={user.name}
-                                            className="w-full h-full rounded-full"
-                                            onError={(e) => {
-                                                const target = e.target as HTMLImageElement;
-                                                target.style.display = 'none';
-                                            }}
-                                        />
-                                    ) : (
-                                        user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-                                    )}
+                                    <UserAvatar
+                                        name={user.name}
+                                        size="sm"
+                                        className="border-2 border-[#25262B] rounded-full"
+                                    />
                                 </div>
                             ))}
                             {selectedUsers.length > 3 && (
@@ -142,12 +142,12 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onSelect(user.id);
-                                // For multi-select, we might not want to close immediately, 
+                                // For multi-select, we might not want to close immediately,
                                 // but for now let's keep it behaving like a toggle or single for compatibility if needed.
                                 // Actually, in IssueModal we do toggle logic in its handler.
                             }}
                         >
-                            <img src={user.avatarUrl} alt={user.name} className="w-4 h-4 rounded-full mr-2" />
+                            <UserAvatar name={user.name} size="sm" className="mr-2" />
                             <span className={`flex-1 ${selectedUserIds.includes(user.id) ? 'font-medium' : ''}`}>
                                 {user.name}
                             </span>

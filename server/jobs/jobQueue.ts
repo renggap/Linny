@@ -1,65 +1,14 @@
 /**
- * ============================================================================
- * ISSUE #3: BACKGROUND JOB QUEUE
- * ============================================================================
+ * Background Job Queue System
  *
- * DEEP REASONING CHAIN:
+ * Provides in-memory job queues for processing tasks asynchronously.
+ * Supports automatic retries with exponential backoff.
  *
- * Why Background Job Queue is Critical:
- * 1. Performance: Offload time-consuming tasks from request handlers
- * 2. Reliability: Ensure tasks complete even if requests timeout
- * 3. Scalability: Process tasks asynchronously without blocking
- * 4. Resilience: Retry failed jobs automatically
- * 5. Monitoring: Track job status and performance
- *
- * Architecture Decisions:
- * - In-memory queue for development (can be upgraded to Bull/Redis for production)
- * - Multiple job queues for different task types
- * - Job priorities for critical tasks
- * - Automatic retries with exponential backoff
- * - Job completion callbacks for notifications
- *
- * EDGE CASE ANALYSIS:
- *
- * 1. Queue Overflow:
- *    - Risk: Too many jobs could overwhelm the queue
- *    - Prevention: Queue size limits and job prioritization
- *    - Fallback: Reject new jobs when queue is full
- *
- * 2. Job Failures:
- *    - Risk: Failed jobs could cause data inconsistency
- *    - Prevention: Automatic retries with backoff
- *    - Fallback: Manual job retry from admin panel
- *
- * 3. Memory Leaks:
- *    - Risk: Stale job data could accumulate
- *    - Prevention: Automatic job cleanup after completion
- *    - Implementation: Job TTL and removal
- *
- * 4. Duplicate Jobs:
- *    - Risk: Same job could be queued multiple times
- *    - Prevention: Job deduplication by ID
- *    - Implementation: Job ID generation
- *
- * 5. Worker Crashes:
- *    - Risk: Worker crashes could leave jobs unprocessed
- *    - Prevention: Automatic worker restart
- *    - Fallback: Jobs remain in queue for retry
- *
- * 6. Long-Running Jobs:
- *    - Risk: Jobs could run indefinitely
- *    - Prevention: Job timeout limits
- *    - Implementation: Maximum job duration
- *
- * 7. Race Conditions:
- *    - Risk: Concurrent job processing could cause conflicts
- *    - Prevention: Job locking and serialization
- *    - Implementation: Atomic operations
- *
- * 8. Resource Exhaustion:
- *    - Risk: Too many concurrent jobs could exhaust resources
- *    - Prevention: Concurrency limits per queue
- *    - Implementation: Worker pool size limits
+ * Queues:
+ * - Email: Email sending jobs
+ * - Notifications: Notification creation jobs
+ * - Cleanup: Data cleanup jobs (old activities, notifications, expired tokens)
+ * - Data Processing: Project stats updates, report generation
  */
 
 import { getDatabase } from '../database.js';
@@ -113,7 +62,7 @@ abstract class SimpleQueue {
             createdAt: new Date()
         };
         this.queue.push(job);
-        console.log(`📋 Job added to ${this.name} queue: ${job.type}`);
+        console.log(`[JobQueue] Job added to ${this.name}: ${job.type}`);
         this.processQueue();
     }
 
@@ -132,9 +81,9 @@ abstract class SimpleQueue {
 
         try {
             await this.processJob(job);
-            console.log(`✅ Job completed in ${this.name} queue: ${job.type}`);
+            console.log(`[JobQueue] Job completed in ${this.name}: ${job.type}`);
         } catch (error) {
-            console.error(`❌ Job failed in ${this.name} queue:`, error);
+            console.error(`[JobQueue] Job failed in ${this.name}:`, error);
 
             // Retry with exponential backoff
             job.attempts++;
@@ -175,12 +124,12 @@ class EmailQueue extends SimpleQueue {
     protected async processJob(job: Job): Promise<void> {
         const { to, type } = job.data;
 
-        console.log(`📧 Processing email job: ${type} to ${to}`);
+        console.log(`[EmailQueue] Sending ${type} to ${to}`);
 
         // Simulate email sending (in production, integrate with email service)
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        console.log(`✅ Email sent successfully: ${type} to ${to}`);
+        console.log(`[EmailQueue] Sent ${type} to ${to}`);
     }
 }
 
@@ -188,24 +137,23 @@ class NotificationQueue extends SimpleQueue {
     protected async processJob(job: Job): Promise<void> {
         const { userId, type, data } = job.data;
 
-        console.log(`🔔 Processing notification job: ${type} for user ${userId}`);
+        console.log(`[NotificationQueue] Creating ${type} for user ${userId}`);
 
         try {
             const db = await getDatabase();
 
-            // Create notification in database
             await db.createNotification({
                 user_id: userId,
                 type,
                 message: data.message || '',
                 issue_id: data.entityId || null,
-                is_read: 0,
+                is_read: false,
                 actor_id: data.actorId || null
             });
 
-            console.log(`✅ Notification created: ${type} for user ${userId}`);
+            console.log(`[NotificationQueue] Created ${type} for user ${userId}`);
         } catch (error) {
-            console.error(`❌ Failed to create notification:`, error);
+            console.error(`[NotificationQueue] Failed:`, error);
             throw error;
         }
     }
@@ -215,48 +163,51 @@ class CleanupQueue extends SimpleQueue {
     protected async processJob(job: Job): Promise<void> {
         const { type } = job.data;
 
-        console.log(`🧹 Processing cleanup job: ${type}`);
+        console.log(`[CleanupQueue] Processing ${type}`);
 
         try {
             const db = await getDatabase();
 
             switch (type) {
-                case 'old_activities':
-                    // Delete activities older than 90 days
+                case 'old_activities': {
                     const ninetyDaysAgo = new Date();
                     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
-                    await db.run(
-                        'DELETE FROM activities WHERE created_at < ?',
-                        [ninetyDaysAgo.toISOString()]
-                    );
-                    console.log(`✅ Cleaned up old activities`);
+                    await db.getPrisma().activity.deleteMany({
+                        where: {
+                            createdAt: {
+                                lt: ninetyDaysAgo
+                            }
+                        }
+                    });
+                    console.log(`[CleanupQueue] Removed old activities`);
                     break;
+                }
 
-                case 'old_notifications':
-                    // Delete read notifications older than 30 days
+                case 'old_notifications': {
                     const thirtyDaysAgo = new Date();
                     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-                    await db.run(
-                        'DELETE FROM notifications WHERE is_read = 1 AND created_at < ?',
-                        [thirtyDaysAgo.toISOString()]
-                    );
-                    console.log(`✅ Cleaned up old notifications`);
+                    await db.getPrisma().notification.deleteMany({
+                        where: {
+                            isRead: true,
+                            createdAt: {
+                                lt: thirtyDaysAgo
+                            }
+                        }
+                    });
+                    console.log(`[CleanupQueue] Removed old notifications`);
                     break;
+                }
 
                 case 'expired_tokens':
-                    // Delete expired refresh tokens
-                    await db.run(
-                        'DELETE FROM refresh_tokens WHERE expires_at < ?',
-                        [new Date().toISOString()]
-                    );
-                    console.log(`✅ Cleaned up expired tokens`);
+                    await db.cleanupExpiredTokens();
+                    console.log(`[CleanupQueue] Removed expired tokens`);
                     break;
 
                 default:
-                    console.warn(`Unknown cleanup type: ${type}`);
+                    console.warn(`[CleanupQueue] Unknown type: ${type}`);
             }
         } catch (error) {
-            console.error(`❌ Failed to process cleanup job:`, error);
+            console.error(`[CleanupQueue] Failed:`, error);
             throw error;
         }
     }
@@ -266,27 +217,26 @@ class DataProcessingQueue extends SimpleQueue {
     protected async processJob(job: Job): Promise<void> {
         const { type, data } = job.data;
 
-        console.log(`⚙️ Processing data job: ${type}`);
+        console.log(`[DataProcessingQueue] Processing ${type}`);
 
         try {
             const db = await getDatabase();
 
             switch (type) {
-                case 'update_project_stats':
-                    // Update project statistics
+                case 'update_project_stats': {
                     const projectId = data.projectId;
                     await db.getIssuesByProject(projectId);
 
-                    await db.run(
-                        'UPDATE projects SET updated_at = ? WHERE id = ?',
-                        [db.now(), projectId]
-                    );
+                    await db.getPrisma().project.update({
+                        where: { id: projectId },
+                        data: { updatedAt: new Date() }
+                    });
 
-                    console.log(`✅ Updated project stats for ${projectId}`);
+                    console.log(`[DataProcessingQueue] Updated stats for ${projectId}`);
                     break;
+                }
 
                 case 'generate_report':
-                    // Generate usage report
                     await Promise.all([
                         db.getAllUsers(),
                         db.getAllTeams(),
@@ -294,14 +244,14 @@ class DataProcessingQueue extends SimpleQueue {
                         db.getAllIssues()
                     ]);
 
-                    console.log(`✅ Generated usage report`);
+                    console.log(`[DataProcessingQueue] Generated usage report`);
                     break;
 
                 default:
-                    console.warn(`Unknown data processing type: ${type}`);
+                    console.warn(`[DataProcessingQueue] Unknown type: ${type}`);
             }
         } catch (error) {
-            console.error(`❌ Failed to process data job:`, error);
+            console.error(`[DataProcessingQueue] Failed:`, error);
             throw error;
         }
     }
@@ -312,16 +262,6 @@ export const emailQueue = new EmailQueue('email');
 export const notificationQueue = new NotificationQueue('notifications');
 export const cleanupQueue = new CleanupQueue('cleanup');
 export const dataProcessingQueue = new DataProcessingQueue('data-processing');
-
-// ============================================================================
-// JOB PROCESSORS
-// ============================================================================
-
-// ============================================================================
-// QUEUE EVENT HANDLERS
-// ============================================================================
-
-// Event handlers are managed by the SimpleQueue class
 
 // ============================================================================
 // JOB HELPER FUNCTIONS
@@ -404,7 +344,6 @@ export async function getQueueStats(): Promise<{
  * Schedule periodic cleanup jobs
  */
 export async function schedulePeriodicJobs(): Promise<void> {
-    // Schedule cleanup jobs to run daily
     const repeat = {
         every: 24 * 60 * 60 * 1000, // 24 hours
     };
@@ -413,7 +352,7 @@ export async function schedulePeriodicJobs(): Promise<void> {
     await addCleanupJob({ type: 'old_notifications' }, { repeat });
     await addCleanupJob({ type: 'expired_tokens' }, { repeat });
 
-    console.log('✅ Periodic cleanup jobs scheduled');
+    console.log('[JobQueue] Periodic cleanup jobs scheduled');
 }
 
 /**
@@ -426,11 +365,11 @@ export async function closeAllQueues(): Promise<void> {
         cleanupQueue.close(),
         dataProcessingQueue.close()
     ]);
-    console.log('✅ All job queues closed');
+    console.log('[JobQueue] All queues closed');
 }
 
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
 
-console.log('✅ Background job queues initialized');
+console.log('[JobQueue] Background job queues initialized');

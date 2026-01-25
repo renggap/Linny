@@ -2,14 +2,14 @@
 export enum Status {
   Backlog = 'Backlog',
   Todo = 'Todo',
-  InProgress = 'In Progress',
-  InReview = 'In Review',
+  InProgress = 'InProgress',
+  InReview = 'InReview',
   Done = 'Done',
   Canceled = 'Canceled'
 }
 
 export enum Priority {
-  NoPriority = 'No Priority',
+  NoPriority = 'NoPriority',
   Urgent = 'Urgent',
   High = 'High',
   Medium = 'Medium',
@@ -18,7 +18,7 @@ export enum Priority {
 
 export enum UserRole {
   Administrator = 'Administrator',
-  TeamLead = 'Team Lead',
+  TeamLead = 'TeamLead',
   Member = 'Member',
   Guest = 'Guest'
 }
@@ -36,7 +36,14 @@ export interface Team {
   id: string;
   name: string;
   icon: string;
+  isStealth?: boolean;
   members: string[]; // User IDs
+  membersWithRoles?: TeamMemberWithRole[]; // Team-specific roles
+}
+
+export interface TeamMemberWithRole {
+  id: string; // User ID
+  role: UserRole;
 }
 
 export interface ResourceLink {
@@ -99,7 +106,8 @@ export interface Comment {
 
 export enum NotificationType {
   Mention = 'mention',
-  DueDate = 'dueDate'
+  DueDate = 'dueDate',
+  JoinRequest = 'joinRequest'
 }
 
 export interface Notification {
@@ -107,7 +115,7 @@ export interface Notification {
   userId: string; // The person receiving the notification
   type: NotificationType;
   message: string;
-  issueId: string;
+  issueId?: string; // Optional - not all notifications have an associated issue
   isRead: boolean;
   createdAt: Date;
   actorId?: string; // The person who triggered it (e.g. who tagged you)
@@ -117,10 +125,23 @@ export interface Notification {
 export interface Activity {
   id: string;
   userId: string;
-  type: 'issue_created' | 'status_change' | 'comment' | 'project_update' | 'issue_update';
+  type: 'issue_created' | 'status_change' | 'comment' | 'project_update' | 'issue_update' | 'issue_deleted';
   projectId?: string;
   issueId?: string;
   entityTitle?: string;
   description?: string;
   createdAt: Date;
+}
+
+export type JoinRequestStatus = 'pending' | 'approved' | 'rejected';
+
+export interface JoinRequest {
+  id: string;
+  teamId: string;
+  userId: string;
+  status: JoinRequestStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  team?: Team;
+  user?: User;
 }

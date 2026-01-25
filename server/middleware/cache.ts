@@ -1,99 +1,125 @@
-import NodeCache from 'node-cache';
-
 /**
- * In-Memory Cache Middleware
- * 
+ * Redis Cache Middleware
+ *
  * DEEP REASONING CHAIN:
  * Caching frequently accessed data reduces database load and improves response times.
- * This implementation uses NodeCache for:
- * 1. Simple key-value storage with TTL (time-to-live)
- * 2. Automatic cache expiration to prevent stale data
- * 3. Cache invalidation on data mutations
- * 4. Thread-safe operations for concurrent requests
- * 
+ * This implementation uses Redis for:
+ * 1. Distributed caching across multiple server instances
+ * 2. Persistent cache storage (survives server restarts)
+ * 3. Automatic cache expiration with TTL
+ * 4. Cache invalidation on data mutations
+ * 5. Graceful degradation when Redis is unavailable
+ *
  * EDGE CASE ANALYSIS:
  * - Handles cache misses gracefully by falling through to database
  * - Prevents caching of error responses
  * - Supports cache invalidation by pattern for bulk updates
  * - Configurable TTL per endpoint type
- * - Memory-efficient with automatic cleanup
+ * - Redis connection failures don't break the application
  */
 
-const cache = new NodeCache({
-    stdTTL: 300, // Default TTL: 5 minutes
-    checkperiod: 60, // Check for expired keys every 60 seconds
-    useClones: false // Performance optimization
-});
+import { getCacheManager, TTL } from '../cache/cacheManager.js';
+
+const cacheManager = getCacheManager();
 
 /**
  * Cache middleware factory
  * Creates middleware that caches GET requests based on cache key
+ * Compatible with both Fastify and Express
  */
-export function cacheMiddleware(keyPrefix: string, ttl: number = 300) {
-    return (req: any, res: any, next: any) => {
-        // Only cache GET requests
-        if (req.method !== 'GET') {
-            return next();
-        }
+export function cacheMiddleware(keyPrefix: string, ttl: number = TTL.DEFAULT) {
+  return async (req: any, res: any, next?: any) => {
+    // Only cache GET requests
+    if (req.method !== 'GET') {
+      if (next) return next();
+      return;
+    }
 
-        // Generate cache key from URL and query params
-        const cacheKey = `${keyPrefix}:${req.originalUrl}`;
+    // Generate cache key from URL and query params
+    const cacheKey = `${keyPrefix}:${req.originalUrl || req.url}`;
 
-        // Check cache
-        const cachedData = cache.get(cacheKey);
-        if (cachedData) {
-            return res.json(cachedData);
-        }
+    // Check cache
+    const cachedData = await cacheManager.get(cacheKey);
+    if (cachedData !== null) {
+      // Add cache hit header
+      if (res.header) {
+        res.header('X-Cache', 'HIT');
+      }
+      if (res.code) {
+        return res.send(cachedData);
+      }
+      return res.json(cachedData);
+    }
 
-        // Store original json method
-        const originalJson = res.json.bind(res);
+    // Store original send/json method
+    const originalSend = res.send ? res.send.bind(res) : null;
+    const originalJson = res.json ? res.json.bind(res) : null;
 
-        // Override json method to cache response
-        res.json = function (data: any) {
-            // Only cache successful responses
-            if (res.statusCode === 200) {
-                cache.set(cacheKey, data, ttl);
-            }
-            return originalJson(data);
-        };
+    // Override send/json methods to cache response
+    const cacheResponse = (data: any) => {
+      // Only cache successful responses
+      const statusCode = res.statusCode || 200;
+      if (statusCode === 200 || statusCode === 304) {
+        cacheManager.set(cacheKey, data, ttl).catch((err) => {
+          console.error('Cache set error:', err);
+        });
+      }
 
-        next();
+      // Add cache miss header
+      if (res.header) {
+        res.header('X-Cache', 'MISS');
+      }
+
+      // Call original method
+      if (originalSend) {
+        return originalSend(data);
+      }
+      if (originalJson) {
+        return originalJson(data);
+      }
+      if (next) return next();
+      return data;
     };
+
+    if (res.send) {
+      res.send = cacheResponse;
+    }
+    if (res.json) {
+      res.json = cacheResponse;
+    }
+
+    if (next) return next();
+  };
 }
 
 /**
  * Invalidate cache by key pattern
  * Useful for bulk updates (e.g., when a project is updated)
  */
-export function invalidateCache(pattern: string): void {
-    const keys = cache.keys();
-    const keysToDelete = keys.filter(key => key.startsWith(pattern));
-
-    if (keysToDelete.length > 0) {
-        cache.del(keysToDelete);
-    }
+export async function invalidateCache(pattern: string): Promise<number> {
+  return await cacheManager.deletePattern(pattern);
 }
 
 /**
  * Invalidate cache by specific key
  */
-export function invalidateCacheKey(key: string): void {
-    cache.del(key);
+export async function invalidateCacheKey(key: string): Promise<void> {
+  await cacheManager.delete(key);
 }
 
 /**
  * Clear all cache
  * Use sparingly - typically only on major schema changes
  */
-export function clearAllCache(): void {
-    cache.flushAll();
+export async function clearAllCache(): Promise<void> {
+  await cacheManager.clear();
 }
 
 /**
  * Get cache statistics
  */
 export function getCacheStats() {
-    return cache.getStats();
+  return cacheManager.getMetrics();
 }
 
-export default cache;
+export default cacheManager;

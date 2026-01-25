@@ -1,44 +1,33 @@
-import { getDatabase } from './database.js';
+import { PrismaClient } from '@prisma/client';
 import { hashPassword } from './auth/password.js';
 
-// Helper to generate UUID using Node.js crypto API
-const uuidv4 = () => crypto.randomUUID();
+const prisma = new PrismaClient();
 
 // Helper to generate dates relative to now
 const daysAgo = (days: number) => {
   const date = new Date();
   date.setDate(date.getDate() - days);
-  return date.toISOString();
+  return date;
 };
 
-const now = () => new Date().toISOString();
+const now = () => new Date();
 
-// Helper to insert user with hashed password
-async function createUser(db: any, name: string, email: string, password: string, role: string, avatarUrl: string) {
-  const id = uuidv4();
-  const password_hash = await hashPassword(password);
-  await db.run(
-    `INSERT INTO users (id, name, email, password_hash, avatar_url, role, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, name, email, password_hash, avatarUrl, role, now(), now()]
-  );
-  return id;
-}
-
-// Helper to get a random item from array
-const random = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
-const randomSubarray = <T>(arr: T[], min: number, max: number): T[] => {
+// Helper to get a random item from array (with non-null assertion for seeding purposes)
+const random = <T>(arr: readonly T[]): T => {
+  const index = Math.floor(Math.random() * arr.length);
+  return arr[index] as T;
+};
+const randomSubarray = <T>(arr: readonly T[], min: number, max: number): T[] => {
   const count = Math.floor(Math.random() * (max - min + 1)) + min;
   const shuffled = [...arr].sort(() => Math.random() - 0.5);
   return shuffled.slice(0, count);
 };
 
 // Status and Priority options
-const statuses = ['Backlog', 'Todo', 'In Progress', 'In Review', 'Done', 'Canceled'] as const;
-const priorities = ['No Priority', 'Urgent', 'High', 'Medium', 'Low'] as const;
+const statuses: readonly string[] = ['Backlog', 'Todo', 'InProgress', 'InReview', 'Done', 'Canceled'];
+const priorities: readonly string[] = ['NoPriority', 'Urgent', 'High', 'Medium', 'Low'];
 
 export async function seedDatabase() {
-  const db = await getDatabase();
   console.log('🌱 Starting database seed...');
 
   // ============================================
@@ -49,25 +38,203 @@ export async function seedDatabase() {
   const users: any[] = [];
 
   // Admins
-  users.push({ id: await createUser(db, 'Alice Chen', 'alice@example.com', 'Password123!', 'Admin', 'https://i.pravatar.cc/150?u=alice'), name: 'Alice Chen', email: 'alice@example.com' });
-  users.push({ id: await createUser(db, 'Bob Smith', 'bob@example.com', 'Password123!', 'Admin', 'https://i.pravatar.cc/150?u=bob'), name: 'Bob Smith', email: 'bob@example.com' });
+  const alicePassword = await hashPassword('Password123!');
+  const alice = await prisma.user.create({
+    data: {
+      name: 'Alice Chen',
+      email: 'alice@example.com',
+      passwordHash: alicePassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=alice',
+      role: 'Administrator',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: alice.id, name: alice.name, email: alice.email });
+
+  const bobPassword = await hashPassword('Password123!');
+  const bob = await prisma.user.create({
+    data: {
+      name: 'Bob Smith',
+      email: 'bob@example.com',
+      passwordHash: bobPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=bob',
+      role: 'Administrator',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: bob.id, name: bob.name, email: bob.email });
 
   // Team Leads
-  users.push({ id: await createUser(db, 'Carol Williams', 'carol@example.com', 'Password123!', 'Team Lead', 'https://i.pravatar.cc/150?u=carol'), name: 'Carol Williams', email: 'carol@example.com' });
-  users.push({ id: await createUser(db, 'David Johnson', 'david@example.com', 'Password123!', 'Team Lead', 'https://i.pravatar.cc/150?u=david'), name: 'David Johnson', email: 'david@example.com' });
-  users.push({ id: await createUser(db, 'Emma Brown', 'emma@example.com', 'Password123!', 'Team Lead', 'https://i.pravatar.cc/150?u=emma'), name: 'Emma Brown', email: 'emma@example.com' });
+  const carolPassword = await hashPassword('Password123!');
+  const carol = await prisma.user.create({
+    data: {
+      name: 'Carol Williams',
+      email: 'carol@example.com',
+      passwordHash: carolPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=carol',
+      role: 'TeamLead',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: carol.id, name: carol.name, email: carol.email });
+
+  const davidPassword = await hashPassword('Password123!');
+  const david = await prisma.user.create({
+    data: {
+      name: 'David Johnson',
+      email: 'david@example.com',
+      passwordHash: davidPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=david',
+      role: 'TeamLead',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: david.id, name: david.name, email: david.email });
+
+  const emmaPassword = await hashPassword('Password123!');
+  const emma = await prisma.user.create({
+    data: {
+      name: 'Emma Brown',
+      email: 'emma@example.com',
+      passwordHash: emmaPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=emma',
+      role: 'TeamLead',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: emma.id, name: emma.name, email: emma.email });
 
   // Members
-  users.push({ id: await createUser(db, 'Frank Miller', 'frank@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=frank'), name: 'Frank Miller', email: 'frank@example.com' });
-  users.push({ id: await createUser(db, 'Grace Lee', 'grace@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=grace'), name: 'Grace Lee', email: 'grace@example.com' });
-  users.push({ id: await createUser(db, 'Henry Wilson', 'henry@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=henry'), name: 'Henry Wilson', email: 'henry@example.com' });
-  users.push({ id: await createUser(db, 'Ivy Martinez', 'ivy@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=ivy'), name: 'Ivy Martinez', email: 'ivy@example.com' });
-  users.push({ id: await createUser(db, 'Jack Davis', 'jack@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=jack'), name: 'Jack Davis', email: 'jack@example.com' });
-  users.push({ id: await createUser(db, 'Kate Taylor', 'kate@example.com', 'Password123!', 'Member', 'https://i.pravatar.cc/150?u=kate'), name: 'Kate Taylor', email: 'kate@example.com' });
+  const frankPassword = await hashPassword('Password123!');
+  const frank = await prisma.user.create({
+    data: {
+      name: 'Frank Miller',
+      email: 'frank@example.com',
+      passwordHash: frankPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=frank',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: frank.id, name: frank.name, email: frank.email });
+
+  const gracePassword = await hashPassword('Password123!');
+  const grace = await prisma.user.create({
+    data: {
+      name: 'Grace Lee',
+      email: 'grace@example.com',
+      passwordHash: gracePassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=grace',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: grace.id, name: grace.name, email: grace.email });
+
+  const henryPassword = await hashPassword('Password123!');
+  const henry = await prisma.user.create({
+    data: {
+      name: 'Henry Wilson',
+      email: 'henry@example.com',
+      passwordHash: henryPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=henry',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: henry.id, name: henry.name, email: henry.email });
+
+  const ivyPassword = await hashPassword('Password123!');
+  const ivy = await prisma.user.create({
+    data: {
+      name: 'Ivy Martinez',
+      email: 'ivy@example.com',
+      passwordHash: ivyPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=ivy',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: ivy.id, name: ivy.name, email: ivy.email });
+
+  const jackPassword = await hashPassword('Password123!');
+  const jack = await prisma.user.create({
+    data: {
+      name: 'Jack Davis',
+      email: 'jack@example.com',
+      passwordHash: jackPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=jack',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: jack.id, name: jack.name, email: jack.email });
+
+  const katePassword = await hashPassword('Password123!');
+  const kate = await prisma.user.create({
+    data: {
+      name: 'Kate Taylor',
+      email: 'kate@example.com',
+      passwordHash: katePassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=kate',
+      role: 'Member',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: kate.id, name: kate.name, email: kate.email });
 
   // Viewers
-  users.push({ id: await createUser(db, 'Liam Anderson', 'liam@example.com', 'Password123!', 'Viewer', 'https://i.pravatar.cc/150?u=liam'), name: 'Liam Anderson', email: 'liam@example.com' });
-  users.push({ id: await createUser(db, 'Mia Thomas', 'mia@example.com', 'Password123!', 'Viewer', 'https://i.pravatar.cc/150?u=mia'), name: 'Mia Thomas', email: 'mia@example.com' });
+  const liamPassword = await hashPassword('Password123!');
+  const liam = await prisma.user.create({
+    data: {
+      name: 'Liam Anderson',
+      email: 'liam@example.com',
+      passwordHash: liamPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=liam',
+      role: 'Guest',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: liam.id, name: liam.name, email: liam.email });
+
+  const miaPassword = await hashPassword('Password123!');
+  const mia = await prisma.user.create({
+    data: {
+      name: 'Mia Thomas',
+      email: 'mia@example.com',
+      passwordHash: miaPassword,
+      avatarUrl: 'https://i.pravatar.cc/150?u=mia',
+      role: 'Guest',
+      emailVerified: true,
+      createdAt: now(),
+      updatedAt: now()
+    }
+  });
+  users.push({ id: mia.id, name: mia.name, email: mia.email });
 
   console.log(`    ✅ Created ${users.length} users`);
 
@@ -85,12 +252,13 @@ export async function seedDatabase() {
   ];
 
   for (const team of teamData) {
-    const id = uuidv4();
-    await db.run(
-      'INSERT INTO teams (id, name, icon, created_at) VALUES (?, ?, ?, ?)',
-      [id, team.name, team.icon, now()]
-    );
-    teams.push({ id, name: team.name, icon: team.icon });
+    const created = await prisma.team.create({
+      data: {
+        name: team.name,
+        icon: team.icon
+      }
+    });
+    teams.push({ id: created.id, name: created.name, icon: created.icon });
   }
 
   console.log(`    ✅ Created ${teams.length} teams`);
@@ -104,31 +272,60 @@ export async function seedDatabase() {
   const engineeringTeam = teams[0];
   const engineeringMembers = [users[0], users[1], users[2], users[5], users[6], users[7]]; // Alice, Bob, Carol + others
   for (const user of engineeringMembers) {
-    await db.run('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)', [engineeringTeam.id, user.id]);
+    await prisma.teamMember.create({
+      data: {
+        teamId: engineeringTeam.id,
+        userId: user.id
+      }
+    }).catch(() => { }); // Ignore duplicates
   }
 
   // Design Team (David is lead) - admins + 3 other members
   const designTeam = teams[1];
   const designMembers = [users[0], users[1], users[3], users[6], users[7]]; // Alice, Bob, David + others
   for (const user of designMembers) {
-    await db.run('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)', [designTeam.id, user.id]);
+    await prisma.teamMember.create({
+      data: {
+        teamId: designTeam.id,
+        userId: user.id
+      }
+    }).catch(() => { });
   }
 
   // Product Team (Emma is lead) - admins + 4 other members
   const productTeam = teams[2];
   const productMembers = [users[0], users[1], users[4], users[5], users[9]]; // Alice, Bob, Emma + others
   for (const user of productMembers) {
-    await db.run('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)', [productTeam.id, user.id]);
+    await prisma.teamMember.create({
+      data: {
+        teamId: productTeam.id,
+        userId: user.id
+      }
+    }).catch(() => { });
   }
 
   // Marketing Team - admins + 2 other members
   const marketingTeam = teams[3];
   const marketingMembers = [users[0], users[1], users[5], users[11]]; // Alice, Bob + others
   for (const user of marketingMembers) {
-    await db.run('INSERT INTO team_members (team_id, user_id) VALUES (?, ?)', [marketingTeam.id, user.id]);
+    await prisma.teamMember.create({
+      data: {
+        teamId: marketingTeam.id,
+        userId: user.id
+      }
+    }).catch(() => { });
   }
 
   console.log(`    ✅ Added team members`);
+
+  // Helper function to get team members for a project
+  function projectTeamsMembers(projectId: string): any[] {
+    const project = projects.find((p: any) => p.id === projectId);
+    if (project?.teamId === engineeringTeam.id) return engineeringMembers;
+    if (project?.teamId === designTeam.id) return designMembers;
+    if (project?.teamId === productTeam.id) return productMembers;
+    return users;
+  }
 
   // ============================================
   // 4. CREATE PROJECTS
@@ -145,13 +342,22 @@ export async function seedDatabase() {
   ];
 
   for (const p of engProjects) {
-    const id = uuidv4();
-    await db.run(
-      `INSERT INTO projects (id, name, identifier, icon, team_id, description, lead_id, start_date, target_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, p.name, p.identifier, p.icon, engineeringTeam.id, p.description, users[2].id, daysAgo(30), daysAgo(-30), now(), now()]
-    );
-    projects.push({ id, ...p, teamId: engineeringTeam.id, leadId: users[2].id });
+    const created = await prisma.project.create({
+      data: {
+        name: p.name,
+        identifier: p.identifier.toLowerCase(),
+        icon: p.icon,
+        teamId: engineeringTeam.id,
+        description: p.description,
+        isPublic: false,
+        leadId: users[2].id,
+        startDate: daysAgo(30),
+        targetDate: daysAgo(-30),
+        createdAt: now(),
+        updatedAt: now()
+      }
+    });
+    projects.push({ id: created.id, ...p, teamId: engineeringTeam.id, leadId: users[2].id });
   }
 
   // Design Projects
@@ -161,13 +367,22 @@ export async function seedDatabase() {
   ];
 
   for (const p of designProjects) {
-    const id = uuidv4();
-    await db.run(
-      `INSERT INTO projects (id, name, identifier, icon, team_id, description, lead_id, start_date, target_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, p.name, p.identifier, p.icon, designTeam.id, p.description, users[3].id, daysAgo(20), daysAgo(-20), now(), now()]
-    );
-    projects.push({ id, ...p, teamId: designTeam.id, leadId: users[3].id });
+    const created = await prisma.project.create({
+      data: {
+        name: p.name,
+        identifier: p.identifier.toLowerCase(),
+        icon: p.icon,
+        teamId: designTeam.id,
+        description: p.description,
+        isPublic: false,
+        leadId: users[3].id,
+        startDate: daysAgo(20),
+        targetDate: daysAgo(-20),
+        createdAt: now(),
+        updatedAt: now()
+      }
+    });
+    projects.push({ id: created.id, ...p, teamId: designTeam.id, leadId: users[3].id });
   }
 
   // Product Projects
@@ -177,13 +392,22 @@ export async function seedDatabase() {
   ];
 
   for (const p of productProjects) {
-    const id = uuidv4();
-    await db.run(
-      `INSERT INTO projects (id, name, identifier, icon, team_id, description, lead_id, start_date, target_date, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, p.name, p.identifier, p.icon, productTeam.id, p.description, users[4].id, daysAgo(15), daysAgo(-15), now(), now()]
-    );
-    projects.push({ id, ...p, teamId: productTeam.id, leadId: users[4].id });
+    const created = await prisma.project.create({
+      data: {
+        name: p.name,
+        identifier: p.identifier.toLowerCase(),
+        icon: p.icon,
+        teamId: productTeam.id,
+        description: p.description,
+        isPublic: false,
+        leadId: users[4].id,
+        startDate: daysAgo(15),
+        targetDate: daysAgo(-15),
+        createdAt: now(),
+        updatedAt: now()
+      }
+    });
+    projects.push({ id: created.id, ...p, teamId: productTeam.id, leadId: users[4].id });
   }
 
   console.log(`    ✅ Created ${projects.length} projects`);
@@ -201,8 +425,8 @@ export async function seedDatabase() {
     'PLT': [
       { title: 'Set up new project structure', description: 'Initialize repository and configure build tools', status: 'Done', priority: 'High', hasSubtasks: true },
       { title: 'Design component architecture', description: 'Define reusable components and their relationships', status: 'Done', priority: 'High', hasSubtasks: false },
-      { title: 'Implement authentication system', description: 'OAuth integration with multiple providers', status: 'In Progress', priority: 'Urgent', hasSubtasks: true },
-      { title: 'Build dashboard layout', description: 'Create responsive grid layout for main dashboard', status: 'In Progress', priority: 'High', hasSubtasks: true },
+      { title: 'Implement authentication system', description: 'OAuth integration with multiple providers', status: 'InProgress', priority: 'Urgent', hasSubtasks: true },
+      { title: 'Build dashboard layout', description: 'Create responsive grid layout for main dashboard', status: 'InProgress', priority: 'High', hasSubtasks: true },
       { title: 'Add dark mode support', description: 'Implement theme switching functionality', status: 'Todo', priority: 'Medium', hasSubtasks: false },
       { title: 'Performance optimization', description: 'Analyze and fix performance bottlenecks', status: 'Backlog', priority: 'Medium', hasSubtasks: true },
       { title: 'Write unit tests', description: 'Achieve 80% code coverage', status: 'Todo', priority: 'Medium', hasSubtasks: false },
@@ -211,40 +435,40 @@ export async function seedDatabase() {
     ],
     'API': [
       { title: 'Profile API endpoints', description: 'Identify slowest endpoints', status: 'Done', priority: 'High', hasSubtasks: true },
-      { title: 'Implement caching layer', description: 'Add Redis caching for frequently accessed data', status: 'In Progress', priority: 'High', hasSubtasks: true },
-      { title: 'Database query optimization', description: 'Add indexes and optimize complex queries', status: 'In Review', priority: 'High', hasSubtasks: false },
+      { title: 'Implement caching layer', description: 'Add Redis caching for frequently accessed data', status: 'InProgress', priority: 'High', hasSubtasks: true },
+      { title: 'Database query optimization', description: 'Add indexes and optimize complex queries', status: 'InReview', priority: 'High', hasSubtasks: false },
       { title: 'Load balancing setup', description: 'Configure load balancer for horizontal scaling', status: 'Todo', priority: 'Medium', hasSubtasks: false },
       { title: 'Monitor response times', description: 'Set up APM and alerting', status: 'Backlog', priority: 'Low', hasSubtasks: false },
     ],
     'DBM': [
       { title: 'Create migration scripts', description: 'Write SQL scripts for data transfer', status: 'Done', priority: 'Urgent', hasSubtasks: true },
       { title: 'Set up new database servers', description: 'Provision and configure production database', status: 'Done', priority: 'Urgent', hasSubtasks: false },
-      { title: 'Data validation', description: 'Verify data integrity after migration', status: 'In Progress', priority: 'Urgent', hasSubtasks: true },
+      { title: 'Data validation', description: 'Verify data integrity after migration', status: 'InProgress', priority: 'Urgent', hasSubtasks: true },
       { title: 'Rollback plan', description: 'Document rollback procedures', status: 'Todo', priority: 'High', hasSubtasks: false },
     ],
     'BRD': [
       { title: 'Competitor analysis', description: 'Research competitor branding strategies', status: 'Done', priority: 'Medium', hasSubtasks: false },
       { title: 'Create mood board', description: 'Visual exploration of brand directions', status: 'Done', priority: 'High', hasSubtasks: false },
-      { title: 'Design new logo', description: 'Create logo variations and mockups', status: 'In Review', priority: 'High', hasSubtasks: true },
+      { title: 'Design new logo', description: 'Create logo variations and mockups', status: 'InReview', priority: 'High', hasSubtasks: true },
       { title: 'Update color palette', description: 'Define new brand colors and gradients', status: 'Todo', priority: 'Medium', hasSubtasks: false },
       { title: 'Create style guide', description: 'Document brand usage guidelines', status: 'Backlog', priority: 'Medium', hasSubtasks: false },
     ],
     'MOB': [
       { title: 'User research interviews', description: 'Conduct user interviews for mobile needs', status: 'Done', priority: 'High', hasSubtasks: false },
       { title: 'Wireframe all screens', description: 'Create low-fidelity wireframes', status: 'Done', priority: 'High', hasSubtasks: true },
-      { title: 'Design high-fidelity mockups', description: 'Create pixel-perfect designs', status: 'In Progress', priority: 'High', hasSubtasks: true },
+      { title: 'Design high-fidelity mockups', description: 'Create pixel-perfect designs', status: 'InProgress', priority: 'High', hasSubtasks: true },
       { title: 'Prototype interactions', description: 'Build interactive prototype for testing', status: 'Todo', priority: 'Medium', hasSubtasks: false },
       { title: 'Handoff to development', description: 'Prepare design assets and specifications', status: 'Backlog', priority: 'Medium', hasSubtasks: false },
     ],
     'Q1F': [
       { title: 'Feature requirements gathering', description: 'Collect and prioritize feature requests', status: 'Done', priority: 'High', hasSubtasks: false },
       { title: 'Create product roadmap', description: 'Plan feature release schedule', status: 'Done', priority: 'High', hasSubtasks: false },
-      { title: 'Beta testing program', description: 'Set up and manage beta testing', status: 'In Progress', priority: 'High', hasSubtasks: true },
+      { title: 'Beta testing program', description: 'Set up and manage beta testing', status: 'InProgress', priority: 'High', hasSubtasks: true },
       { title: 'Launch marketing materials', description: 'Prepare launch announcements and content', status: 'Todo', priority: 'Medium', hasSubtasks: false },
     ],
     'ONB': [
       { title: 'User journey mapping', description: 'Map current onboarding experience', status: 'Done', priority: 'Medium', hasSubtasks: false },
-      { title: 'Design onboarding flow', description: 'Create improved onboarding screens', status: 'In Progress', priority: 'High', hasSubtasks: true },
+      { title: 'Design onboarding flow', description: 'Create improved onboarding screens', status: 'InProgress', priority: 'High', hasSubtasks: true },
       { title: 'A/B testing setup', description: 'Prepare experiments for onboarding variants', status: 'Todo', priority: 'Medium', hasSubtasks: false },
       { title: 'Analytics integration', description: 'Track onboarding funnel metrics', status: 'Backlog', priority: 'Low', hasSubtasks: false },
     ],
@@ -253,32 +477,47 @@ export async function seedDatabase() {
   for (const project of projects) {
     const templates = issueTemplates[project.identifier] || [];
     for (const template of templates) {
-      const issueId = uuidv4();
       const identifier = `${project.identifier}-${String(issueCounter).padStart(3, '0')}`;
       issueCounter++;
 
-      await db.run(
-        `INSERT INTO issues (id, identifier, title, description, status, priority, project_id, start_date, due_date, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [issueId, identifier, template.title, template.description, template.status, template.priority, project.id, daysAgo(14), daysAgo(Math.random() * 20 - 10), now(), now()]
-      );
+      const dueDate = daysAgo(Math.floor(Math.random() * 20) - 10);
+
+      const issue = await prisma.issue.create({
+        data: {
+          identifier,
+          title: template.title,
+          description: template.description,
+          status: template.status as any,
+          priority: template.priority as any,
+          projectId: project.id,
+          startDate: daysAgo(14),
+          dueDate,
+          createdAt: now(),
+          updatedAt: now()
+        }
+      });
 
       // Add assignees (1-3 random team members)
-      const teamMemberIds = project.teamId === engineeringTeam.id ? engineeringMembers.map(u => u.id)
-        : project.teamId === designTeam.id ? designMembers.map(u => u.id)
-        : productMembers.map(u => u.id);
+      const teamMemberIds = project.teamId === engineeringTeam.id ? engineeringMembers.map((u: any) => u.id)
+        : project.teamId === designTeam.id ? designMembers.map((u: any) => u.id)
+          : productMembers.map((u: any) => u.id);
       const assignees = randomSubarray(teamMemberIds, 1, 3);
+
       for (const assigneeId of assignees) {
-        await db.run('INSERT INTO issue_assignees (issue_id, user_id) VALUES (?, ?)', [issueId, assigneeId]);
+        await prisma.issueAssignee.create({
+          data: {
+            issueId: issue.id,
+            userId: assigneeId
+          }
+        }).catch(() => { });
       }
 
-      issues.push({ id: issueId, identifier, ...template, projectId: project.id, assigneeIds: assignees });
+      issues.push({ id: issue.id, identifier, ...template, projectId: project.id, assigneeIds: assignees, dueDate });
 
       // Create sub-issues if template has subtasks
       if (template.hasSubtasks) {
         const subtaskCount = Math.floor(Math.random() * 3) + 2; // 2-4 subtasks
         for (let i = 0; i < subtaskCount; i++) {
-          const subIssueId = uuidv4();
           const subIdentifier = `${project.identifier}-${String(issueCounter).padStart(3, '0')}`;
           issueCounter++;
 
@@ -286,21 +525,34 @@ export async function seedDatabase() {
             'Research and planning', 'Implementation phase 1', 'Implementation phase 2',
             'Testing and QA', 'Documentation', 'Code review', 'Deployment preparation'
           ];
-          const subtaskTitle = subtaskTitles[i % subtaskTitles.length];
+          const subtaskTitle = subtaskTitles[i % subtaskTitles.length] ?? 'Subtask';
 
-          await db.run(
-            `INSERT INTO issues (id, identifier, title, description, status, priority, project_id, parent_id, created_at, updated_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [subIssueId, subIdentifier, subtaskTitle, `Subtask for: ${template.title}`, random(statuses.slice(0, 5)), random(priorities), project.id, issueId, now(), now()]
-          );
+          const subIssue = await prisma.issue.create({
+            data: {
+              identifier: subIdentifier,
+              title: subtaskTitle,
+              description: `Subtask for: ${template.title}`,
+              status: random(statuses.slice(0, 5)) as any,
+              priority: random(priorities) as any,
+              projectId: project.id,
+              parentId: issue.id,
+              createdAt: now(),
+              updatedAt: now()
+            }
+          });
 
           // Assign subtask to 1-2 people
           const subAssignees = randomSubarray(teamMemberIds, 1, 2);
           for (const assigneeId of subAssignees) {
-            await db.run('INSERT INTO issue_assignees (issue_id, user_id) VALUES (?, ?)', [subIssueId, assigneeId]);
+            await prisma.issueAssignee.create({
+              data: {
+                issueId: subIssue.id,
+                userId: assigneeId
+              }
+            }).catch(() => { });
           }
 
-          issues.push({ id: subIssueId, identifier: subIdentifier, title: subtaskTitle, projectId: project.id, parentId: issueId });
+          issues.push({ id: subIssue.id, identifier: subIdentifier, title: subtaskTitle, projectId: project.id, parentId: issue.id });
         }
       }
     }
@@ -341,27 +593,22 @@ export async function seedDatabase() {
       const teamMembers = projectTeamsMembers(issue.projectId);
 
       for (let i = 0; i < numComments; i++) {
-        const commentId = uuidv4();
         const author = random(teamMembers);
         const content = random(commentTemplates);
 
-        await db.run(
-          'INSERT INTO comments (id, content, issue_id, user_id, created_at) VALUES (?, ?, ?, ?, ?)',
-          [commentId, content, issue.id, author.id, daysAgo(Math.floor(Math.random() * 10))]
-        );
-        comments.push({ id: commentId, content, issueId: issue.id, userId: author.id });
+        const comment = await prisma.comment.create({
+          data: {
+            content,
+            issueId: issue.id,
+            userId: author.id,
+            createdAt: daysAgo(Math.floor(Math.random() * 10))
+          }
+        });
+
+        comments.push({ id: comment.id, content, issueId: issue.id, userId: author.id });
         commentCount++;
       }
     }
-  }
-
-  // Helper function to get team members for a project
-  function projectTeamsMembers(projectId: string): any[] {
-    const project = projects.find(p => p.id === projectId);
-    if (project?.teamId === engineeringTeam.id) return engineeringMembers;
-    if (project?.teamId === designTeam.id) return designMembers;
-    if (project?.teamId === productTeam.id) return productMembers;
-    return users;
   }
 
   console.log(`    ✅ Created ${commentCount} comments`);
@@ -382,40 +629,47 @@ export async function seedDatabase() {
 
     while ((match = mentionRegex.exec(content)) !== null) {
       const mentionedName = match[1];
-      const mentionedUser = users.find(u => u.name === mentionedName);
+      const mentionedUser = users.find((u: any) => u.name === mentionedName);
 
       if (mentionedUser && mentionedUser.id !== comment.userId) {
-        const notifId = uuidv4();
-        const issue = issues.find(i => i.id === comment.issueId);
-        const actor = users.find(u => u.id === comment.userId);
+        issues.find((i: any) => i.id === comment.issueId);
+        const actor = users.find((u: any) => u.id === comment.userId);
 
-        await db.run(
-          `INSERT INTO notifications (id, user_id, type, message, issue_id, actor_id, is_read, created_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [notifId, mentionedUser.id, 'mention', `${actor?.name || 'Someone'} mentioned you in a comment`, comment.issueId, comment.userId, 0, daysAgo(Math.random() * 5)]
-        );
-        mentionNotifications.push({ id: notifId, userId: mentionedUser.id, issueId: comment.issueId });
+        const notif = await prisma.notification.create({
+          data: {
+            userId: mentionedUser.id,
+            type: 'mention',
+            message: `${actor?.name || 'Someone'} mentioned you in a comment`,
+            issueId: comment.issueId,
+            isRead: false,
+            actorId: comment.userId,
+            createdAt: daysAgo(Math.floor(Math.random() * 5))
+          }
+        });
+
+        mentionNotifications.push({ id: notif.id, userId: mentionedUser.id, issueId: comment.issueId });
       }
     }
   }
 
   // Create due date notifications for issues due soon
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-
-  for (const issue of issues.filter(i => i.dueDate)) {
+  for (const issue of issues.filter((i: any) => i.dueDate)) {
     if (issue.assigneeIds && issue.assigneeIds.length > 0) {
       for (const assigneeId of issue.assigneeIds) {
         // Randomly assign some as due date notifications
         if (Math.random() > 0.7) {
-          const notifId = uuidv4();
-          await db.run(
-            `INSERT INTO notifications (id, user_id, type, message, issue_id, is_read, created_at)
-             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [notifId, assigneeId, 'dueDate', `Issue "${issue.title}" is due soon`, issue.id, 0, daysAgo(Math.random() * 2)]
-          );
-          dueDateNotifications.push({ id: notifId, userId: assigneeId, issueId: issue.id });
+          const notif = await prisma.notification.create({
+            data: {
+              userId: assigneeId,
+              type: 'dueDate',
+              message: `Issue "${issue.title}" is due soon`,
+              issueId: issue.id,
+              isRead: false,
+              createdAt: daysAgo(Math.floor(Math.random() * 2))
+            }
+          });
+
+          dueDateNotifications.push({ id: notif.id, userId: assigneeId, issueId: issue.id });
         }
       }
     }
@@ -432,12 +686,11 @@ export async function seedDatabase() {
   let activityCount = 0;
 
   for (const issue of issues.slice(0, 20)) { // Add activities for first 20 issues
-    const project = projects.find(p => p.id === issue.projectId);
+    projects.find((p: any) => p.id === issue.projectId);
     const teamMembers = projectTeamsMembers(issue.projectId);
     const numActivities = Math.floor(Math.random() * 3) + 1; // 1-3 activities per issue
 
     for (let i = 0; i < numActivities; i++) {
-      const activityId = uuidv4();
       const actor = random(teamMembers);
       const activityType = random(activityTypes);
       let description = '';
@@ -460,19 +713,26 @@ export async function seedDatabase() {
           break;
       }
 
-      await db.run(
-        `INSERT INTO activities (id, user_id, type, project_id, issue_id, entity_title, description, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [activityId, actor.id, activityType, issue.projectId, issue.id, issue.title, description, daysAgo(Math.random() * 14)]
-      );
+      await prisma.activity.create({
+        data: {
+          userId: actor.id,
+          type: activityType,
+          projectId: issue.projectId,
+          issueId: issue.id,
+          entityTitle: issue.title,
+          description,
+          createdAt: daysAgo(Math.floor(Math.random() * 14))
+        }
+      });
+
       activityCount++;
     }
   }
 
   console.log(`    ✅ Created ${activityCount} activities`);
 
-  // Save database
-  (db as any).save();
+  // Disconnect Prisma
+  await prisma.$disconnect();
 
   console.log('');
   console.log('✨ Database seeded successfully!');
@@ -487,11 +747,12 @@ export async function seedDatabase() {
   console.log(`   Activities: ${activityCount}`);
   console.log('');
   console.log('🔐 Test credentials (all passwords: Password123!):');
-  console.log('   Admin: alice@example.com');
-  console.log('   Team Lead: carol@example.com (Engineering)');
-  console.log('   Team Lead: david@example.com (Design)');
-  console.log('   Team Lead: emma@example.com (Product)');
+  console.log('   Administrator: alice@example.com');
+  console.log('   TeamLead: carol@example.com (Engineering)');
+  console.log('   TeamLead: david@example.com (Design)');
+  console.log('   TeamLead: emma@example.com (Product)');
   console.log('   Member: frank@example.com');
+  console.log('   Guest: liam@example.com');
   console.log('');
 }
 
