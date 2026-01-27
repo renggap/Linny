@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Terminal, Shield, Cpu, Activity, ArrowRight, Lock, Mail, User as UserIcon, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PasswordResetModal } from './PasswordResetModal';
 
 export const Auth: React.FC = () => {
   const { login, register, isLoading, error, clearError } = useAuth();
@@ -12,14 +13,20 @@ export const Auth: React.FC = () => {
   const [name, setName] = useState('');
   const [localError, setLocalError] = useState('');
   const [inviteMode, setInviteMode] = useState(false);
+  const [inviteToken, setInviteToken] = useState<string | null>(null);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const inviteEmail = params.get('inviteEmail');
+    const token = params.get('inviteToken');
     if (inviteEmail) {
       setIsLoginMode(false);
       setEmail(inviteEmail);
       setInviteMode(true);
+      if (token) {
+        setInviteToken(token);
+      }
     }
   }, []);
 
@@ -41,6 +48,20 @@ export const Auth: React.FC = () => {
       }
       try {
         await register(name, email, password);
+
+        // If this is an invitation flow, accept the invitation after registration
+        if (inviteToken) {
+          try {
+            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/v1/invitations/accept`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: inviteToken })
+            });
+          } catch (err) {
+            console.error('Failed to accept invitation:', err);
+            // Don't fail registration if invitation acceptance fails
+          }
+        }
       } catch (err) {
         setLocalError(error || 'Registration sequence interrupted');
       }
@@ -147,6 +168,17 @@ export const Auth: React.FC = () => {
                   disabled={isLoading}
                 />
               </div>
+              {isLoginMode && (
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    className="text-[10px] text-[#5E6AD2] hover:text-[#7c7bf4] transition-colors font-medium"
+                  >
+                    Lupa Password?
+                  </button>
+                </div>
+              )}
             </div>
 
             {displayError && (
@@ -203,6 +235,14 @@ export const Auth: React.FC = () => {
           Made with love by Neo DEV Team
         </p>
       </motion.div>
+
+      {showForgotPassword && (
+        <PasswordResetModal
+          isOpen={showForgotPassword}
+          onClose={() => setShowForgotPassword(false)}
+          defaultEmail={email}
+        />
+      )}
     </div>
   );
 };

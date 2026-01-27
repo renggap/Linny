@@ -5,6 +5,7 @@ import { hashPassword, verifyPassword, validatePasswordStrength } from '../auth/
 import { getRefreshTokenExpiryDate } from '../auth/jwt.js';
 import { authenticate } from '../middleware/authHooks.js';
 import { UserRole } from '@prisma/client';
+import { generateToken, sendEmail, generatePasswordResetEmailHTML } from '../auth/email.js';
 
 const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;
@@ -186,6 +187,95 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       console.log('[auth.refresh] Error:', err);
       fastify.log.error({ err }, 'Refresh token error');
       return reply.code(401).send({ error: 'Invalid or expired refresh token' });
+    }
+  });
+
+  // Forgot password - send reset link via email
+  fastify.post('/forgot-password', async (request: any, reply: any) => {
+    const { email } = request.body as { email: string };
+
+    if (!email || !email.includes('@')) {
+      return reply.code(400).send({ message: 'Email wajib diisi kak' });
+    }
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() }
+      });
+
+      if (!user) {
+        return reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+      }
+
+      await prisma.passwordResetToken.deleteMany({
+        where: { userId: user.id }
+      });
+
+      const token = generateToken();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+      await prisma.passwordResetToken.create({
+        data: {
+          token,
+          userId: user.id,
+          expiresAt
+        }
+      });
+
+      const emailHTML = generatePasswordResetEmailHTML(token);
+      await sendEmail({
+        to: user.email,
+        subject: 'Reset Password Kakak',
+        html: emailHTML
+      });
+
+      reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      reply.code(500).send({ message: 'Gagal kirim email reset. Coba lagi nanti ya kak' });
+    }
+  });
+
+  // Reset password with token
+  fastify.post('/reset-password', async (request: any, reply: any) => {
+    const { token, newPassword } = request.body as { token: string; newPassword: string };
+
+    if (!token || !newPassword) {
+      return reply.code(400).send({ message: 'Token dan password wajib diisi' });
+    }
+
+    if (newPassword.length < 8) {
+      return reply.code(400).send({ message: 'Password minimal 8 karakter ya kak' });
+    }
+
+    try {
+      const resetToken = await prisma.passwordResetToken.findUnique({
+        where: { token },
+        include: { user: true }
+      });
+
+      if (!resetToken) {
+        return reply.code(400).send({ message: 'Link reset nggak valid atau udah kadaluarsa kak' });
+      }
+
+      if (resetToken.expiresAt < new Date()) {
+        await prisma.passwordResetToken.delete({ where: { token } });
+        return reply.code(400).send({ message: 'Link reset udah kadaluarsa. Request yang baru ya kak' });
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+
+      await prisma.user.update({
+        where: { id: resetToken.userId },
+        data: { passwordHash }
+      });
+
+      await prisma.passwordResetToken.delete({ where: { token } });
+
+      reply.send({ message: 'Password berhasil diupdate kak!' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      reply.code(500).send({ message: 'Gagal ganti password. Coba lagi nanti ya kak' });
     }
   });
 };

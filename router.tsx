@@ -36,9 +36,25 @@ const publicRoute = createRoute({
     path: '/public/$slug',
 });
 
+// Accept invitation route - /accept-invite
+const acceptInviteRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/accept-invite',
+    component: () => import('./components/AcceptInvite').then(m => ({ default: m.AcceptInvite }))
+});
+
+// Reset password route - /reset-password
+const resetPasswordRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '/reset-password',
+    component: () => import('./components/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage }))
+});
+
 // Build the route tree
 const routeTree = rootRoute.addChildren([
     indexRoute,
+    acceptInviteRoute,
+    resetPasswordRoute,
     teamRoute.addChildren([
         projectRoute.addChildren([
             issueRoute,

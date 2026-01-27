@@ -440,8 +440,12 @@ async function refreshAccessToken(): Promise<boolean> {
       const refreshUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `${API_BASE}/auth/refresh`;
       const response = await fetch(refreshUrl, {
         method: 'POST',
-        headers,
-        credentials: 'include' // Include httpOnly cookie automatically
+        headers: {
+          ...headers,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include', // Include httpOnly cookie automatically
+        body: JSON.stringify({}) // Send empty object to satisfy backend schema
       });
 
       // Update CSRF token from response headers if present
@@ -638,6 +642,36 @@ export const authApi = {
       delete user.avatar_url;
     }
     return user as User;
+  },
+
+  async requestPasswordReset(email: string): Promise<{ message: string }> {
+    const forgotPasswordUrl = import.meta.env?.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL}/api/v1/auth/forgot-password`
+      : `${API_BASE}/auth/forgot-password`;
+
+    const response = await fetch(forgotPasswordUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+      credentials: 'include'
+    });
+
+    return await handleResponse<{ message: string }>(response);
+  },
+
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    const resetPasswordUrl = import.meta.env?.VITE_API_URL
+      ? `${import.meta.env.VITE_API_URL}/api/v1/auth/reset-password`
+      : `${API_BASE}/auth/reset-password`;
+
+    const response = await fetch(resetPasswordUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, newPassword }),
+      credentials: 'include'
+    });
+
+    return await handleResponse<{ message: string }>(response);
   }
 };
 
@@ -808,16 +842,16 @@ export const projectsApi = {
   },
 
   async update(id: string, updates: Partial<Project>): Promise<Project> {
-    // Transform camelCase to snake_case for backend
+    // Backend uses camelCase for project updates
     const backendUpdates: any = {};
     if (updates.name !== undefined) backendUpdates.name = updates.name;
     if (updates.identifier !== undefined) backendUpdates.identifier = updates.identifier;
     if (updates.icon !== undefined) backendUpdates.icon = updates.icon;
     if (updates.teamId !== undefined) backendUpdates.teamId = updates.teamId;
     if (updates.description !== undefined) backendUpdates.description = updates.description;
-    if (updates.isPublic !== undefined) backendUpdates.is_public = updates.isPublic;
-    if (updates.publicSlug !== undefined) backendUpdates.public_slug = updates.publicSlug;
-    if (updates.leadId !== undefined) backendUpdates.lead_id = updates.leadId;
+    if (updates.isPublic !== undefined) backendUpdates.isPublic = updates.isPublic;
+    if (updates.publicSlug !== undefined) backendUpdates.publicSlug = updates.publicSlug;
+    if (updates.leadId !== undefined) backendUpdates.leadId = updates.leadId;
     // Format dates like the Issues API does
     if (updates.startDate !== undefined) {
       backendUpdates.startDate = updates.startDate instanceof Date
@@ -830,16 +864,10 @@ export const projectsApi = {
         : updates.targetDate;
     }
 
-    // DIAGNOSTIC: Log what we're sending
-    console.log('[projects.update] Sending to server:', JSON.stringify(backendUpdates));
-
     const response = await fetchWithAuth(`/projects/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(backendUpdates)
     });
-
-    // DIAGNOSTIC: Log response status
-    console.log('[projects.update] Response status:', response.status);
 
     const data = await handleResponse<{ project: any }>(response);
     return transformProject(data.project);
