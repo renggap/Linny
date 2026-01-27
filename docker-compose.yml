@@ -36,6 +36,12 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+      args:
+        DATABASE_URL: postgresql://neo_linear:neo_linear_password@postgres:5432/neo_linear
+        JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+        NODE_ENV: production
+        FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+        PORT: 3001
     container_name: neo_linear_server
     environment:
       NODE_ENV: production

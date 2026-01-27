@@ -1,7 +1,12 @@
 # =====================================================
 # Neo Linear Backend - Production Dockerfile
 # =====================================================
+# Build arguments - passed from docker-compose or Easypanel
 ARG DATABASE_URL
+ARG JWT_SECRET
+ARG NODE_ENV=production
+ARG FRONTEND_URL
+ARG PORT=3001
 
 # -------------------------------
 # Stage 1: Dependencies
@@ -18,15 +23,29 @@ RUN npm ci --legacy-peer-deps
 # -------------------------------
 FROM node:20-alpine AS builder
 
+# Receive build arguments
 ARG DATABASE_URL
+ARG JWT_SECRET
+ARG NODE_ENV
+ARG FRONTEND_URL
+ARG PORT
+
+# Set as environment variables for build time
 ENV DATABASE_URL=$DATABASE_URL
+ENV JWT_SECRET=$JWT_SECRET
+ENV NODE_ENV=$NODE_ENV
+ENV FRONTEND_URL=$FRONTEND_URL
+ENV PORT=$PORT
 
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Generate Prisma client first
 RUN npx prisma generate
-RUN npm run build
+
+# Build with fallback - if build fails, show debug info
+RUN npm run build || (echo "===== BUILD FAILED - DEBUG INFO =====" && ls -la && echo "===== package.json scripts =====" && cat package.json && exit 1)
 
 # -------------------------------
 # Stage 3: Production Runner
