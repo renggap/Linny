@@ -1,21 +1,15 @@
 # =====================================================
 # Neo Linear Backend - Production Dockerfile
 # =====================================================
+ARG DATABASE_URL
 
 # -------------------------------
 # Stage 1: Dependencies
 # -------------------------------
 FROM node:20-alpine AS deps
-
-# Prisma requires openssl
 RUN apk add --no-cache libc6-compat openssl
-
 WORKDIR /app
-
-# Copy dependency files
 COPY package.json package-lock.json* ./
-
-# Install dependencies (deterministic)
 RUN npm ci --legacy-peer-deps
 
 
@@ -24,20 +18,15 @@ RUN npm ci --legacy-peer-deps
 # -------------------------------
 FROM node:20-alpine AS builder
 
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
+
 WORKDIR /app
-
-# Copy node_modules from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-
-# Copy source code
 COPY . .
 
-# Generate Prisma client
 RUN npx prisma generate
-
-# Build TypeScript
 RUN npm run build
-
 
 # -------------------------------
 # Stage 3: Production Runner
