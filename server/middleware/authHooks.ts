@@ -27,6 +27,7 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
 
 /**
  * Admin or Team Lead hook
+ * NOTE: This checks GLOBAL role. For team-specific roles, use requireTeamAdminOrTeamLead
  */
 export async function requireAdminOrTeamLead(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
@@ -36,9 +37,48 @@ export async function requireAdminOrTeamLead(request: FastifyRequest, reply: Fas
 }
 
 /**
- * Team member hook
+ * Team-specific Admin or Team Lead hook
+ * Checks team-specific role from TeamMember table
  */
-export async function requireTeamMember(request: FastifyRequest, reply: FastifyReply) {
+export async function requireTeamAdminOrTeamLead(request: FastifyRequest, reply: FastifyReply) {
+  await authenticate(request, reply);
+  const { prisma } = request.server as any;
+
+  // Administrators always have access
+  if (request.userRole === 'Administrator') {
+    return;
+  }
+
+  // Extract teamId from params or body
+  const params = request.params as any;
+  const body = request.body as any;
+  const teamId = params.teamId || params.id || (body && body.teamId);
+
+  if (!teamId) {
+    return reply.code(400).send({ error: 'Team ID is required' });
+  }
+
+  // Check team-specific role
+  const membership = await prisma.teamMember.findUnique({
+    where: { teamId_userId: { teamId, userId: request.userId } }
+  });
+
+  if (!membership) {
+    return reply.code(403).send({ error: 'Forbidden: Team membership required' });
+  }
+
+  // Check if user has Team Lead or Administrator role in this team
+  if (membership.role !== 'TeamLead' && membership.role !== 'Administrator') {
+    return reply.code(403).send({ error: 'Forbidden: Team Lead or Administrator access required' });
+  }
+}
+
+/**
+ * Team access hook
+ * NOTE: This allows access to non-stealth teams even for non-members.
+ * For strict membership checks, verify team membership in the route handler.
+ */
+export async function requireTeamAccess(request: FastifyRequest, reply: FastifyReply) {
   await authenticate(request, reply);
   const { prisma } = request.server as any;
   // Extract teamId from params or body (body may not be parsed yet in onRequest hook)
@@ -56,11 +96,17 @@ export async function requireTeamMember(request: FastifyRequest, reply: FastifyR
 
   if (!membership && (request.userRole as any) !== 'Administrator') {
     const team = await prisma.team.findUnique({ where: { id: teamId } });
-    if (!team || team.isStealth || (request.userRole as any) !== 'Administrator') {
-      return reply.code(403).send({ error: 'Forbidden: Team membership required' });
+    if (!team || team.isStealth) {
+      return reply.code(403).send({ error: 'Forbidden: Team access required' });
     }
   }
 }
+
+/**
+ * @deprecated Use requireTeamAccess instead
+ * This alias is kept for backward compatibility
+ */
+export const requireTeamMember = requireTeamAccess;
 
 /**
  * Project member hook

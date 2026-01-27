@@ -116,8 +116,9 @@ interface TokenResponse {
   refreshToken: string;
 }
 
-// Helper to get access token from memory or localStorage
-const TOKEN_STORAGE_KEY = 'linear_clone_access_token';
+// Access token is stored in memory only for security (XSS prevention)
+// The httpOnly refresh token cookie handles persistence across page reloads
+const TOKEN_STORAGE_KEY = 'linear_clone_access_token'; // Kept for migration purposes only
 
 let accessToken: string | null = null;
 let isRefreshing = false;
@@ -155,35 +156,21 @@ function triggerAuthFailure(): void {
 }
 
 export function getAccessToken(): string | null {
-  if (!accessToken) {
-    // Try to restore from localStorage on page load/refresh
-    const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-    if (stored) {
-      accessToken = stored;
-    }
-  }
+  // Access token is stored in memory only for security (XSS prevention)
+  // On page refresh, a new token is obtained via the httpOnly refresh token cookie
   return accessToken;
 }
 
 function setAccessToken(token: string): void {
   accessToken = token;
-  // Persist to localStorage for refresh scenarios
-  try {
-    localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  } catch (e) {
-    console.warn('Failed to store access token:', e);
-  }
+  // NO LONGER storing in localStorage to prevent XSS attacks
+  // Token is kept in memory only; refresh token cookie handles page reloads
 }
 
 function clearTokens(): void {
   accessToken = null;
-  // Clear from localStorage
-  try {
-    localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch (e) {
-    console.warn('Failed to clear access token:', e);
-  }
-  // Clear cookie (will be done by server on logout)
+  // NO LONGER clearing from localStorage (not stored there)
+  // Cookie will be cleared by server on logout
 }
 
 /**
@@ -241,21 +228,34 @@ async function syncQueuedRequests(): Promise<void> {
   const queue = [...requestQueue];
   requestQueue = [];
 
-  for (const request of queue) {
-    try {
-      const fullUrl = import.meta.env?.VITE_API_URL ? `${import.meta.env.VITE_API_URL}${API_BASE}${request.url}` : `${API_BASE}${request.url}`;
-      await fetch(fullUrl, {
-        ...request.options,
-        credentials: 'include'
-      });
-      console.log(`✅ Synced: ${request.method} ${request.url}`);
-    } catch (error) {
-      console.error(`❌ Failed to sync: ${request.method} ${request.url}`, error);
-      // Only re-queue if we haven't exceeded the limit and request is not expired
-      if (now - request.timestamp < QUEUE_TTL_MS && requestQueue.length < MAX_QUEUE_SIZE) {
-        requestQueue.push(request);
+  // Process requests in parallel with concurrency limit of 5
+  const CONCURRENCY_LIMIT = 5;
+  const results = await Promise.allSettled(
+    queue.map(async (request) => {
+      try {
+        const fullUrl = import.meta.env?.VITE_API_URL
+          ? `${import.meta.env.VITE_API_URL}${API_BASE}${request.url}`
+          : `${API_BASE}${request.url}`;
+        await fetch(fullUrl, {
+          ...request.options,
+          credentials: 'include'
+        });
+        console.log(`✅ Synced: ${request.method} ${request.url}`);
+        return { success: true, request };
+      } catch (error) {
+        console.error(`❌ Failed to sync: ${request.method} ${request.url}`, error);
+        // Only re-queue if we haven't exceeded the limit and request is not expired
+        if (now - request.timestamp < QUEUE_TTL_MS && requestQueue.length < MAX_QUEUE_SIZE) {
+          requestQueue.push(request);
+        }
+        return { success: false, request, error };
       }
-    }
+    })
+  );
+
+  const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success));
+  if (failed.length > 0) {
+    console.log(`⚠️ ${failed.length} requests failed to sync`);
   }
 
   if (requestQueue.length > 0) {

@@ -1,24 +1,25 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: linear_clone_postgres
+    container_name: neo_linear_postgres
     environment:
-      POSTGRES_USER: linear_clone
-      POSTGRES_PASSWORD: linear_clone_password
-      POSTGRES_DB: linear_clone
+      POSTGRES_USER: neo_linear
+      POSTGRES_PASSWORD: neo_linear_password
+      POSTGRES_DB: neo_linear
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U linear_clone" ]
+      test: [ "CMD-SHELL", "pg_isready -U neo_linear" ]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: linear_clone_redis
+    container_name: neo_linear_redis
     ports:
       - "6379:6379"
     volumes:
@@ -31,6 +32,36 @@ services:
       retries: 5
     restart: unless-stopped
 
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: neo_linear_server
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://neo_linear:neo_linear_password@postgres:5432/neo_linear
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_ENABLED: "true"
+      REDIS_PREFIX: neo_linear:
+      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-use-openssl-rand-hex-32}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - neo_linear_network
+
 volumes:
   postgres_data:
   redis_data:
+
+networks:
+  neo_linear_network:
+    driver: bridge

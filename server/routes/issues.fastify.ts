@@ -126,14 +126,21 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
       const project = await tx.project.findUnique({ where: { id: projectId } });
       if (!project) return null;
 
-      const highestIssue = await tx.issue.findFirst({
+      // Fetch recent issues and sort by numeric portion to avoid alphabetical sorting issues
+      // (e.g., "TEAM-9" vs "TEAM-10" - alphabetical would put TEAM-9 last)
+      const recentIssues = await tx.issue.findMany({
         where: { projectId },
-        orderBy: { identifier: 'desc' }
+        take: 100, // Reasonable limit for most projects
+        select: { identifier: true }
       });
 
-      const nextNumber = highestIssue
-        ? parseInt(highestIssue.identifier.split('-')[1]) + 1
-        : 101;
+      // Extract numeric portion and find the highest number
+      const highestNumber = recentIssues.reduce((max: number, issue: any) => {
+        const num = parseInt(issue.identifier.split('-')[1]);
+        return isNaN(num) ? max : Math.max(max, num);
+      }, 0);
+
+      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 101;
 
       return tx.issue.create({
         data: {

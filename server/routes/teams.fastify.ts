@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { createTeamSchema } from '../validation/schemas.js';
-import { authenticate, requireAdminOrTeamLead, requireTeamMember, requireAdmin } from '../middleware/authHooks.js';
+import { authenticate, requireAdminOrTeamLead, requireTeamMember, requireAdmin, requireTeamAdminOrTeamLead } from '../middleware/authHooks.js';
 
 const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;
@@ -168,7 +168,7 @@ const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   fastify.post('/:id/members', {
-    onRequest: [requireAdminOrTeamLead, requireTeamMember],
+    onRequest: [requireTeamAdminOrTeamLead, requireTeamMember],
     schema: {
       params: z.object({ id: z.string() }),
       body: z.object({
@@ -181,7 +181,12 @@ const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const { userId, role = 'Member' } = request.body;
 
     // Team Leads cannot assign Administrator role
-    if (request.userRole === 'TeamLead' && role === 'Administrator') {
+    // Check team-specific role (not global role) since we're using team-specific permissions
+    const currentMember = await prisma.teamMember.findUnique({
+      where: { teamId_userId: { teamId, userId: request.userId } }
+    });
+
+    if (currentMember?.role === 'TeamLead' && role === 'Administrator') {
       return reply.code(403).send({ error: 'Team Leads cannot assign Administrator role' });
     }
 
@@ -208,7 +213,7 @@ const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   fastify.delete('/:id/members/:userId', {
-    onRequest: [requireAdminOrTeamLead, requireTeamMember],
+    onRequest: [requireTeamAdminOrTeamLead, requireTeamMember],
     schema: {
       params: z.object({
         id: z.string(),
