@@ -12,6 +12,7 @@
  */
 
 import { getDatabase } from '../database.js';
+import { randomUUID } from 'crypto';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -54,7 +55,7 @@ abstract class SimpleQueue {
 
     async add(data: any, options?: any): Promise<void> {
         const job: Job = {
-            id: crypto.randomUUID(),
+            id: randomUUID(),
             type: data.type || 'unknown',
             data,
             attempts: 0,

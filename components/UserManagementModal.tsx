@@ -45,10 +45,28 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     if (!isOpen) return null;
 
     // For list view: filter current team members
-    const filteredUsers = workspaceMembers.filter(u =>
-        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredUsers = workspaceMembers
+        .filter(u =>
+            u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            u.email.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+        .sort((a, b) => {
+            // Get effective role for each user
+            const roleA = getEffectiveRole(a, currentTeam);
+            const roleB = getEffectiveRole(b, currentTeam);
+
+            // Sort by role priority: Administrator > TeamLead > Member > Guest
+            const roleOrder = [UserRole.Administrator, UserRole.TeamLead, UserRole.Member, UserRole.Guest];
+            const indexA = roleOrder.indexOf(roleA as UserRole);
+            const indexB = roleOrder.indexOf(roleB as UserRole);
+
+            if (indexA !== indexB) {
+                return indexA - indexB;
+            }
+
+            // Secondary sort by name alphabetically
+            return a.name.localeCompare(b.name);
+        });
 
     // For invite view: show all users NOT in current team
     const currentTeamMemberIds = new Set(workspaceMembers.map(u => u.id));

@@ -75,8 +75,9 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-    // Track if we've already initialized state for this issue
+    // Track if we've already initialized state for this issue or new issue form
     const initializedIssueIdRef = useRef<string | null>(null);
+    const initializedNewIssueRef = useRef(false);
 
     const filteredUsers = mentionQuery !== null
         ? users.filter(u => u.name.toLowerCase().includes(mentionQuery.toLowerCase()))
@@ -89,6 +90,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         if (!isOpen) {
             // Reset initialization when modal closes
             initializedIssueIdRef.current = null;
+            initializedNewIssueRef.current = false;
             return;
         }
 
@@ -105,9 +107,10 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                 setStartDate(formatDateToInput(issueData.startDate));
                 setDueDate(formatDateToInput(issueData.dueDate));
                 initializedIssueIdRef.current = issueId;
+                initializedNewIssueRef.current = false;
             }
-        } else {
-            // New issue - reset state
+        } else if (!initializedNewIssueRef.current) {
+            // New issue - reset state only ONCE when first opening
             setTitle('');
             setDescription('');
             setPriority(Priority.NoPriority);
@@ -116,6 +119,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
             setStartDate('');
             setDueDate('');
             initializedIssueIdRef.current = null;
+            initializedNewIssueRef.current = true;
         }
     }, [isOpen, existingIssue, projects, defaultProjectId]);
 
@@ -375,7 +379,12 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                                 className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
                                                                 value={newSubtaskTitle}
                                                                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                                                onKeyDown={(e) => e.key === 'Enter' && onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle)}
+                                                                onKeyDown={async (e) => {
+                                                                    if (e.key === 'Enter' && newSubtaskTitle.trim()) {
+                                                                        await onCreateSubtask?.((existingIssue as Issue).id, newSubtaskTitle);
+                                                                        setNewSubtaskTitle('');
+                                                                    }
+                                                                }}
                                                             />
                                                         </div>
                                                     )

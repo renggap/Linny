@@ -53,10 +53,12 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
         const newIsPublic = !isPublic;
         setIsPublic(newIsPublic);
         if (newIsPublic && !publicSlug) setPublicSlug(project.identifier.toLowerCase());
-        onUpdate(project.id, {
+
+        const updateData = {
             isPublic: newIsPublic,
             publicSlug: newIsPublic ? (publicSlug || project.identifier.toLowerCase()) : undefined
-        });
+        };
+        onUpdate(project.id, updateData);
     };
 
     const handleSlugChange = (e: React.ChangeEvent<HTMLInputElement>) => {

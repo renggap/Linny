@@ -95,7 +95,23 @@ export const Sidebar: React.FC = () => {
   const [joiningTeamId, setJoiningTeamId] = useState<string | null>(null);
 
   const currentTeam = teams.find(t => t.id === ui.currentTeamId);
-  const sortedTeamUsers = useWorkspaceMembers(currentTeam, users);
+  const teamUsers = useWorkspaceMembers(currentTeam, users);
+
+  // Sort team users by role: Administrator > TeamLead > Member > Guest, then by name
+  const sortedTeamUsers = teamUsers.sort((a, b) => {
+    const roleA = getEffectiveRole(a, currentTeam);
+    const roleB = getEffectiveRole(b, currentTeam);
+
+    const roleOrder = [UserRole.Administrator, UserRole.TeamLead, UserRole.Member, UserRole.Guest];
+    const indexA = roleOrder.indexOf(roleA as UserRole);
+    const indexB = roleOrder.indexOf(roleB as UserRole);
+
+    if (indexA !== indexB) {
+      return indexA - indexB;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
 
   // Helper to check if user has a pending join request for a team
   const hasPendingJoinRequest = (teamId: string) => {

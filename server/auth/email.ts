@@ -1,16 +1,19 @@
 import crypto from 'crypto';
+import nodemailer from 'nodemailer';
+import { config } from '../config/index.js';
 
 /**
- * Email Service (Mock Implementation)
- * 
+ * Email Service (SMTP Implementation)
+ *
  * DEEP REASONING CHAIN:
  * Email service enables:
  * 1. Email verification for account security
  * 2. Password reset for account recovery
  * 3. 2FA codes for additional security
- * 
- * In production, replace with real email service (SendGrid, AWS SES, etc.)
- * 
+ *
+ * Uses nodemailer with SMTP configuration from environment variables.
+ * Gracefully degrades if email is disabled or misconfigured.
+ *
  * EDGE CASE ANALYSIS:
  * - Generates secure random tokens
  * - Handles email sending failures gracefully
@@ -25,28 +28,88 @@ export interface EmailOptions {
     text?: string;
 }
 
+// Create reusable transporter
+let transporter: nodemailer.Transporter | null = null;
+
+function getTransporter(): nodemailer.Transporter | null {
+    if (!config.emailEnabled) {
+        return null;
+    }
+
+    if (transporter) {
+        return transporter;
+    }
+
+    // Validate email configuration
+    if (!config.emailHost || !config.emailPort || !config.emailUser || !config.emailPassword) {
+        console.warn('⚠️  Email configuration incomplete. Please check EMAIL_* environment variables.');
+        return null;
+    }
+
+    try {
+        transporter = nodemailer.createTransport({
+            host: config.emailHost,
+            port: config.emailPort,
+            secure: config.emailPort === 465, // true for 465, false for other ports
+            auth: {
+                user: config.emailUser,
+                pass: config.emailPassword,
+            },
+        });
+
+        console.log('✅ Email transporter initialized successfully');
+        return transporter;
+    } catch (error) {
+        console.error('❌ Failed to create email transporter:', error);
+        return null;
+    }
+}
+
 /**
- * Send email (mock implementation)
- * In production, integrate with real email service
+ * Send email via SMTP
+ * Falls back to console logging if email is disabled or misconfigured
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
-    // Mock implementation - log email to console
-    console.log('\n📧 EMAIL MOCK:');
-    console.log('─────────────────────────────────────');
-    console.log(`To: ${options.to}`);
-    console.log(`Subject: ${options.subject}`);
-    console.log('─────────────────────────────────────');
-    if (options.text) {
-        console.log(options.text);
-    }
-    if (options.html) {
-        console.log('HTML:', options.html.substring(0, 100) + '...');
-    }
-    console.log('─────────────────────────────────────\n');
+    const mailTransporter = getTransporter();
 
-    // In production, use real email service:
-    // await sendgrid.send(options);
-    // or await ses.sendEmail(options).promise();
+    if (!mailTransporter) {
+        // Fallback to console logging if email is not configured
+        console.log('\n📧 EMAIL LOG (Email disabled or not configured):');
+        console.log('─────────────────────────────────────');
+        console.log(`To: ${options.to}`);
+        console.log(`Subject: ${options.subject}`);
+        console.log('─────────────────────────────────────');
+        if (options.text) {
+            console.log(options.text);
+        }
+        if (options.html) {
+            console.log('HTML:', options.html.substring(0, 100) + '...');
+        }
+        console.log('─────────────────────────────────────\n');
+        return;
+    }
+
+    try {
+        const mailOptions = {
+            from: config.emailFrom || config.emailUser,
+            to: options.to,
+            subject: options.subject,
+            text: options.text,
+            html: options.html,
+        };
+
+        const info = await mailTransporter.sendMail(mailOptions);
+        console.log('✅ Email sent successfully:', info.messageId);
+    } catch (error) {
+        console.error('❌ Failed to send email:', error);
+        // Log email content for debugging
+        console.log('\n📧 Failed Email Content:');
+        console.log('─────────────────────────────────────');
+        console.log(`To: ${options.to}`);
+        console.log(`Subject: ${options.subject}`);
+        console.log('─────────────────────────────────────\n');
+        throw error; // Re-throw to allow caller to handle the error
+    }
 }
 
 /**
@@ -89,15 +152,15 @@ export function generateVerificationEmailHTML(token: string): string {
           <h1>Neo Linear</h1>
         </div>
         <div class="content">
-          <h2>Verify Your Email Address</h2>
-          <p>Thank you for registering! Please verify your email address by clicking the button below:</p>
-          <center><a href="${verifyUrl}" class="button">Verify Email</a></center>
-          <p>Or copy and paste this link into your browser:</p>
+          <h2>Verifikasi Email Kakak</h2>
+          <p>Makasih sudah daftar! Tolong verifikasi email kakak dengan klik tombol di bawah ini ya:</p>
+          <center><a href="${verifyUrl}" class="button">Verifikasi Email</a></center>
+          <p>Atau copy-paste link ini ke browser kakak:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${verifyUrl}</p>
-          <p>This link will expire in 24 hours.</p>
+          <p>Link ini bakal kadaluarsa dalam 24 jam.</p>
         </div>
         <div class="footer">
-          <p>If you didn't create an account, you can safely ignore this email.</p>
+          <p>Kalau kakak nggak bikin akun, bisa diabaikan aja email ini.</p>
         </div>
       </div>
     </body>
@@ -131,15 +194,15 @@ export function generatePasswordResetEmailHTML(token: string): string {
           <h1>Neo Linear</h1>
         </div>
         <div class="content">
-          <h2>Reset Your Password</h2>
-          <p>We received a request to reset your password. Click the button below to create a new password:</p>
+          <h2>Reset Password Kakak</h2>
+          <p>Kami ada request buat reset password kakak. Klik tombol di bawah ini buat bikin password baru:</p>
           <center><a href="${resetUrl}" class="button">Reset Password</a></center>
-          <p>Or copy and paste this link into your browser:</p>
+          <p>Atau copy-paste link ini ke browser kakak:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${resetUrl}</p>
-          <p>This link will expire in 1 hour.</p>
+          <p>Link ini bakal kadaluarsa dalam 1 jam.</p>
         </div>
         <div class="footer">
-          <p>If you didn't request a password reset, you can safely ignore this email.</p>
+          <p>Kalau kakak nggak request reset password, bisa diabaikan aja email ini.</p>
         </div>
       </div>
     </body>
@@ -172,21 +235,21 @@ export function generate2FASetupEmailHTML(secret: string, backupCodes: string[])
           <h1>Neo Linear</h1>
         </div>
         <div class="content">
-          <h2>Two-Factor Authentication Setup</h2>
-          <p>Scan this QR code with your authenticator app:</p>
+          <h2>Setup Autentikasi Dua Faktor</h2>
+          <p>Scan QR code ini pake authenticator app kakak:</p>
           <div class="code">${secret}</div>
-          <p>Or enter this code manually:</p>
+          <p>Atau masukin kode ini manual:</p>
           <div class="code">${secret}</div>
           <div class="backup-codes">
-            <h3>⚠️ Save These Backup Codes</h3>
-            <p>Store these codes in a safe place. You can use them if you lose access to your authenticator app:</p>
+            <h3>⚠️ Simpan Kode Backup Ini</h3>
+            <p>Simpan kode-kode ini di tempat aman. Kakak bisa pake ini kalau sewaktu-waktu nggak bisa akses authenticator app:</p>
             <ul>
               ${backupCodes.map(code => `<li>${code}</li>`).join('')}
             </ul>
           </div>
         </div>
         <div class="footer">
-          <p>Keep these codes secure. Each code can only be used once.</p>
+          <p>Simpan kode-kode ini dengan aman ya kak. Setiap kode cuma bisa dipake sekali aja.</p>
         </div>
       </div>
     </body>
@@ -220,17 +283,17 @@ export function generateInvitationEmailHTML(teamName: string, role: string, invi
           <h1>Neo Linear</h1>
         </div>
         <div class="content">
-          <h2>You're Invited to Join ${teamName}</h2>
-          <p>You have been invited to join the <strong>${teamName}</strong> team as a <strong>${role}</strong>.</p>
-          <p>To accept this invitation and join the workspace, click the button below:</p>
-          <center><a href="${inviteUrl}" class="button">Accept Invitation</a></center>
-          <p>Or copy and paste this link into your browser:</p>
+          <h2>Kakak Diundang ke ${teamName}</h2>
+          <p>Kakak udah diundang buat gabung ke team <strong>${teamName}</strong> sebagai <strong>${role}</strong>.</p>
+          <p>Untuk terima undangan ini dan gabung ke workspace, klik tombol di bawah ini ya:</p>
+          <center><a href="${inviteUrl}" class="button">Terima Undangan</a></center>
+          <p>Atau copy-paste link ini ke browser kakak:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${inviteUrl}</p>
-          <p>This invitation will expire in 7 days.</p>
+          <p>Undangan ini bakal kadaluarsa dalam 7 hari.</p>
         </div>
         <div class="footer">
-          <p>If you don't have an account yet, you'll be able to create one after clicking the link.</p>
-          <p>If you didn't expect this invitation, you can safely ignore this email.</p>
+          <p>Kalau kakak belum punya akun, bisa bikin dulu setelah klik link tadi.</p>
+          <p>Kalau kakak nggak ngira ada undangan ini, bisa diabaikan aja.</p>
         </div>
       </div>
     </body>

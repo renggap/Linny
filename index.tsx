@@ -7,8 +7,10 @@ import { AuthProvider } from './contexts/AuthContext';
 import { queryClient } from './services/queryClient';
 import { router } from './router';
 import './index.css';
+import { showConsoleBanner } from './utils/consoleBanner';
 
-console.log('[index.tsx] App loading...');
+// Show fancy console banner
+showConsoleBanner();
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

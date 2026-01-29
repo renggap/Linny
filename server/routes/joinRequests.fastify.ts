@@ -66,7 +66,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
         data: {
           userId: member.userId,
           type: 'joinRequest',
-          message: `${user.name} requested to join ${team.name}`,
+          message: `${user.name} mau gabung ke ${team.name}`,
           actorId: userId
         }
       });
@@ -76,7 +76,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     // Broadcast join request created event for real-time updates
     broadcastJoinRequestCreated(joinRequest);
 
-    return { message: 'Join request created', joinRequest };
+    return { message: 'Request gabung berhasil dibuat', joinRequest };
   });
 
   fastify.get('/', {
@@ -173,7 +173,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     try {
       // Use upsert to handle case where user is already a member
-      const memberResult = await prisma.teamMember.upsert({
+      await prisma.teamMember.upsert({
         where: {
           teamId_userId: { teamId: joinRequest.teamId, userId: joinRequest.userId }
         },
@@ -195,7 +195,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
         data: {
           userId: joinRequest.userId,
           type: 'joinRequest',
-          message: `Your request to join ${joinRequest.team.name} has been approved`,
+          message: `Request kakak buat gabung ke ${joinRequest.team.name} udah diterima`,
           actorId: userId
         }
       });
@@ -205,7 +205,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
       broadcastJoinRequestUpdated(id, 'approved');
 
       console.log(`[JoinRequest APPROVE] Successfully approved request ${id}`);
-      return { message: 'Join request approved' };
+      return { message: 'Request gabung diterima' };
     } catch (error) {
       console.error(`[JoinRequest APPROVE] Error approving request ${id}:`, error);
       return reply.code(400).send({ error: 'Failed to approve request' });
@@ -249,7 +249,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
       data: {
         userId: joinRequest.userId,
         type: 'joinRequest',
-        message: `Your request to join ${joinRequest.team.name} has been rejected`,
+        message: `Request kakak buat gabung ke ${joinRequest.team.name} ditolak ya`,
         actorId: userId
       }
     });
@@ -258,7 +258,7 @@ const joinRequestsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     // Broadcast join request updated event for real-time updates
     broadcastJoinRequestUpdated(id, 'rejected');
 
-    return { message: 'Join request rejected' };
+      return { message: 'Request gabung ditolak' };
   });
 };
 

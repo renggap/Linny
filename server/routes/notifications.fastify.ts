@@ -125,7 +125,7 @@ const notificationsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     schema: {
       querystring: z.object({ teamId: z.string().optional() })
     }
-  }, async (request: any, reply: any) => {
+  }, async (request: any) => {
     const { teamId } = request.query;
     const userId = request.userId;
 

@@ -299,7 +299,7 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     });
 
     await invalidateCache(`project:${projectId}`);
-    return { links: [{ id: linkId, ...updatedLink }] };
+    return { links: [updatedLink] };
   });
 
   fastify.patch('/:id', {

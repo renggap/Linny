@@ -639,7 +639,7 @@ export async function seedDatabase() {
           data: {
             userId: mentionedUser.id,
             type: 'mention',
-            message: `${actor?.name || 'Someone'} mentioned you in a comment`,
+            message: `${actor?.name || 'Seseorang'} nmention kakak di komentar`,
             issueId: comment.issueId,
             isRead: false,
             actorId: comment.userId,

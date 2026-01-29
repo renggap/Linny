@@ -68,11 +68,11 @@ const invitationsRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     await sendEmail({
       to: email,
-      subject: `Invitation to join ${team.name}`,
+      subject: `Undangan gabung ${team.name}`,
       html: generateInvitationEmailHTML(team.name, role, token)
     });
 
-    return { message: 'Invitation sent successfully' };
+    return { message: 'Undangan berhasil dikirim' };
   });
 
   fastify.get('/check/:token', {
@@ -125,7 +125,7 @@ const invitationsRoutes: FastifyPluginAsyncZod = async (fastify) => {
         data: { accepted: true }
       });
 
-      return { message: 'Invitation accepted successfully' };
+      return { message: 'Undangan berhasil diterima' };
     }
 
     return {

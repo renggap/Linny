@@ -9,6 +9,7 @@ import { MainView } from './components/MainView';
 import { ModalsContainer } from './components/ModalsContainer';
 import { Auth } from './components/Auth';
 import { PublicViewContainer } from './components/PublicViewContainer';
+import { AcceptInvite } from './components/AcceptInvite';
 import { WorkspaceApplication } from './components/WorkspaceApplication';
 import { JoinRequestManagementModal } from './components/JoinRequestManagementModal';
 import { useInitialData } from './hooks/useInitialData';
@@ -113,6 +114,10 @@ const App: React.FC = () => {
   }
 
   if (location.pathname.startsWith('/public/')) return <PublicViewContainer />;
+  if (location.pathname.startsWith('/accept-invite')) {
+    // AcceptInvite route handles its own auth logic
+    return <AcceptInvite />;
+  }
   if (!isAuthenticated) return <Auth />;
 
   // Check if user is a member of any team or is an administrator

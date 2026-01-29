@@ -21,6 +21,9 @@ export default defineConfig({
       }
     }
   },
+  preview: {
+    allowedHosts: ['linear.neodigital.co.id', 'neodigital.co.id']
+  },
   plugins: [react()],
   resolve: {
     alias: {

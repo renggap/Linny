@@ -295,6 +295,106 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
     return { issue: updatedIssue };
   });
 
+  fastify.post('/:id/subtasks', {
+    onRequest: [requireIssueTeamMember],
+    schema: {
+      params: z.object({ id: z.string() }),
+      body: z.object({
+        title: z.string().min(1, 'Title is required')
+      })
+    }
+  }, async (request: any, reply: any) => {
+    const { id: parentId } = request.params;
+    const { title } = request.body;
+    const userId = request.userId;
+
+    // Verify parent issue exists
+    const parentIssue = await prisma.issue.findUnique({
+      where: { id: parentId },
+      include: { project: true }
+    });
+
+    if (!parentIssue) {
+      return reply.code(404).send({ error: 'Parent issue not found' });
+    }
+
+    // Don't allow creating subtasks of subtasks (prevent deep nesting)
+    if (parentIssue.parentId) {
+      return reply.code(400).send({ error: 'Cannot create subtask of a subtask' });
+    }
+
+    const newSubtask = await prisma.$transaction(async (tx: any) => {
+      const projectId = parentIssue.projectId;
+
+      // Fetch recent issues and sort by numeric portion
+      const recentIssues = await tx.issue.findMany({
+        where: { projectId },
+        take: 100,
+        select: { identifier: true }
+      });
+
+      // Extract numeric portion and find the highest number
+      const highestNumber = recentIssues.reduce((max: number, issue: any) => {
+        const num = parseInt(issue.identifier.split('-')[1]);
+        return isNaN(num) ? max : Math.max(max, num);
+      }, 0);
+
+      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 101;
+
+      return tx.issue.create({
+        data: {
+          identifier: `${parentIssue.project.identifier}-${nextNumber}`,
+          title: title || 'Untitled',
+          description: null,
+          status: 'Backlog',
+          priority: 'NoPriority',
+          projectId,
+          parentId: parentId,
+          startDate: null,
+          dueDate: null,
+          assignees: undefined,
+          activities: {
+            create: {
+              userId,
+              type: 'issue_created',
+              projectId,
+              entityTitle: title || 'Untitled',
+              description: 'created a subtask'
+            }
+          }
+        },
+        include: {
+          assignees: { include: { user: true } },
+          activities: { include: { user: true }, take: 1 }
+        }
+      });
+    });
+
+    if (!newSubtask) {
+      return reply.code(500).send({ error: 'Failed to create subtask' });
+    }
+
+    await invalidateCache('issues');
+    await invalidateCache(`issue:${parentId}`);
+
+    const sanitizedSubtask = {
+      ...newSubtask,
+      assignees: (newSubtask as any).assignees.map((ia: any) => {
+        const { passwordHash: _, ...u } = ia.user;
+        return u;
+      })
+    };
+
+    // Broadcast the new subtask
+    broadcastNewIssue(parentIssue.projectId, sanitizedSubtask, userId);
+
+    reply.code(201);
+    return {
+      issue: sanitizedSubtask,
+      activity: (newSubtask as any).activities[0]
+    };
+  });
+
   fastify.delete('/:id', {
     onRequest: [requireAdmin],
     schema: {

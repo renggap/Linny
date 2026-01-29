@@ -24,13 +24,25 @@ import fastifyWebsocket from '@fastify/websocket';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import dotenv from 'dotenv';
 import fp from 'fastify-plugin';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { getDatabase } from './database.js';
 import { getRedisClient } from './cache/redis.js';
 import { registerWebSocketRoutes } from './websocket/fastifyWebSocketRoutes.js';
 import { schedulePeriodicJobs } from './jobs/jobQueue.js';
+import { BANNER } from './utils/banner.js';
 
-// Load environment variables
-dotenv.config();
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Load environment variables from parent directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
+
+// Show banner on startup (only in production or if explicitly enabled)
+if (process.env.NODE_ENV === 'production' || process.env.SHOW_BANNER === 'true') {
+  console.log(BANNER);
+}
 
 const PORT = process.env.PORT || 3001;
 const isDevelopment = process.env.NODE_ENV !== 'production';
@@ -44,21 +56,21 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
  */
 async function securityPlugin(fastify: FastifyInstance) {
   await fastify.register(fastifyHelmet, {
-    contentSecurityPolicy: {
+    contentSecurityPolicy: isDevelopment ? {
       directives: {
         defaultSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"], // For Tailwind
         scriptSrc: ["'self'"],
         imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
-        connectSrc: ["'self'", 'http://localhost:3001', 'http://localhost:3000'],
+        connectSrc: ["'self'", 'http://localhost:3001', 'http://localhost:3000', 'ws://localhost:3001'],
         fontSrc: ["'self'"],
         objectSrc: ["'none'"],
         mediaSrc: ["'self'"],
         frameSrc: ["'none'"]
       }
-    },
+    } : false, // Disabled in production, nginx handles CSP
     hsts: isDevelopment ? false : {
-      maxAge: 31536000,
+      maxAge: 63072000, // 2 years
       includeSubDomains: true,
       preload: true
     }
@@ -71,12 +83,14 @@ async function securityPlugin(fastify: FastifyInstance) {
 
 const corsOptions = {
   origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
+    // Allow requests with no origin (like mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
 
     const allowedOrigins = isDevelopment
-      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:5173',
-        'http://127.0.0.1:3000', 'http://127.0.0.1:5173']
-      : (process.env.FRONTEND_URL || 'https://your-domain.com').split(',');
+      ? ['http://localhost:3000', 'http://localhost:3001', 'http://localhost:3002', 'http://localhost:4173', 'http://localhost:5173',
+        'http://127.0.0.1:3000', 'http://127.0.0.1:4173', 'http://127.0.0.1:5173',
+        'https://linear.neodigital.co.id'] // Add production domain
+      : (process.env.FRONTEND_URL || 'https://linear.neodigital.co.id').split(',');
 
     if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
@@ -94,11 +108,24 @@ const corsOptions = {
 // JWT AUTHENTICATION PLUGIN
 // ============================================================================
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  console.error('FATAL: JWT_SECRET environment variable is not set');
+  process.exit(1);
+}
+
+// Warn if using default development secret
+if (JWT_SECRET === 'dev-secret-change-in-production' || JWT_SECRET.length < 32) {
+  console.error('WARNING: JWT_SECRET is insecure. Use a strong secret in production.');
+}
+
+// Type assertion for TypeScript after validation
+const JWT_SECRET_VALIDATED = JWT_SECRET as string;
 
 async function jwtPlugin(fastify: FastifyInstance) {
   await fastify.register(fastifyJwt, {
-    secret: JWT_SECRET,
+    secret: JWT_SECRET_VALIDATED,
     sign: {
       expiresIn: '3d'
     }
@@ -114,7 +141,7 @@ const rateLimitConfig = {
   max: isDevelopment ? 1000 : 100,
   timeWindow: '15 minutes',
   cache: 10000,
-  allowList: ['127.0.0.1'],
+  allowList: isDevelopment ? ['127.0.0.1', '::1'] : [],
   redis: undefined // Will be set if Redis is available
 };
 
@@ -147,16 +174,18 @@ async function cachePlugin(fastify: FastifyInstance) {
 const fastify = Fastify({
   logger: {
     level: isDevelopment ? 'info' : 'warn',
-    transport: {
+    transport: isDevelopment ? {
       target: 'pino-pretty',
       options: {
         translateTime: 'HH:MM:ss Z',
         ignore: 'pid,hostname'
       }
-    }
+    } : undefined, // JSON output in production
+    redact: ['req.headers.authorization', 'req.headers.cookie'], // Don't log sensitive data
   },
-  bodyLimit: 10 * 1024 * 1024, // 10MB
-  requestIdHeader: 'x-request-id'
+  bodyLimit: 5 * 1024 * 1024, // 5MB - reduced from 10MB for security
+  requestIdHeader: 'x-request-id',
+  disableRequestLogging: !isDevelopment // Disable request logging in production for performance
 });
 
 // Set validator and serializer compilers
@@ -361,7 +390,6 @@ async function startServer() {
 
     // Initialize database
     const db = await getDatabase();
-    console.log('✅ Database initialized');
 
     // Database: Ensure first user is Administrator if no Administrator users exist
     const allUsers = await db.getAllUsers();
@@ -369,35 +397,42 @@ async function startServer() {
     if (!hasAdmin && allUsers.length > 0) {
       const firstUser = allUsers[0];
       if (firstUser) {
-        console.log(`⚠️  No Administrator users found. Promoting first user (${firstUser.email}) to Administrator...`);
+        fastify.log.warn(`No Administrator users found. Promoting first user (${firstUser.email}) to Administrator...`);
         await db.updateUser(firstUser.id, { role: 'Administrator' });
-        console.log('✅ First user promoted to Administrator');
       }
     }
 
     // Start server (WebSocket already registered in registerRoutes())
     await fastify.listen({ port: PORT as number, host: '0.0.0.0' });
 
-    console.log(`\n🚀 Neo Linear Server running on http://localhost:${PORT}`);
-    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'WARNING: using default!'}`);
-    console.log(`🔒 Security: Helmet, CORS, CSRF, Rate Limiting enabled`);
-    console.log(`📦 Compression: Enabled`);
-    console.log(`📝 Logging: Request and error logging enabled`);
-    console.log(`🔴 Redis: ${getRedisClient().isReady() ? 'Connected' : 'Not connected'}`);
+    // Server startup info (only show in development or with banner)
+    if (isDevelopment || process.env.SHOW_BANNER === 'true') {
+      console.log(`\n🚀 Neo Linear Server running on http://localhost:${PORT}`);
+      console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'WARNING: using default!'}`);
+      console.log(`🔒 Security: Helmet, CORS, CSRF, Rate Limiting enabled`);
+      console.log(`📦 Compression: Enabled`);
+      console.log(`📝 Logging: Request and error logging enabled`);
+      console.log(`🔴 Redis: ${getRedisClient().isReady() ? 'Connected' : 'Not connected'}`);
+    } else {
+      // Production: minimal logging
+      fastify.log.info(`Neo Linear server started on port ${PORT}`);
+    }
 
     // Schedule periodic background jobs
     await schedulePeriodicJobs();
 
   } catch (error) {
-    console.error('❌ Failed to start server:', error);
+    fastify.log.error('Failed to start server');
+    fastify.log.error(error);
     process.exit(1);
   }
 }
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('\n⏳ Shutting down gracefully...');
+  if (isDevelopment) console.log('\n⏳ Shutting down gracefully...');
+  fastify.log.info('Received SIGINT, shutting down gracefully...');
   await fastify.close();
   const redis = getRedisClient();
   await redis.close();
@@ -405,7 +440,8 @@ process.on('SIGINT', async () => {
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n⏳ Shutting down gracefully...');
+  if (isDevelopment) console.log('\n⏳ Shutting down gracefully...');
+  fastify.log.info('Received SIGTERM, shutting down gracefully...');
   await fastify.close();
   const redis = getRedisClient();
   await redis.close();
