@@ -4,7 +4,7 @@ services:
     container_name: neo_linear_postgres
     environment:
       POSTGRES_USER: neo_linear
-      POSTGRES_PASSWORD: ebB2eYukf+HELS1BocGAbJ35g9MByRG06AYmH7b5I3E=
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: neo_linear
     ports:
       - "5432:5432"
@@ -24,12 +24,12 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass t4sl6bC596nGDcHdRQ6u1HM04k9VCu6haMd2hxUmnc4=
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD}
     healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "t4sl6bC596nGDcHdRQ6u1HM04k9VCu6haMd2hxUmnc4=", "ping" ]
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping" ]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
     restart: unless-stopped
 
   server:
@@ -37,8 +37,8 @@ services:
       context: ./server
       dockerfile: Dockerfile
       args:
-        DATABASE_URL: postgresql://neo_linear:ebB2eYukf+HELS1BocGAbJ35g9MByRG06AYmH7b5I3E=@postgres:5432/neo_linear
-        JWT_SECRET: ${JWT_SECRET:-dev-secret-change-in-production}
+        DATABASE_URL: postgresql://neo_linear:${POSTGRES_PASSWORD}@postgres:5432/neo_linear
+        JWT_SECRET: ${JWT_SECRET}
         NODE_ENV: production
         FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
         PORT: 3001
@@ -46,13 +46,13 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3001
-      DATABASE_URL: postgresql://neo_linear:ebB2eYukf+HELS1BocGAbJ35g9MByRG06AYmH7b5I3E=@postgres:5432/neo_linear
+      DATABASE_URL: postgresql://neo_linear:${POSTGRES_PASSWORD}@postgres:5432/neo_linear
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: t4sl6bC596nGDcHdRQ6u1HM04k9VCu6haMd2hxUmnc4=
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_ENABLED: "true"
       REDIS_PREFIX: "neo_linear:"
-      JWT_SECRET: ${JWT_SECRET:-change-this-in-production-use-openssl-rand-hex-32}
+      JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
     ports:
       - "3001:3001"

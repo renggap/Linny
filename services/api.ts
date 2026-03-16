@@ -145,7 +145,6 @@ export function onAuthFailure(callback: () => void): () => void {
  * Called when token refresh completely fails.
  */
 function triggerAuthFailure(): void {
-  console.log('[api] Authentication failed, triggering callbacks');
   authFailureCallbacks.forEach(cb => {
     try {
       cb();
@@ -178,12 +177,10 @@ function clearTokens(): void {
  */
 function handleOffline(): void {
   isOnline = false;
-  console.log('📴 Going offline - requests will be queued');
 }
 
 function handleOnline(): void {
   isOnline = true;
-  console.log('📶 Back online - syncing queued requests');
   syncQueuedRequests();
 }
 
@@ -205,7 +202,6 @@ function queueRequest(method: string, url: string, options?: RequestInit): void 
     timestamp: Date.now()
   };
   requestQueue.push(request);
-  console.log(`📦 Queued request: ${method} ${url} (queue size: ${requestQueue.length})`);
 }
 
 async function syncQueuedRequests(): Promise<void> {
@@ -213,7 +209,6 @@ async function syncQueuedRequests(): Promise<void> {
 
   isSyncing = true;
 
-  console.log(`🔄 Syncing ${requestQueue.length} queued requests...`);
 
   // Filter out expired requests
   const now = Date.now();
@@ -221,7 +216,6 @@ async function syncQueuedRequests(): Promise<void> {
   const expiredCount = requestQueue.length - validRequests.length;
 
   if (expiredCount > 0) {
-    console.log(`🗑️ Removed ${expiredCount} expired requests`);
   }
   requestQueue = validRequests;
 
@@ -240,7 +234,6 @@ async function syncQueuedRequests(): Promise<void> {
           ...request.options,
           credentials: 'include'
         });
-        console.log(`✅ Synced: ${request.method} ${request.url}`);
         return { success: true, request };
       } catch (error) {
         console.error(`❌ Failed to sync: ${request.method} ${request.url}`, error);
@@ -255,11 +248,9 @@ async function syncQueuedRequests(): Promise<void> {
 
   const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success));
   if (failed.length > 0) {
-    console.log(`⚠️ ${failed.length} requests failed to sync`);
   }
 
   if (requestQueue.length > 0) {
-    console.log(`⚠️ ${requestQueue.length} requests still queued`);
   }
 
   isSyncing = false;
@@ -332,11 +323,9 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
   if (stateChangingMethods.includes(method)) {
     // Ensure CSRF token is present before state-changing requests
     if (!csrfToken) {
-      console.log('No CSRF token, fetching one...');
       await fetchCsrfToken();
     }
     headers['X-CSRF-Token'] = csrfToken || '';
-    console.log(`Making ${method} request to ${url} with CSRF token: ${csrfToken?.substring(0, 10)}...`);
   }
 
   try {
@@ -354,7 +343,6 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
 
     // Handle 401 Unauthorized - try to refresh token (only retry once)
     if (response.status === 401 && !url.includes('/auth/refresh') && retryCount === 0) {
-      console.log(`Got 401 for ${url}, attempting to refresh token...`);
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         // Retry original request with new token (only once)
@@ -368,10 +356,8 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
 
     // Handle 403 Forbidden - might be invalid CSRF token
     if (response.status === 403 && stateChangingMethods.includes(method)) {
-      console.log(`Got 403 for ${url}, checking if CSRF token issue...`);
       const error = await response.json().catch(() => ({ error: 'Forbidden' }));
       if (error.error?.toLowerCase().includes('csrf')) {
-        console.log(`CSRF token invalid, refreshing and retrying...`);
         // Fetch new CSRF token and retry
         await fetchCsrfToken();
         // Get current access token for the retry
@@ -458,16 +444,13 @@ async function refreshAccessToken(): Promise<boolean> {
         const data: TokenResponse = await response.json();
         setAccessToken(data.accessToken);
         // Refresh token is already set by server as httpOnly cookie
-        console.log('[api] Token refreshed successfully');
         return true;
       } else {
         // Handle 401/403 from refresh endpoint - token is truly invalid
-        console.log('[api] Refresh failed:', response.status);
         return false;
       }
     } catch (error) {
       // Network error or other failure
-      console.log('[api] Refresh error:', error);
       return false;
     } finally {
       // Clear the refresh lock AFTER the promise completes
@@ -988,15 +971,12 @@ export const issuesApi = {
   },
 
   async updateStatus(id: string, status: Status): Promise<Issue> {
-    console.log('[api.issues.updateStatus] Sending request:', { id, status });
     const response = await fetchWithAuth(`/issues/${id}/status`, {
       method: 'POST',
       body: JSON.stringify({ status })
     });
-    console.log('[api.issues.updateStatus] Response status:', response.status);
     const data = await handleResponse<{ issue: any }>(response);
     const transformed = transformIssue(data.issue);
-    console.log('[api.issues.updateStatus] Transformed issue:', transformed);
     return transformed;
   },
 
@@ -1227,5 +1207,4 @@ export function getOfflineStatus(): { isOnline: boolean; queuedRequests: number 
 
 export function clearRequestQueue(): void {
   requestQueue = [];
-  console.log('🗑️ Request queue cleared');
 }
