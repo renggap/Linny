@@ -22,6 +22,7 @@ import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fp from 'fastify-plugin';
 import path from 'path';
@@ -290,7 +291,7 @@ const csrfTokens = new Map<string, { token: string; expires: number }>();
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000;
 
 function generateCsrfToken(): string {
-  return Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join('');
+  return crypto.randomBytes(32).toString('base64url');
 }
 
 async function csrfPlugin(fastify: FastifyInstance) {
