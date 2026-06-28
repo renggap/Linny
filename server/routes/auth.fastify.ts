@@ -6,6 +6,12 @@ import { getRefreshTokenExpiryDate } from '../auth/jwt.js';
 import { authenticate } from '../middleware/authHooks.js';
 import { UserRole } from '@prisma/client';
 import { generateToken, sendEmail, generatePasswordResetEmailHTML } from '../auth/email.js';
+import {
+  isAccountLocked,
+  recordFailedAttempt,
+  resetFailedAttempts,
+  getLockoutTimeRemaining
+} from '../middleware/accountLockout.js';
 
 const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;
@@ -93,25 +99,30 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     },
     config: { rateLimit: { max: 5, timeWindow: '15 minutes' } }
   }, async (request: any, reply: any) => {
-    console.log('[auth.login] Handler entered');
     const { email, password } = request.body;
-    console.log('[auth.login] Email:', email);
+    const normalizedEmail = email.toLowerCase();
 
-    console.log('[auth.login] Finding user...');
-    const user = await prisma.user.findUnique({ where: { email } });
-    console.log('[auth.login] User found:', !!user);
+    if (isAccountLocked(normalizedEmail)) {
+      const retryAfter = getLockoutTimeRemaining(normalizedEmail);
+      return reply
+        .code(429)
+        .header('Retry-After', String(retryAfter))
+        .send({ error: 'Too many failed login attempts. Try again later.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
+      recordFailedAttempt(normalizedEmail);
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
 
-    console.log('[auth.login] Verifying password...');
     const isValid = await verifyPassword(password, user.passwordHash);
-    console.log('[auth.login] Password valid:', isValid);
     if (!isValid) {
+      recordFailedAttempt(normalizedEmail);
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
 
-    console.log('[auth.login] Sending auth response...');
+    resetFailedAttempts(normalizedEmail);
     return sendAuthResponse(reply, user);
   });
 

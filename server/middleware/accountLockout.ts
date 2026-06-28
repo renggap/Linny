@@ -1,5 +1,3 @@
-import { Request, Response, NextFunction } from 'express';
-
 interface FailedAttempt {
     count: number;
     lockedUntil: number | null;
@@ -87,37 +85,4 @@ export function recordFailedAttempt(email: string): void {
  */
 export function resetFailedAttempts(email: string): void {
     failedAttempts.delete(email);
-}
-
-/**
- * Account Lockout Middleware
- * 
- * Checks if account is locked before allowing login attempts
- */
-export function accountLockout(req: Request, res: Response, next: NextFunction) {
-    // Only apply to login endpoint
-    if (req.path !== '/api/auth/login' || req.method !== 'POST') {
-        return next();
-    }
-
-    const { email } = req.body;
-
-    if (!email) {
-        return next();
-    }
-
-    // Check if account is locked
-    if (isAccountLocked(email)) {
-        const remainingSeconds = getLockoutTimeRemaining(email);
-        const remainingMinutes = Math.ceil(remainingSeconds / 60);
-
-        return res.status(429).json({
-            error: 'Too many failed login attempts',
-            message: `Account locked. Please try again in ${remainingMinutes} minute(s).`,
-            locked: true,
-            retryAfter: remainingSeconds
-        });
-    }
-
-    next();
 }
