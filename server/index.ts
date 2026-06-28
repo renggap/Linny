@@ -138,7 +138,7 @@ async function jwtPlugin(fastify: FastifyInstance) {
 // ============================================================================
 
 const rateLimitConfig = {
-  global: false, // Don't apply globally
+  global: true,
   max: isDevelopment ? 1000 : 100,
   timeWindow: '15 minutes',
   cache: 10000,

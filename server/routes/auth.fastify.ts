@@ -52,7 +52,8 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.post('/register', {
     schema: {
       body: registerSchema
-    }
+    },
+    config: { rateLimit: { max: 5, timeWindow: '1 hour' } }
   }, async (request: any, reply: any) => {
     const { name, email, password } = request.body;
 
@@ -89,7 +90,8 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.post('/login', {
     schema: {
       body: loginSchema
-    }
+    },
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } }
   }, async (request: any, reply: any) => {
     console.log('[auth.login] Handler entered');
     const { email, password } = request.body;
@@ -191,7 +193,9 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   // Forgot password - send reset link via email
-  fastify.post('/forgot-password', async (request: any, reply: any) => {
+  fastify.post('/forgot-password', {
+    config: { rateLimit: { max: 3, timeWindow: '1 hour' } }
+  }, async (request: any, reply: any) => {
     const { email } = request.body as { email: string };
 
     if (!email || !email.includes('@')) {
@@ -237,7 +241,9 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   // Reset password with token
-  fastify.post('/reset-password', async (request: any, reply: any) => {
+  fastify.post('/reset-password', {
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } }
+  }, async (request: any, reply: any) => {
     const { token, newPassword } = request.body as { token: string; newPassword: string };
 
     if (!token || !newPassword) {
