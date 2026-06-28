@@ -261,8 +261,12 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       return reply.code(400).send({ message: 'Token dan password wajib diisi' });
     }
 
-    if (newPassword.length < 8) {
-      return reply.code(400).send({ message: 'Password minimal 8 karakter ya kak' });
+    const strength = validatePasswordStrength(newPassword);
+    if (!strength.valid) {
+      return reply.code(400).send({
+        message: 'Password does not meet requirements',
+        details: strength.errors
+      });
     }
 
     try {
