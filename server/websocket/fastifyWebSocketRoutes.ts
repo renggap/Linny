@@ -157,7 +157,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // User notifications WebSocket route - for direct user notifications
     fastify.get('/ws/user', {
         websocket: true,
-        logLevel: 'warn'
+        logLevel: 'warn',
+        config: { rateLimit: false }
     }, (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
 
@@ -230,7 +231,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // Issue room WebSocket route
     fastify.get('/ws/issue/:issueId', {
         websocket: true,
-        logLevel: 'warn'
+        logLevel: 'warn',
+        config: { rateLimit: false }
     }, (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { issueId } = req.params;
@@ -302,7 +304,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // Project room WebSocket route
     fastify.get('/ws/project/:projectId', {
         websocket: true,
-        logLevel: 'warn'
+        logLevel: 'warn',
+        config: { rateLimit: false }
     }, (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { projectId } = req.params;

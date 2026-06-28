@@ -20,4 +20,13 @@ describe('rate limiting', () => {
     // /reset-password: 5 per 15 minutes
     expect(src).toMatch(/fastify\.post\('\/reset-password'[\s\S]*?config:\s*\{\s*rateLimit:\s*\{[^}]*max:\s*5[^}]*timeWindow:\s*'15 minutes'/);
   });
+
+  it('WebSocket routes bypass rate limit', () => {
+    const src = fs.readFileSync('./server/websocket/fastifyWebSocketRoutes.ts', 'utf8');
+    // Each of the 3 ws routes must declare rateLimit: false
+    const wsRouteCount = (src.match(/fastify\.get\('\/ws\//g) || []).length;
+    expect(wsRouteCount).toBe(3);
+    const bypassCount = (src.match(/rateLimit:\s*false/g) || []).length;
+    expect(bypassCount).toBe(3);
+  });
 });
