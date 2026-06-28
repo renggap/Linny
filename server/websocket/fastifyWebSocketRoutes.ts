@@ -233,7 +233,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         websocket: true,
         logLevel: 'warn',
         config: { rateLimit: false }
-    }, (connection: WebSocket, req: any) => {
+    }, async (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { issueId } = req.params;
 
@@ -248,6 +248,36 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         ws.userId = authResult.userId!;
         ws.userEmail = authResult.userEmail!;
         ws.userRole = authResult.userRole!;
+
+        // Resolve teamId for the issue and verify membership if stealth
+        const issue = await fastify.prisma.issue.findUnique({
+            where: { id: issueId },
+            select: {
+                id: true,
+                project: {
+                    select: {
+                        teamId: true,
+                        team: { select: { isStealth: true } }
+                    }
+                }
+            }
+        });
+
+        if (!issue) {
+            ws.close(1008, 'Issue not found');
+            return;
+        }
+
+        const teamId = issue.project.teamId;
+        if (issue.project.team?.isStealth) {
+            const membership = await fastify.prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId: ws.userId } }
+            });
+            if (!membership) {
+                ws.close(1008, 'Not authorized for this workspace');
+                return;
+            }
+        }
 
         // Track user connection
         if (!trackUserConnection(ws.userId, ws)) {
@@ -306,7 +336,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         websocket: true,
         logLevel: 'warn',
         config: { rateLimit: false }
-    }, (connection: WebSocket, req: any) => {
+    }, async (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { projectId } = req.params;
 
@@ -319,6 +349,30 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         ws.userId = authResult.userId!;
         ws.userEmail = authResult.userEmail!;
         ws.userRole = authResult.userRole!;
+
+        const project = await fastify.prisma.project.findUnique({
+            where: { id: projectId },
+            select: {
+                id: true,
+                teamId: true,
+                team: { select: { isStealth: true } }
+            }
+        });
+
+        if (!project) {
+            ws.close(1008, 'Project not found');
+            return;
+        }
+
+        if (project.team?.isStealth) {
+            const membership = await fastify.prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId: project.teamId, userId: ws.userId } }
+            });
+            if (!membership) {
+                ws.close(1008, 'Not authorized for this workspace');
+                return;
+            }
+        }
 
         if (!trackUserConnection(ws.userId, ws)) {
             ws.close(1008, 'Too many connections');
