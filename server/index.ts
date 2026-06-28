@@ -291,6 +291,14 @@ fastify.get('/api/health', async (_request, reply) => {
 const csrfTokens = new Map<string, { token: string; expires: number }>();
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000;
 
+// Evict expired tokens every 5 minutes to bound memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of csrfTokens.entries()) {
+    if (value.expires <= now) csrfTokens.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
 function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('base64url');
 }
@@ -300,11 +308,19 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 async function csrfPlugin(fastify: FastifyInstance) {
   fastify.get('/api/csrf-token', async (request, reply) => {
     const sessionId = (request.ip as string) || 'anonymous';
-    const token = generateCsrfToken();
-    csrfTokens.set(sessionId, {
-      token,
-      expires: Date.now() + TOKEN_EXPIRY_MS
-    });
+    const now = Date.now();
+    const existing = csrfTokens.get(sessionId);
+
+    // Reuse valid token to avoid invalidating other tabs/sessions sharing
+    // the same session id (multi-tab scenario).
+    const token = (existing && existing.expires > now) ? existing.token : generateCsrfToken();
+
+    if (!existing || existing.expires <= now) {
+      csrfTokens.set(sessionId, {
+        token,
+        expires: now + TOKEN_EXPIRY_MS
+      });
+    }
 
     // Set cookie so the browser echoes it back on subsequent state-changing
     // requests (double-submit pattern). Frontend reads token from JSON
@@ -327,10 +343,14 @@ async function csrfPlugin(fastify: FastifyInstance) {
   fastify.addHook('preHandler', async (request: any, reply: any) => {
     if (SAFE_METHODS.has(request.method)) return;
 
-    // Skip endpoints a client must hit before having a token
-    if (request.url === '/api/v1/auth/login' ||
-        request.url === '/api/v1/auth/register' ||
-        request.url === '/api/csrf-token') {
+    // Skip endpoints a client must hit before having a token.
+    // Strip query string so endpoints invoked with ?email=... etc. are still skipped.
+    const urlPath = request.url.split('?')[0];
+    if (urlPath === '/api/v1/auth/login' ||
+        urlPath === '/api/v1/auth/register' ||
+        urlPath === '/api/v1/auth/forgot-password' ||
+        urlPath === '/api/v1/auth/reset-password' ||
+        urlPath === '/api/csrf-token') {
       return;
     }
 

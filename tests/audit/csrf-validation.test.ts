@@ -24,8 +24,13 @@ async function buildApp() {
 
   app.get('/api/csrf-token', async (request: any, reply: any) => {
     const sessionId = (request.ip as string) || 'anonymous';
-    const token = generateCsrfToken();
-    csrfTokens.set(sessionId, { token, expires: Date.now() + TOKEN_EXPIRY_MS });
+    const now = Date.now();
+    const existing = csrfTokens.get(sessionId);
+    // Mirror production: get-or-create with reuse for multi-tab safety
+    const token = (existing && existing.expires > now) ? existing.token : generateCsrfToken();
+    if (!existing || existing.expires <= now) {
+      csrfTokens.set(sessionId, { token, expires: now + TOKEN_EXPIRY_MS });
+    }
     reply.setCookie('csrfToken', token, {
       httpOnly: false,
       secure: false,
@@ -38,10 +43,13 @@ async function buildApp() {
 
   app.addHook('preHandler', async (request: any, reply: any) => {
     if (SAFE_METHODS.has(request.method)) return;
+    const urlPath = request.url.split('?')[0];
     if (
-      request.url === '/api/v1/auth/login' ||
-      request.url === '/api/v1/auth/register' ||
-      request.url === '/api/csrf-token'
+      urlPath === '/api/v1/auth/login' ||
+      urlPath === '/api/v1/auth/register' ||
+      urlPath === '/api/v1/auth/forgot-password' ||
+      urlPath === '/api/v1/auth/reset-password' ||
+      urlPath === '/api/csrf-token'
     ) {
       return;
     }
@@ -108,6 +116,17 @@ describe('CSRF validation preHandler', () => {
     const app = await buildApp();
     const res = await app.inject({ method: 'GET', url: '/api/csrf-token' });
     expect(res.statusCode).toBe(200);
+    await app.close();
+  });
+
+  it('reuses valid token instead of rotating (multi-tab safety)', async () => {
+    const app = await buildApp();
+    // Mirror the production logic: get-or-create with reuse
+    const first = await app.inject({ method: 'GET', url: '/api/csrf-token' });
+    const firstToken = JSON.parse(first.body).csrfToken;
+    const second = await app.inject({ method: 'GET', url: '/api/csrf-token' });
+    const secondToken = JSON.parse(second.body).csrfToken;
+    expect(secondToken).toBe(firstToken);
     await app.close();
   });
 });
