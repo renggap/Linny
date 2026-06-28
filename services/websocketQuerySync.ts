@@ -5,7 +5,7 @@ import { queryClient } from './queryClient';
 import { websocketService } from './websocket';
 import { useUIStore } from '../stores/uiStore';
 import { Comment, Notification, Issue, JoinRequest } from '../types';
-import { issueKeys, commentKeys, isScopeKey } from './queryKeys';
+import { issueKeys, commentKeys, isScopeKey, activityKeys } from './queryKeys';
 
 /**
  * WebSocket to TanStack Query Cache Integration (SCOPED)
@@ -68,6 +68,16 @@ function shouldUpdateIssueCache(issueTeamId: string | undefined): boolean {
 }
 
 /**
+ * Refetch the activity feed for the current workspace.
+ * Uses scoped activityKeys so TanStack can match the actual query.
+ */
+function refetchActivityFeed(): void {
+    const currentTeamId = getCurrentTeamId();
+    if (!currentTeamId) return;
+    queryClient.refetchQueries({ queryKey: activityKeys.all(currentTeamId) });
+}
+
+/**
  * Set up notification WebSocket sync to TanStack Query cache.
  * Notifications are global (per-user), not scoped to workspace.
  */
@@ -94,8 +104,8 @@ export function setupNotificationWebSocketSync() {
             return [notification, ...old];
         });
 
-        // Refetch activity query
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
     });
 
     console.log('[websocketQuerySync] Notification WebSocket sync enabled');
@@ -137,8 +147,8 @@ export function setupCommentWebSocketSync() {
             return [...old, comment];
         });
 
-        // Refetch activity query
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
     });
 
     console.log('[websocketQuerySync] Comment WebSocket sync enabled (scoped)');
@@ -188,8 +198,8 @@ export function setupIssueWebSocketSync() {
             old ? { ...old, ...issue } : issue
         );
 
-        // Refetch activity feed (Task 11 will fix the query key)
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
 
         console.log('[websocketQuerySync] Issue data updated in cache (scoped)');
     });
