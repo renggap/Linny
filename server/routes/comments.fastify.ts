@@ -145,7 +145,7 @@ const commentsRoutes: FastifyPluginAsyncZod = async (fastify) => {
         data: mentionedUsers.map((u: any) => ({
           userId: u.id,
           type: 'mention',
-          message: 'nmention kakak di komentar',
+          message: 'mentioned you in a comment',
           issueId,
           actorId: userId
         }))
