@@ -213,13 +213,17 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       return reply.code(400).send({ message: 'Email wajib diisi kak' });
     }
 
+    const normalizedEmail = email.toLowerCase();
+    // Both real and non-existent users receive: "Kalo ada akun pake email ini, link reset udah dikirim ya kak"
+    const genericMessage = 'Kalo ada akun pake email ini, link reset udah dikirim ya kak';
+
     try {
-      const user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
-      });
+      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (!user) {
-        return reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+        // Constant-time-ish delay to match the real-user path (DB + SMTP ~ 400-600ms)
+        await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 200));
+        return reply.send({ message: genericMessage });
       }
 
       await prisma.passwordResetToken.deleteMany({
@@ -244,10 +248,10 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         html: emailHTML
       });
 
-      reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+      reply.send({ message: genericMessage });
     } catch (error) {
-      console.error('Forgot password error:', error);
-      reply.code(500).send({ message: 'Gagal kirim email reset. Coba lagi nanti ya kak' });
+      fastify.log.error({ err: error }, 'Forgot password error');
+      reply.send({ message: genericMessage });
     }
   });
 
