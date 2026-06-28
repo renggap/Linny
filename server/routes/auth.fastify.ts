@@ -286,12 +286,14 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
       const passwordHash = await hashPassword(newPassword);
 
-      await prisma.user.update({
-        where: { id: resetToken.userId },
-        data: { passwordHash }
-      });
-
-      await prisma.passwordResetToken.delete({ where: { token } });
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: resetToken.userId },
+          data: { passwordHash }
+        }),
+        prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } }),
+        prisma.passwordResetToken.delete({ where: { token } })
+      ]);
 
       reply.send({ message: 'Password berhasil diupdate kak!' });
     } catch (error) {
