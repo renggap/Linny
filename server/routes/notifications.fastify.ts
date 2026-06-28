@@ -20,7 +20,7 @@ const notificationsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     // Build the where clause
     const where: any = {
       userId,
-      isRead: unread === 'true' ? false : undefined
+      isRead: unread === 'true' ? false : unread === 'false' ? true : undefined
     };
 
     // If teamId is provided, filter notifications by team scope
