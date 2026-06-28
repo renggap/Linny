@@ -416,11 +416,11 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
 /**
  * Broadcast issue update
  */
-export function broadcastIssueUpdate(issueId: string, data: any, excludeUserId?: string): void {
+export function broadcastIssueUpdate(issueId: string, issue: any, excludeUserId?: string): void {
     console.log(`📢 Broadcasting issue update for issue ${issueId}`);
     broadcastToRoom(`issue:${issueId}`, {
         type: 'issue_updated',
-        data: { issueId, ...data }
+        data: { issueId, issue }
     }, excludeUserId);
 }
 
