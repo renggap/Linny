@@ -45,7 +45,7 @@ export function useApproveJoinRequest() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['join-requests'] });
       queryClient.invalidateQueries({ queryKey: ['teams'] });
-      queryClient.invalidateQueries({ queryKey: ['workspace-members'] });
+      queryClient.invalidateQueries({ queryKey: ['users'] });
     }
   });
 }

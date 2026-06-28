@@ -6,6 +6,12 @@ import { getRefreshTokenExpiryDate } from '../auth/jwt.js';
 import { authenticate } from '../middleware/authHooks.js';
 import { UserRole } from '@prisma/client';
 import { generateToken, sendEmail, generatePasswordResetEmailHTML } from '../auth/email.js';
+import {
+  isAccountLocked,
+  recordFailedAttempt,
+  resetFailedAttempts,
+  getLockoutTimeRemaining
+} from '../middleware/accountLockout.js';
 
 const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;
@@ -52,7 +58,8 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.post('/register', {
     schema: {
       body: registerSchema
-    }
+    },
+    config: { rateLimit: { max: 5, timeWindow: '1 hour' } }
   }, async (request: any, reply: any) => {
     const { name, email, password } = request.body;
 
@@ -89,27 +96,33 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   fastify.post('/login', {
     schema: {
       body: loginSchema
-    }
+    },
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } }
   }, async (request: any, reply: any) => {
-    console.log('[auth.login] Handler entered');
     const { email, password } = request.body;
-    console.log('[auth.login] Email:', email);
+    const normalizedEmail = email.toLowerCase();
 
-    console.log('[auth.login] Finding user...');
-    const user = await prisma.user.findUnique({ where: { email } });
-    console.log('[auth.login] User found:', !!user);
+    if (isAccountLocked(normalizedEmail)) {
+      const retryAfter = getLockoutTimeRemaining(normalizedEmail);
+      return reply
+        .code(429)
+        .header('Retry-After', String(retryAfter))
+        .send({ error: 'Too many failed login attempts. Try again later.' });
+    }
+
+    const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (!user) {
+      recordFailedAttempt(normalizedEmail);
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
 
-    console.log('[auth.login] Verifying password...');
     const isValid = await verifyPassword(password, user.passwordHash);
-    console.log('[auth.login] Password valid:', isValid);
     if (!isValid) {
+      recordFailedAttempt(normalizedEmail);
       return reply.code(401).send({ error: 'Invalid credentials' });
     }
 
-    console.log('[auth.login] Sending auth response...');
+    resetFailedAttempts(normalizedEmail);
     return sendAuthResponse(reply, user);
   });
 
@@ -191,20 +204,25 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   // Forgot password - send reset link via email
-  fastify.post('/forgot-password', async (request: any, reply: any) => {
+  fastify.post('/forgot-password', {
+    config: { rateLimit: { max: 3, timeWindow: '1 hour' } }
+  }, async (request: any, reply: any) => {
     const { email } = request.body as { email: string };
 
     if (!email || !email.includes('@')) {
       return reply.code(400).send({ message: 'Email wajib diisi kak' });
     }
 
+    const normalizedEmail = email.toLowerCase();
+    const genericMessage = 'Kalo ada akun pake email ini, link reset udah dikirim ya kak';
+
     try {
-      const user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() }
-      });
+      const user = await prisma.user.findUnique({ where: { email: normalizedEmail } });
 
       if (!user) {
-        return reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+        // Constant-time-ish delay to match the real-user path (DB + SMTP ~ 400-600ms)
+        await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 200));
+        return reply.send({ message: genericMessage });
       }
 
       await prisma.passwordResetToken.deleteMany({
@@ -229,23 +247,29 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
         html: emailHTML
       });
 
-      reply.send({ message: 'Kalo ada akun pake email ini, link reset udah dikirim ya kak' });
+      reply.send({ message: genericMessage });
     } catch (error) {
-      console.error('Forgot password error:', error);
-      reply.code(500).send({ message: 'Gagal kirim email reset. Coba lagi nanti ya kak' });
+      fastify.log.error({ err: error }, 'Forgot password error');
+      reply.send({ message: genericMessage });
     }
   });
 
   // Reset password with token
-  fastify.post('/reset-password', async (request: any, reply: any) => {
+  fastify.post('/reset-password', {
+    config: { rateLimit: { max: 5, timeWindow: '15 minutes' } }
+  }, async (request: any, reply: any) => {
     const { token, newPassword } = request.body as { token: string; newPassword: string };
 
     if (!token || !newPassword) {
       return reply.code(400).send({ message: 'Token dan password wajib diisi' });
     }
 
-    if (newPassword.length < 8) {
-      return reply.code(400).send({ message: 'Password minimal 8 karakter ya kak' });
+    const strength = validatePasswordStrength(newPassword);
+    if (!strength.valid) {
+      return reply.code(400).send({
+        message: 'Password does not meet requirements',
+        details: strength.errors
+      });
     }
 
     try {
@@ -265,12 +289,14 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
       const passwordHash = await hashPassword(newPassword);
 
-      await prisma.user.update({
-        where: { id: resetToken.userId },
-        data: { passwordHash }
-      });
-
-      await prisma.passwordResetToken.delete({ where: { token } });
+      await prisma.$transaction([
+        prisma.user.update({
+          where: { id: resetToken.userId },
+          data: { passwordHash }
+        }),
+        prisma.refreshToken.deleteMany({ where: { userId: resetToken.userId } }),
+        prisma.passwordResetToken.delete({ where: { token } })
+      ]);
 
       reply.send({ message: 'Password berhasil diupdate kak!' });
     } catch (error) {

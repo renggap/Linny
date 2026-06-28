@@ -22,6 +22,7 @@ import fastifyJwt from '@fastify/jwt';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
+import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fp from 'fastify-plugin';
 import path from 'path';
@@ -137,7 +138,7 @@ async function jwtPlugin(fastify: FastifyInstance) {
 // ============================================================================
 
 const rateLimitConfig = {
-  global: false, // Don't apply globally
+  global: true,
   max: isDevelopment ? 1000 : 100,
   timeWindow: '15 minutes',
   cache: 10000,
@@ -216,8 +217,9 @@ async function registerPlugins() {
   await fastify.register(fp(databasePlugin));
   await fastify.register(fp(cachePlugin));
 
-  // CSRF token endpoint (registered after CORS)
-  await fastify.register(csrfPlugin);
+  // CSRF token endpoint + double-submit preHandler (fp-wrapped so the
+  // preHandler escapes encapsulation and applies to /api/v1/* routes).
+  await fastify.register(fp(csrfPlugin));
 
   // WebSocket support (registered after Express compatibility layer)
   await fastify.register(fastifyWebsocket);
@@ -289,20 +291,85 @@ fastify.get('/api/health', async (_request, reply) => {
 const csrfTokens = new Map<string, { token: string; expires: number }>();
 const TOKEN_EXPIRY_MS = 30 * 60 * 1000;
 
+// Evict expired tokens every 5 minutes to bound memory growth
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of csrfTokens.entries()) {
+    if (value.expires <= now) csrfTokens.delete(key);
+  }
+}, 5 * 60 * 1000).unref();
+
 function generateCsrfToken(): string {
-  return Array.from({ length: 32 }, () => Math.random().toString(36)[2]).join('');
+  return crypto.randomBytes(32).toString('base64url');
 }
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 async function csrfPlugin(fastify: FastifyInstance) {
   fastify.get('/api/csrf-token', async (request, reply) => {
     const sessionId = (request.ip as string) || 'anonymous';
-    const token = generateCsrfToken();
-    csrfTokens.set(sessionId, {
-      token,
-      expires: Date.now() + TOKEN_EXPIRY_MS
+    const now = Date.now();
+    const existing = csrfTokens.get(sessionId);
+
+    // Reuse valid token to avoid invalidating other tabs/sessions sharing
+    // the same session id (multi-tab scenario).
+    const token = (existing && existing.expires > now) ? existing.token : generateCsrfToken();
+
+    if (!existing || existing.expires <= now) {
+      csrfTokens.set(sessionId, {
+        token,
+        expires: now + TOKEN_EXPIRY_MS
+      });
+    }
+
+    // Set cookie so the browser echoes it back on subsequent state-changing
+    // requests (double-submit pattern). Frontend reads token from JSON
+    // response and sends X-CSRF-Token header; browser sends cookie
+    // automatically. Server compares header === cookie === stored token.
+    reply.setCookie('csrfToken', token, {
+      httpOnly: false, // Frontend reads document.cookie for retries
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: TOKEN_EXPIRY_MS / 1000,
+      path: '/'
     });
 
     return reply.send({ csrfToken: token });
+  });
+
+  // Double-submit CSRF validation on state-changing routes.
+  // Wrapped with fp() at registration so this hook propagates to all
+  // /api/v1/* routes registered in registerRoutes().
+  fastify.addHook('preHandler', async (request: any, reply: any) => {
+    if (SAFE_METHODS.has(request.method)) return;
+
+    // Skip endpoints a client must hit before having a token.
+    // Strip query string so endpoints invoked with ?email=... etc. are still skipped.
+    const urlPath = request.url.split('?')[0];
+    if (urlPath === '/api/v1/auth/login' ||
+        urlPath === '/api/v1/auth/register' ||
+        urlPath === '/api/v1/auth/forgot-password' ||
+        urlPath === '/api/v1/auth/reset-password' ||
+        urlPath === '/api/csrf-token') {
+      return;
+    }
+
+    const headerToken = request.headers['x-csrf-token'];
+    const cookieToken = request.cookies?.csrfToken;
+    const sessionId = (request.ip as string) || 'anonymous';
+    const stored = csrfTokens.get(sessionId);
+
+    const isValid =
+      headerToken &&
+      cookieToken &&
+      headerToken === cookieToken &&
+      stored &&
+      stored.token === headerToken &&
+      stored.expires > Date.now();
+
+    if (!isValid) {
+      return reply.code(403).send({ error: 'CSRF token invalid or missing' });
+    }
   });
 }
 

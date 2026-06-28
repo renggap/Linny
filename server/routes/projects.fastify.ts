@@ -321,7 +321,7 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
         description: updates.description,
         isPublic: updates.isPublic,
         publicSlug: updates.publicSlug,
-        leadId: updates.leadId || updates.lead_id,
+        leadId: updates.leadId !== undefined ? updates.leadId : updates.lead_id,
         startDate: updates.startDate ? new Date(updates.startDate) : undefined,
         targetDate: updates.targetDate ? new Date(updates.targetDate) : undefined,
         updatedAt: new Date()

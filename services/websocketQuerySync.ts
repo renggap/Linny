@@ -5,7 +5,7 @@ import { queryClient } from './queryClient';
 import { websocketService } from './websocket';
 import { useUIStore } from '../stores/uiStore';
 import { Comment, Notification, Issue, JoinRequest } from '../types';
-import { issueKeys, commentKeys, isScopeKey } from './queryKeys';
+import { issueKeys, commentKeys, isScopeKey, activityKeys } from './queryKeys';
 
 /**
  * WebSocket to TanStack Query Cache Integration (SCOPED)
@@ -68,6 +68,16 @@ function shouldUpdateIssueCache(issueTeamId: string | undefined): boolean {
 }
 
 /**
+ * Refetch the activity feed for the current workspace.
+ * Uses scoped activityKeys so TanStack can match the actual query.
+ */
+function refetchActivityFeed(): void {
+    const currentTeamId = getCurrentTeamId();
+    if (!currentTeamId) return;
+    queryClient.refetchQueries({ queryKey: activityKeys.all(currentTeamId) });
+}
+
+/**
  * Set up notification WebSocket sync to TanStack Query cache.
  * Notifications are global (per-user), not scoped to workspace.
  */
@@ -94,8 +104,8 @@ export function setupNotificationWebSocketSync() {
             return [notification, ...old];
         });
 
-        // Refetch activity query
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
     });
 
     console.log('[websocketQuerySync] Notification WebSocket sync enabled');
@@ -137,8 +147,8 @@ export function setupCommentWebSocketSync() {
             return [...old, comment];
         });
 
-        // Refetch activity query
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
     });
 
     console.log('[websocketQuerySync] Comment WebSocket sync enabled (scoped)');
@@ -161,6 +171,12 @@ export function setupIssueWebSocketSync() {
         console.log('[websocketQuerySync] Received issue_updated event:', data);
         const { issueId, issue, teamId } = data;
 
+        // Defensive: drop malformed events rather than corrupt cache
+        if (!issue || !issue.id || issue.id !== issueId) {
+            console.warn('[websocketQuerySync] Malformed issue_updated event, ignoring:', data);
+            return;
+        }
+
         // Scope check: Only update if this issue belongs to current workspace
         if (!shouldUpdateIssueCache(teamId)) {
             console.log('[websocketQuerySync] Issue belongs to different workspace, skipping');
@@ -169,17 +185,21 @@ export function setupIssueWebSocketSync() {
 
         const currentTeamId = getCurrentTeamId();
 
-        // Update all scoped issue queries for current workspace
+        // Merge partial issue updates into existing cache entries instead of replacing.
+        // This protects against any future partial-payload broadcast that would
+        // otherwise blank out fields not present in the patch.
         queryClient.setQueriesData(
             { queryKey: issueKeys.all(currentTeamId) },
-            (old: Issue[] = []) => old.map(i => i.id === issueId ? issue : i)
+            (old: Issue[] = []) => old.map(i => i.id === issueId ? { ...i, ...issue } : i)
         );
 
-        // Update specific issue detail query
-        queryClient.setQueryData(issueKeys.detail(currentTeamId, issueId), issue);
+        // Detail cache: merge if existing entry, else set fresh
+        queryClient.setQueryData(issueKeys.detail(currentTeamId, issueId), (old: Issue | undefined) =>
+            old ? { ...old, ...issue } : issue
+        );
 
-        // Refetch activity query
-        queryClient.refetchQueries({ queryKey: ['activity'] });
+        // Refetch activity feed for current workspace
+        refetchActivityFeed();
 
         console.log('[websocketQuerySync] Issue data updated in cache (scoped)');
     });

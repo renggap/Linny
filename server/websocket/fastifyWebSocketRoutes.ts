@@ -157,7 +157,8 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // User notifications WebSocket route - for direct user notifications
     fastify.get('/ws/user', {
         websocket: true,
-        logLevel: 'warn'
+        logLevel: 'warn',
+        config: { rateLimit: false }
     }, (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
 
@@ -230,8 +231,9 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // Issue room WebSocket route
     fastify.get('/ws/issue/:issueId', {
         websocket: true,
-        logLevel: 'warn'
-    }, (connection: WebSocket, req: any) => {
+        logLevel: 'warn',
+        config: { rateLimit: false }
+    }, async (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { issueId } = req.params;
 
@@ -246,6 +248,36 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         ws.userId = authResult.userId!;
         ws.userEmail = authResult.userEmail!;
         ws.userRole = authResult.userRole!;
+
+        // Resolve teamId for the issue and verify membership if stealth
+        const issue = await fastify.prisma.issue.findUnique({
+            where: { id: issueId },
+            select: {
+                id: true,
+                project: {
+                    select: {
+                        teamId: true,
+                        team: { select: { isStealth: true } }
+                    }
+                }
+            }
+        });
+
+        if (!issue) {
+            ws.close(1008, 'Issue not found');
+            return;
+        }
+
+        const teamId = issue.project.teamId;
+        if (issue.project.team?.isStealth) {
+            const membership = await fastify.prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId, userId: ws.userId } }
+            });
+            if (!membership) {
+                ws.close(1008, 'Not authorized for this workspace');
+                return;
+            }
+        }
 
         // Track user connection
         if (!trackUserConnection(ws.userId, ws)) {
@@ -302,8 +334,9 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
     // Project room WebSocket route
     fastify.get('/ws/project/:projectId', {
         websocket: true,
-        logLevel: 'warn'
-    }, (connection: WebSocket, req: any) => {
+        logLevel: 'warn',
+        config: { rateLimit: false }
+    }, async (connection: WebSocket, req: any) => {
         const ws = connection as AuthenticatedWebSocket;
         const { projectId } = req.params;
 
@@ -316,6 +349,30 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         ws.userId = authResult.userId!;
         ws.userEmail = authResult.userEmail!;
         ws.userRole = authResult.userRole!;
+
+        const project = await fastify.prisma.project.findUnique({
+            where: { id: projectId },
+            select: {
+                id: true,
+                teamId: true,
+                team: { select: { isStealth: true } }
+            }
+        });
+
+        if (!project) {
+            ws.close(1008, 'Project not found');
+            return;
+        }
+
+        if (project.team?.isStealth) {
+            const membership = await fastify.prisma.teamMember.findUnique({
+                where: { teamId_userId: { teamId: project.teamId, userId: ws.userId } }
+            });
+            if (!membership) {
+                ws.close(1008, 'Not authorized for this workspace');
+                return;
+            }
+        }
 
         if (!trackUserConnection(ws.userId, ws)) {
             ws.close(1008, 'Too many connections');
@@ -359,11 +416,11 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
 /**
  * Broadcast issue update
  */
-export function broadcastIssueUpdate(issueId: string, data: any, excludeUserId?: string): void {
+export function broadcastIssueUpdate(issueId: string, issue: any, excludeUserId?: string): void {
     console.log(`📢 Broadcasting issue update for issue ${issueId}`);
     broadcastToRoom(`issue:${issueId}`, {
         type: 'issue_updated',
-        data: { issueId, ...data }
+        data: { issueId, issue }
     }, excludeUserId);
 }
 

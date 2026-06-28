@@ -284,15 +284,26 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     const updatedIssue = await prisma.issue.update({
       where: { id },
-      data: { status: status as any, updatedAt: new Date() }
+      data: { status: status as any, updatedAt: new Date() },
+      include: {
+        assignees: { include: { user: true } }
+      }
     });
 
     await invalidateCache('issues');
     await invalidateCache(`issue:${id}`);
 
-    broadcastIssueUpdate(id, { status: updatedIssue.status }, userId);
+    const sanitizedIssue = {
+      ...updatedIssue,
+      assignees: updatedIssue.assignees.map((ia: any) => {
+        const { passwordHash: _, ...u } = ia.user;
+        return u;
+      })
+    };
 
-    return { issue: updatedIssue };
+    broadcastIssueUpdate(id, sanitizedIssue, userId);
+
+    return { issue: sanitizedIssue };
   });
 
   fastify.post('/:id/subtasks', {
