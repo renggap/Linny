@@ -214,7 +214,6 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     }
 
     const normalizedEmail = email.toLowerCase();
-    // Both real and non-existent users receive: "Kalo ada akun pake email ini, link reset udah dikirim ya kak"
     const genericMessage = 'Kalo ada akun pake email ini, link reset udah dikirim ya kak';
 
     try {
