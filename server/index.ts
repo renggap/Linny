@@ -217,8 +217,9 @@ async function registerPlugins() {
   await fastify.register(fp(databasePlugin));
   await fastify.register(fp(cachePlugin));
 
-  // CSRF token endpoint (registered after CORS)
-  await fastify.register(csrfPlugin);
+  // CSRF token endpoint + double-submit preHandler (fp-wrapped so the
+  // preHandler escapes encapsulation and applies to /api/v1/* routes).
+  await fastify.register(fp(csrfPlugin));
 
   // WebSocket support (registered after Express compatibility layer)
   await fastify.register(fastifyWebsocket);
@@ -294,6 +295,8 @@ function generateCsrfToken(): string {
   return crypto.randomBytes(32).toString('base64url');
 }
 
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
 async function csrfPlugin(fastify: FastifyInstance) {
   fastify.get('/api/csrf-token', async (request, reply) => {
     const sessionId = (request.ip as string) || 'anonymous';
@@ -303,7 +306,50 @@ async function csrfPlugin(fastify: FastifyInstance) {
       expires: Date.now() + TOKEN_EXPIRY_MS
     });
 
+    // Set cookie so the browser echoes it back on subsequent state-changing
+    // requests (double-submit pattern). Frontend reads token from JSON
+    // response and sends X-CSRF-Token header; browser sends cookie
+    // automatically. Server compares header === cookie === stored token.
+    reply.setCookie('csrfToken', token, {
+      httpOnly: false, // Frontend reads document.cookie for retries
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: TOKEN_EXPIRY_MS / 1000,
+      path: '/'
+    });
+
     return reply.send({ csrfToken: token });
+  });
+
+  // Double-submit CSRF validation on state-changing routes.
+  // Wrapped with fp() at registration so this hook propagates to all
+  // /api/v1/* routes registered in registerRoutes().
+  fastify.addHook('preHandler', async (request: any, reply: any) => {
+    if (SAFE_METHODS.has(request.method)) return;
+
+    // Skip endpoints a client must hit before having a token
+    if (request.url === '/api/v1/auth/login' ||
+        request.url === '/api/v1/auth/register' ||
+        request.url === '/api/csrf-token') {
+      return;
+    }
+
+    const headerToken = request.headers['x-csrf-token'];
+    const cookieToken = request.cookies?.csrfToken;
+    const sessionId = (request.ip as string) || 'anonymous';
+    const stored = csrfTokens.get(sessionId);
+
+    const isValid =
+      headerToken &&
+      cookieToken &&
+      headerToken === cookieToken &&
+      stored &&
+      stored.token === headerToken &&
+      stored.expires > Date.now();
+
+    if (!isValid) {
+      return reply.code(403).send({ error: 'CSRF token invalid or missing' });
+    }
   });
 }
 

@@ -23,7 +23,9 @@
         "./*"
       ],
       "@neo-linear/contracts": ["./packages/contracts/src/index.ts"],
-      "@neo-linear/contracts/*": ["./packages/contracts/src/*"]
+      "@neo-linear/contracts/*": ["./packages/contracts/src/*"],
+      "fastify": ["./server/node_modules/fastify"],
+      "@fastify/cookie": ["./server/node_modules/@fastify/cookie"]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true,

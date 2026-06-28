@@ -25,7 +25,12 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, '.')
+      '@': resolve(__dirname, '.'),
+      // Server-only deps used by tests/audit/* — root has no node_modules
+      // install, so point bare imports at server's install.
+      fastify: resolve(__dirname, 'server/node_modules/fastify'),
+      '@fastify/cookie': resolve(__dirname, 'server/node_modules/@fastify/cookie'),
+      'fastify-plugin': resolve(__dirname, 'server/node_modules/fastify-plugin')
     }
   }
 });
