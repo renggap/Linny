@@ -1,3 +1,4 @@
+@import '@fontsource-variable/inter-tight';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,36 +14,42 @@
   --bg-primary: #FFFFFF;
   --bg-secondary: #F3F4F6;
   --bg-tertiary: #E5E7EB;
-  --text-primary: #111827;
+  --text-primary: #0E0F12;
   --text-secondary: #4B5563;
   --text-tertiary: #9CA3AF;
   --border-color: #E5E7EB;
-  --accent-color: #5E6AD2;
-  --accent-hover: #4C51BF;
+  --accent-color: #0066FF;
+  --accent-hover: #0052CC;
+  --accent-pressed: #003D99;
+  --accent-subtle: rgba(0, 102, 255, 0.12);
   --shadow-color: rgba(0, 0, 0, 0.1);
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.15);
   --scrollbar-thumb: #3F414D;
   --scrollbar-thumb-hover: #52545E;
 }
 
 .dark {
-  /* Dark theme colors */
-  --bg-primary: #1E1F24;
-  --bg-secondary: #2D2F3A;
-  --bg-tertiary: #3A3D4A;
-  --text-primary: #F9FAFB;
-  --text-secondary: #D1D5DB;
-  --text-tertiary: #9CA3AF;
-  --border-color: #4B5563;
-  --accent-color: #60A5FA;
-  --accent-hover: #3B82F6;
+  /* Dark theme colors — Porsche-inspired charcoal */
+  --bg-primary: #0E0F12;
+  --bg-secondary: #16181D;
+  --bg-tertiary: #1E2128;
+  --text-primary: #F5F6F8;
+  --text-secondary: #A8ACB5;
+  --text-tertiary: #6B7079;
+  --border-color: #2A2D35;
+  --accent-color: #0066FF;
+  --accent-hover: #0052CC;
+  --accent-pressed: #003D99;
+  --accent-subtle: rgba(0, 102, 255, 0.12);
   --shadow-color: rgba(0, 0, 0, 0.3);
-  --scrollbar-thumb: #4B5563;
-  --scrollbar-thumb-hover: #6B7280;
+  --shadow-popover: 0 8px 32px rgba(0, 0, 0, 0.4);
+  --scrollbar-thumb: #2A2D35;
+  --scrollbar-thumb-hover: #3A3D45;
 }
 
 /* Apply theme colors to body */
 body {
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: "Inter Tight Variable", "Inter Tight", "Inter", system-ui, -apple-system, sans-serif;
   font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

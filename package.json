@@ -23,6 +23,7 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@fontsource-variable/inter-tight": "^5.2.7",
     "@neo-linear/contracts": "file:./packages/contracts",
     "@tanstack/react-query": "^5.90.19",
     "@tanstack/react-router": "^1.151.3",
