@@ -54,22 +54,37 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
 
 /**
  * Security plugin wrapper for @fastify/helmet
+ *
+ * Production no longer relies on nginx to inject a Content-Security-Policy
+ * header — Helmet emits it for every environment so the protection cannot
+ * silently disappear behind a reverse proxy config.
+ *
+ * NOTE: `styleSrc` includes `'unsafe-inline'` because Tailwind injects
+ * runtime styles. Switching to nonces/hashes is a follow-up.
  */
 async function securityPlugin(fastify: FastifyInstance) {
+  const cspDirectives = {
+    defaultSrc: ["'self'"],
+    styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
+    scriptSrc: ["'self'"],
+    imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
+    connectSrc: [
+      "'self'",
+      'http://localhost:3001',
+      'http://localhost:3000',
+      'ws://localhost:3001',
+      // Include configured production frontend origin(s) so the deployed UI
+      // can reach the API and WebSocket. FRONTEND_URL may be a comma list.
+      ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [])
+    ],
+    fontSrc: ["'self'"],
+    objectSrc: ["'none'"],
+    mediaSrc: ["'self'"],
+    frameSrc: ["'none'"]
+  };
+
   await fastify.register(fastifyHelmet, {
-    contentSecurityPolicy: isDevelopment ? {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"], // For Tailwind
-        scriptSrc: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
-        connectSrc: ["'self'", 'http://localhost:3001', 'http://localhost:3000', 'ws://localhost:3001'],
-        fontSrc: ["'self'"],
-        objectSrc: ["'none'"],
-        mediaSrc: ["'self'"],
-        frameSrc: ["'none'"]
-      }
-    } : false, // Disabled in production, nginx handles CSP
+    contentSecurityPolicy: { directives: cspDirectives },
     hsts: isDevelopment ? false : {
       maxAge: 63072000, // 2 years
       includeSubDomains: true,
