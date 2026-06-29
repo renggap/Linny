@@ -62,13 +62,14 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     config: { rateLimit: { max: 5, timeWindow: '1 hour' } }
   }, async (request: any, reply: any) => {
     const { name, email, password } = request.body;
+    const normalizedEmail = email.toLowerCase();
 
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.valid) {
       return reply.code(400).send({ error: 'Password does not meet requirements', details: passwordValidation.errors });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
       return reply.code(409).send({ error: 'Email already registered' });
     }
@@ -81,7 +82,7 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const newUser = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         passwordHash,
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
         role,
