@@ -1,85 +1,103 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 
-// Consistent color palette for avatars
-const AVATAR_COLORS = [
-  'bg-accent', // Purple
-  'bg-[#E54D2E]', // Red
-  'bg-[#2E9E4E]', // Green
-  'bg-[#E5A02E]', // Orange
-  'bg-[#2E8FE5]', // Blue
-  'bg-[#9B2EE5]', // Violet
-  'bg-[#E52E8A]', // Pink
-  'bg-[#2EE5B8]', // Teal
-  'bg-[#E5B82E]', // Yellow
-  'bg-[#2EE5E5]', // Cyan
-];
-
-/**
- * Generate a consistent color from a string using hash
- */
-function getAvatarColor(name: string): string {
-  let hash = 0;
+function hashName(name: string): number {
+  let h = 5381;
   for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    h = ((h << 5) + h) + name.charCodeAt(i);
+    h |= 0;
   }
-  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+  return Math.abs(h);
 }
 
-/**
- * Get initials from a name (always 2 letters)
- */
-function getInitials(name: string): string {
-  const parts = name.trim().split(' ');
-  if (parts.length === 1) {
-    // For single name, take first 2 characters
-    const namePart = parts[0].toUpperCase();
-    return namePart.substring(0, 2);
+function identiconGrid(hash: number): boolean[][] {
+  const grid: boolean[][] = [];
+  for (let row = 0; row < 5; row++) {
+    grid[row] = [];
+    for (let col = 0; col < 5; col++) {
+      const sourceCol = col < 3 ? col : 4 - col;
+      const bit = (hash >> (row * 3 + sourceCol)) & 1;
+      grid[row][col] = bit === 1;
+    }
   }
-  // For multiple names, take first letter of first and last name
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  return grid;
+}
+
+function identiconColor(hash: number): string {
+  const hue = hash % 360;
+  const sat = 55 + (hash % 20);
+  const light = 50 + ((hash >> 8) % 15);
+  return `hsl(${hue}, ${sat}%, ${light}%)`;
 }
 
 interface UserAvatarProps {
   name: string;
+  avatarUrl?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   showRing?: boolean;
 }
 
 const sizeClasses = {
-  sm: 'w-4 h-4 text-[6px]',
-  md: 'w-6 h-6 text-[9px]',
-  lg: 'w-8 h-8 text-[11px]',
-  xl: 'w-12 h-12 text-[14px]',
+  sm: 'w-4 h-4',
+  md: 'w-6 h-6',
+  lg: 'w-8 h-8',
+  xl: 'w-12 h-12',
 };
 
-/**
- * Consistent UserAvatar component that displays 2-letter initials
- * with a consistent background color based on the name.
- *
- * All avatars use initials only for a unified, consistent appearance.
- */
 export const UserAvatar: React.FC<UserAvatarProps> = ({
   name,
+  avatarUrl,
   size = 'md',
   className,
   showRing = false,
 }) => {
-  const initials = getInitials(name);
-  const bgColor = getAvatarColor(name);
+  const safeName = name || 'unknown';
+  const hash = hashName(safeName);
+  const grid = identiconGrid(hash);
+  const color = identiconColor(hash);
+
+  if (avatarUrl) {
+    return (
+      <img
+        src={avatarUrl}
+        alt={safeName}
+        className={cn(
+          'rounded-full object-cover shrink-0',
+          sizeClasses[size],
+          showRing && 'ring-1 ring-[#363840]/50',
+          className
+        )}
+      />
+    );
+  }
 
   return (
     <div
       className={cn(
-        'rounded-full flex items-center justify-center font-bold text-white shrink-0',
+        'rounded-full overflow-hidden shrink-0 bg-[#1A1C23]',
         sizeClasses[size],
-        bgColor,
         showRing && 'ring-1 ring-[#363840]/50',
         className
       )}
+      title={safeName}
     >
-      <span>{initials}</span>
+      <svg viewBox="0 0 5 5" className="w-full h-full block" aria-label={safeName}>
+        {grid.map((row, r) =>
+          row.map((on, c) =>
+            on ? (
+              <rect
+                key={`${r}-${c}`}
+                x={c + 0.1}
+                y={r + 0.1}
+                width="0.8"
+                height="0.8"
+                fill={color}
+              />
+            ) : null
+          )
+        )}
+      </svg>
     </div>
   );
 };
