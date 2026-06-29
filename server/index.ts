@@ -126,18 +126,6 @@ const corsOptions = {
 // JWT AUTHENTICATION PLUGIN
 // ============================================================================
 
-const JWT_SECRET = process.env.JWT_SECRET;
-
-if (!JWT_SECRET) {
-  console.error('FATAL: JWT_SECRET environment variable is not set');
-  process.exit(1);
-}
-
-// Warn if using default development secret
-if (JWT_SECRET === 'dev-secret-change-in-production' || JWT_SECRET.length < 32) {
-  console.error('WARNING: JWT_SECRET is insecure. Use a strong secret in production.');
-}
-
 // Production CSP requires FRONTEND_URL so connectSrc can derive wss:// for WebSocket.
 // Without it, deployed browsers will block API/WS requests.
 if (process.env.NODE_ENV === 'production') {
@@ -148,12 +136,18 @@ if (process.env.NODE_ENV === 'production') {
   }
 }
 
-// Type assertion for TypeScript after validation
-const JWT_SECRET_VALIDATED = JWT_SECRET as string;
-
 async function jwtPlugin(fastify: FastifyInstance) {
+  const jwtSecret = process.env.JWT_SECRET;
+  if (!jwtSecret) {
+    console.error('FATAL: JWT_SECRET environment variable is not set');
+    process.exit(1);
+  }
+  if (jwtSecret.length < 32) {
+    console.error('FATAL: JWT_SECRET must be at least 32 characters long');
+    process.exit(1);
+  }
   await fastify.register(fastifyJwt, {
-    secret: JWT_SECRET_VALIDATED,
+    secret: jwtSecret,
     sign: {
       expiresIn: '3d'
     }

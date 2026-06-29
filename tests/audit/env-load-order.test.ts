@@ -39,4 +39,16 @@ describe('env load order', () => {
     expect(topLines).not.toMatch(/^const\s+SECRET\s*=\s*process\.env\.JWT_SECRET/m);
     expect(topLines).not.toMatch(/^const\s+JWT_SECRET\s*=\s*process\.env\.JWT_SECRET/m);
   });
+
+  it('server/index.ts does NOT capture JWT_SECRET at module scope', () => {
+    // The capture must live inside the jwtPlugin function so it reads env at
+    // registration time, not module-load time.
+    expect(indexSrc).not.toMatch(/^const\s+JWT_SECRET\s*=\s*process\.env\.JWT_SECRET/m);
+    expect(indexSrc).not.toMatch(/^const\s+JWT_SECRET_VALIDATED\s*=\s*/m);
+  });
+
+  it('jwtPlugin reads JWT_SECRET inside the function body', () => {
+    const block = indexSrc.match(/async function jwtPlugin\([\s\S]*?^\}/m)?.[0] ?? '';
+    expect(block).toMatch(/process\.env\.JWT_SECRET/);
+  });
 });
