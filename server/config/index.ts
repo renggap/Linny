@@ -4,10 +4,10 @@
  * @module config
  */
 
-import dotenv from 'dotenv';
-
-// Load environment variables from .env file
-dotenv.config();
+// NOTE: dotenv.config() is invoked by server/env.ts, which server/index.ts
+// imports as its first statement. By the time this module evaluates,
+// process.env is already populated. Do not re-run dotenv.config() here —
+// doing so would re-introduce the module-load race fixed in env.ts.
 
 /**
  * Application configuration interface

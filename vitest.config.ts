@@ -30,7 +30,8 @@ export default defineConfig({
       // install, so point bare imports at server's install.
       fastify: resolve(__dirname, 'server/node_modules/fastify'),
       '@fastify/cookie': resolve(__dirname, 'server/node_modules/@fastify/cookie'),
-      'fastify-plugin': resolve(__dirname, 'server/node_modules/fastify-plugin')
+      'fastify-plugin': resolve(__dirname, 'server/node_modules/fastify-plugin'),
+      jsonwebtoken: resolve(__dirname, 'server/node_modules/jsonwebtoken')
     }
   }
 });
