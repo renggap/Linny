@@ -3,7 +3,7 @@ import { z } from 'zod';
 import crypto from 'crypto';
 import { registerSchema, loginSchema } from '../validation/schemas.js';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../auth/password.js';
-import { getRefreshTokenExpiryDate } from '../auth/jwt.js';
+import { getRefreshTokenExpiryDate, verifyToken } from '../auth/jwt.js';
 import { authenticate } from '../middleware/authHooks.js';
 import { UserRole } from '@prisma/client';
 import { generateToken, sendEmail, generatePasswordResetEmailHTML } from '../auth/email.js';
@@ -171,7 +171,10 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     }
 
     try {
-      const decoded = fastify.jwt.verify(refreshToken) as any;
+      const decoded = verifyToken(refreshToken);
+      if (!decoded) {
+        return reply.code(401).send({ error: 'Invalid or expired refresh token' });
+      }
 
       const storedToken = await prisma.refreshToken.findUnique({
         where: { token: refreshToken }

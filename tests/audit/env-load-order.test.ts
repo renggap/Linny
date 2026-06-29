@@ -63,4 +63,17 @@ describe('env load order', () => {
     const block = indexSrc.match(/async function startServer\([\s\S]*?^\}/m)?.[0] ?? '';
     expect(block).toMatch(/validateConfig\(\)/);
   });
+
+  it('server/routes/auth.fastify.ts /refresh uses verifyToken, not fastify.jwt.verify', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../server/routes/auth.fastify.ts'),
+      'utf8'
+    );
+    // Find the /refresh handler block
+    const block = src.match(/fastify\.post\('\/refresh'[\s\S]*?\n  \}\);/m)?.[0] ?? '';
+    expect(block).toMatch(/verifyToken\(/);
+    expect(block).not.toMatch(/fastify\.jwt\.verify/);
+  });
 });
