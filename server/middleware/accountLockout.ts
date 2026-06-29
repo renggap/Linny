@@ -25,7 +25,8 @@ function cleanupOldRecords(): void {
 }
 
 // Run cleanup every 5 minutes
-setInterval(cleanupOldRecords, 5 * 60 * 1000);
+const lockoutCleanupInterval = setInterval(cleanupOldRecords, 5 * 60 * 1000);
+lockoutCleanupInterval.unref();
 
 /**
  * Check if account is locked
