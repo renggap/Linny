@@ -21,8 +21,23 @@ const activitiesRoutes: FastifyPluginAsyncZod = async (fastify) => {
     schema: {
       querystring: activitiesQuerySchema
     }
-  }, async (request: any) => {
+  }, async (request: any, reply: any) => {
     const { teamId, projectId, limit = 100 } = request.query;
+
+    // Membership gate (mirrors /issues and /projects list routes)
+    if (request.userRole !== 'Administrator') {
+      if (!teamId) {
+        return reply.code(400).send({ error: 'teamId is required' });
+      }
+      const membership = await prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId, userId: request.userId } }
+      });
+      if (!membership) {
+        return reply.code(403).send({
+          error: 'Forbidden: You are not a member of this team'
+        });
+      }
+    }
 
     const activities = await prisma.activity.findMany({
       where: projectId
