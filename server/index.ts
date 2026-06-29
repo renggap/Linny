@@ -63,6 +63,18 @@ const isDevelopment = process.env.NODE_ENV !== 'production';
  * runtime styles. Switching to nonces/hashes is a follow-up.
  */
 async function securityPlugin(fastify: FastifyInstance) {
+  // Include configured production frontend origin(s) so the deployed UI can
+  // reach the API over HTTPS and the WebSocket over WSS. Browsers treat
+  // https:// and wss:// as distinct CSP schemes, so we derive the WS pair.
+  const frontendUrls = process.env.FRONTEND_URL
+    ? [
+        ...process.env.FRONTEND_URL.split(','),
+        ...process.env.FRONTEND_URL.split(',').map((u) =>
+          u.trim().replace(/^https:/, 'wss:').replace(/^http:/, 'ws:')
+        )
+      ]
+    : [];
+
   const cspDirectives = {
     defaultSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'"], // Tailwind requires unsafe-inline
@@ -70,12 +82,10 @@ async function securityPlugin(fastify: FastifyInstance) {
     imgSrc: ["'self'", 'data:', 'https://picsum.photos', 'https://ui-avatars.com'],
     connectSrc: [
       "'self'",
-      'http://localhost:3001',
-      'http://localhost:3000',
-      'ws://localhost:3001',
-      // Include configured production frontend origin(s) so the deployed UI
-      // can reach the API and WebSocket. FRONTEND_URL may be a comma list.
-      ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : [])
+      ...(isDevelopment
+        ? ['http://localhost:3001', 'http://localhost:3000', 'ws://localhost:3001']
+        : []),
+      ...frontendUrls
     ],
     fontSrc: ["'self'"],
     objectSrc: ["'none'"],

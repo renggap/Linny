@@ -24,4 +24,10 @@ describe('Helmet CSP production config', () => {
     const block = src.match(/async function securityPlugin[\s\S]*?^\}/m)?.[0] ?? '';
     expect(block).toMatch(/FRONTEND_URL/);
   });
+
+  it('derives wss:// URLs from FRONTEND_URL for production WebSocket', () => {
+    const block = src.match(/async function securityPlugin[\s\S]*?^\}/m)?.[0] ?? '';
+    expect(block).toMatch(/wss:/);
+    expect(block).toMatch(/FRONTEND_URL[\s\S]*replace\(\s*\/\^https:/);
+  });
 });
