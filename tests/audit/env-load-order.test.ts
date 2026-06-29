@@ -39,4 +39,41 @@ describe('env load order', () => {
     expect(topLines).not.toMatch(/^const\s+SECRET\s*=\s*process\.env\.JWT_SECRET/m);
     expect(topLines).not.toMatch(/^const\s+JWT_SECRET\s*=\s*process\.env\.JWT_SECRET/m);
   });
+
+  it('server/index.ts does NOT capture JWT_SECRET at module scope', () => {
+    // The capture must live inside the jwtPlugin function so it reads env at
+    // registration time, not module-load time.
+    expect(indexSrc).not.toMatch(/^const\s+JWT_SECRET\s*=\s*process\.env\.JWT_SECRET/m);
+    expect(indexSrc).not.toMatch(/^const\s+JWT_SECRET_VALIDATED\s*=\s*/m);
+  });
+
+  it('jwtPlugin reads JWT_SECRET inside the function body', () => {
+    const block = indexSrc.match(/async function jwtPlugin\([\s\S]*?^\}/m)?.[0] ?? '';
+    expect(block).toMatch(/process\.env\.JWT_SECRET/);
+  });
+
+  it('server/config/index.ts does NOT auto-call validateConfig at module import', () => {
+    // Modules should not call process.exit on import. Validation belongs at startup.
+    expect(configSrc).not.toMatch(/^validateConfig\(\)/m);
+    expect(configSrc).not.toMatch(/try\s*\{\s*validateConfig\(\)/);
+  });
+
+  it('server/index.ts calls validateConfig from startServer', () => {
+    // Find startServer function body
+    const block = indexSrc.match(/async function startServer\([\s\S]*?^\}/m)?.[0] ?? '';
+    expect(block).toMatch(/validateConfig\(\)/);
+  });
+
+  it('server/routes/auth.fastify.ts /refresh uses verifyToken, not fastify.jwt.verify', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../server/routes/auth.fastify.ts'),
+      'utf8'
+    );
+    // Find the /refresh handler block
+    const block = src.match(/fastify\.post\('\/refresh'[\s\S]*?\n  \}\);/m)?.[0] ?? '';
+    expect(block).toMatch(/verifyToken\(/);
+    expect(block).not.toMatch(/fastify\.jwt\.verify/);
+  });
 });

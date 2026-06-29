@@ -458,6 +458,9 @@ REDIS_ENABLED=true
 REDIS_PREFIX=neo_linear:
 
 # Frontend (for production)
+# VITE_API_URL must be the ORIGIN ONLY — code in services/api.ts:25 appends /api/v1.
+# Correct: https://linny-live.microworker.my.id
+# Wrong:   https://linny-live.microworker.my.id/api/v1 (produces /api/v1/api/v1/... 404s)
 VITE_API_URL=http://localhost:3001
 FRONTEND_URL=http://localhost:3000
 ```
