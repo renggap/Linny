@@ -60,9 +60,9 @@ const SidebarItem = ({
     whileHover={{ x: 2 }}
     whileTap={{ scale: 0.98 }}
     className={cn(
-      "group flex items-center px-3 py-1.5 mx-2 cursor-pointer transition-all duration-200 border border-transparent",
+      "group flex items-center px-3 py-1.5 mx-2 cursor-pointer transition-all duration-200 border-l-2 border-transparent",
       isActive
-        ? "bg-[#1A1C23] border-[#2C2D35] text-[#E8E8E8]"
+        ? "bg-[#1A1C23] border-accent text-[#E8E8E8]"
         : "text-[#8A8F98] hover:bg-[#15161A] hover:text-[#C0C4CC]",
       indent && "ml-6",
       className
