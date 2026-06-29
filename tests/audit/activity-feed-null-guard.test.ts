@@ -14,6 +14,11 @@ describe('ActivityFeed null guard on payload', () => {
     expect(line).toMatch(/\?\.actorId/);
   });
 
+  it('skips rendering when payload is null/undefined (returns null at top of map)', () => {
+    const mapBlock = src.match(/\.map\(\(activity,[\s\S]*?\}\)/g)?.[0] ?? '';
+    expect(mapBlock).toMatch(/if\s*\(!activity\.payload\)\s*return\s+null/);
+  });
+
   it('does NOT use bare activity.payload.userId (would throw on undefined payload)', () => {
     expect(src).not.toMatch(/activity\.payload\.userId/);
     expect(src).not.toMatch(/activity\.payload\.actorId/);
