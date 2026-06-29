@@ -27,6 +27,7 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 import crypto from 'crypto';
 import fp from 'fastify-plugin';
 import { getDatabase } from './database.js';
+import { validateConfig } from './config/index.js';
 import { getRedisClient } from './cache/redis.js';
 import { registerWebSocketRoutes } from './websocket/fastifyWebSocketRoutes.js';
 import { schedulePeriodicJobs } from './jobs/jobQueue.js';
@@ -471,6 +472,9 @@ fastify.setNotFoundHandler((request, reply) => {
 
 async function startServer() {
   try {
+    // Validate configuration before any plugins register
+    validateConfig();
+
     // Register plugins
     await registerPlugins();
 

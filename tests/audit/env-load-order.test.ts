@@ -51,4 +51,16 @@ describe('env load order', () => {
     const block = indexSrc.match(/async function jwtPlugin\([\s\S]*?^\}/m)?.[0] ?? '';
     expect(block).toMatch(/process\.env\.JWT_SECRET/);
   });
+
+  it('server/config/index.ts does NOT auto-call validateConfig at module import', () => {
+    // Modules should not call process.exit on import. Validation belongs at startup.
+    expect(configSrc).not.toMatch(/^validateConfig\(\)/m);
+    expect(configSrc).not.toMatch(/try\s*\{\s*validateConfig\(\)/);
+  });
+
+  it('server/index.ts calls validateConfig from startServer', () => {
+    // Find startServer function body
+    const block = indexSrc.match(/async function startServer\([\s\S]*?^\}/m)?.[0] ?? '';
+    expect(block).toMatch(/validateConfig\(\)/);
+  });
 });

@@ -191,12 +191,7 @@ export function validateConfig(): void {
     }
 }
 
-// Validate configuration on import
-try {
-    validateConfig();
-} catch (error) {
-    console.error('❌ Configuration validation failed:', error);
-    process.exit(1);
-}
+// validateConfig() should be called explicitly from the server entry (startServer)
+// to avoid terminating the process at module-import time.
 
 export default config;
