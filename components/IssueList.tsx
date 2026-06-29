@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react'; // Standard icons from lucide-react
 import { UserAvatar } from './UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -83,7 +83,7 @@ const IssueRow: React.FC<{
       onClick={() => onEdit(issue)}
     >
       {/* Selection/Hover Indicator */}
-      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#5E6AD2] opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {/* Drag Handle */}
       {canInteract && (
@@ -160,14 +160,14 @@ const IssueRow: React.FC<{
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all bg-[#0F1014]/80 backdrop-blur-sm pl-2 rounded-l-lg border-l border-[#22242A]">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(issue); }}
-            className="p-1.5 text-[#5E6068] hover:text-[#5E6AD2] hover:bg-[#1A1C23] rounded-md transition-colors"
+            className="p-1.5 text-[#5E6068] hover:text-accent hover:bg-[#1A1C23] transition-colors"
             title="Edit Issue"
           >
             <Edit2 className="w-3.5 h-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(issue.id); }}
-            className="p-1.5 text-[#5E6068] hover:text-red-400 hover:bg-[#1A1C23] rounded-md transition-colors"
+            className="p-1.5 text-[#5E6068] hover:text-red-400 hover:bg-[#1A1C23] transition-colors"
             title="Delete Issue"
           >
             <Trash2 className="w-3.5 h-3.5" />
@@ -227,8 +227,8 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
       <div
         key={status}
         className={cn(
-          "mb-6 transition-all duration-300 rounded-lg border border-transparent",
-          isDropTarget ? "bg-[#1A1C23]/50 border-[#5E6AD2]/30" : ""
+          "mb-6 transition-all duration-300 border border-transparent",
+          isDropTarget ? "bg-[#1A1C23]/50 border-accent/30" : ""
         )}
         onDragOver={(e) => canInteract && handleDragOver(e, status)}
         onDrop={(e) => canInteract && handleDrop(e, status)}
@@ -239,7 +239,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
               <StatusIcon status={status} className="w-3 h-3" />
             </div>
             <span className="text-[12px] font-semibold text-[#E8E8E8] tracking-tight">{status}</span>
-            <span className="text-[10px] font-mono text-[#5E6068] bg-[#1A1C23] px-1.5 py-0.5 rounded-md border border-[#22242A] ml-2">
+            <span className="text-[10px] font-mono text-[#5E6068] bg-[#1A1C23] px-1.5 py-0.5 border border-[#22242A] ml-2">
               {groupIssues.length}
             </span>
           </div>
@@ -268,7 +268,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="h-20 border-2 border-dashed border-[#2C2D35] m-2 rounded-lg flex items-center justify-center bg-[#1A1C23]/20"
+              className="h-20 border-2 border-dashed border-[#2C2D35] m-2 flex items-center justify-center bg-[#1A1C23]/20"
             >
               <div className="flex items-center text-[#5E6068]">
                 <span className="text-[11px] font-medium mr-2">Move to {status}</span>
@@ -303,7 +303,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
           animate={{ opacity: 1, scale: 1 }}
           className="flex flex-col items-center justify-center py-32 text-center"
         >
-          <div className="w-16 h-16 bg-[#1A1C23] border border-[#2C2D35] rounded-2xl flex items-center justify-center mb-6 shadow-2xl shadow-black/50">
+          <div className="w-16 h-16 bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center mb-6 shadow-popover shadow-black/50">
             <Layers className="w-8 h-8 text-[#5E6068]" />
           </div>
           <h3 className="text-[#E8E8E8] font-semibold mb-2 text-lg tracking-tight">Scope Empty</h3>

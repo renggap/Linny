@@ -170,7 +170,7 @@ export const ModalsContainer: React.FC<ModalsContainerProps> = ({
           onClick={() => setSelectedUserForModal(false, null)}
         />
         <div
-          className={`bg-[#0F1014] w-full max-w-md rounded-2xl shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] border border-[#22242A] overflow-hidden relative z-10 transform transition-transform duration-200 ${selectedUserForModal ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
+          className={`bg-[#0F1014] w-full max-w-md shadow-popover border border-[#22242A] overflow-hidden relative z-10 transform transition-transform duration-200 ${selectedUserForModal ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
         >
           <div className="p-6">
             {selectedUserForModal && (
@@ -179,12 +179,12 @@ export const ModalsContainer: React.FC<ModalsContainerProps> = ({
                   <img
                     src={selectedUserForModal.avatarUrl}
                     alt={selectedUserForModal.name}
-                    className="w-16 h-16 rounded-full border-2 border-[#5E6AD2]"
+                    className="w-16 h-16 rounded-full border-2 border-accent"
                   />
                   <div>
                     <h3 className="text-[16px] font-bold text-[#E8E8E8]">{selectedUserForModal.name}</h3>
                     <p className="text-[12px] text-[#5E6068]">{selectedUserForModal.email}</p>
-                    <span className="inline-block mt-1 text-[9px] font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-2 py-0.5 rounded uppercase tracking-wider border border-[#5E6AD2]/20">
+                    <span className="inline-block mt-1 text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded uppercase tracking-wider border border-accent/20">
                       {selectedUserForModal.role}
                     </span>
                   </div>

@@ -4,7 +4,7 @@ import { Issue, User, Status } from '../types';
 import { StatusIcon } from './Icons';
 import { UserAvatar } from './UserAvatar';
 import { UserCircle } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -133,7 +133,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
                 )}
                 style={{ height: ROW_HEIGHT, paddingLeft: `${24 + level * 20}px` }}
               >
-                <div className="p-0.5 rounded bg-[#1A1C23] border border-[#2C2D35] mr-3 group-hover:border-[#5E6AD2]/50 transition-colors">
+                <div className="p-0.5 rounded bg-[#1A1C23] border border-[#2C2D35] mr-3 group-hover:border-accent/50 transition-colors">
                   <StatusIcon status={issue.status} className="w-2.5 h-2.5" />
                 </div>
                 <div className="flex flex-col min-w-0 flex-1">
@@ -181,13 +181,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
                     key={date.toISOString()}
                     className={cn(
                       "flex-shrink-0 border-r border-[#22242A]/50 flex flex-col items-center justify-center transition-colors",
-                      isToday ? "bg-[#5E6AD2]/10" : isWeekend ? "bg-[#101114]/30" : ""
+                      isToday ? "bg-accent/10" : isWeekend ? "bg-[#101114]/30" : ""
                     )}
                     style={{ width: CELL_WIDTH }}
                   >
                     <span className={cn(
                       "text-[12px] font-bold leading-none mb-1",
-                      isToday ? "text-[#5E6AD2]" : "text-[#E8E8E8]"
+                      isToday ? "text-accent" : "text-[#E8E8E8]"
                     )}>{date.getDate()}</span>
                     <span className="text-[9px] text-[#5E6068] font-bold uppercase tracking-tighter">{date.toLocaleDateString('en-US', { weekday: 'narrow' })}</span>
                   </div>
@@ -222,10 +222,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.02 }}
                       className={cn(
-                        "absolute top-[10px] bottom-[10px] rounded-lg border px-3 flex items-center overflow-hidden transition-all z-10 cursor-pointer shadow-lg hover:brightness-110",
+                        "absolute top-[10px] bottom-[10px] border px-3 flex items-center overflow-hidden transition-all z-10 cursor-pointer shadow-lg hover:brightness-110",
                         isDone
                           ? "bg-[#1A1C23] border-[#2C2D35] text-[#5E6068]"
-                          : "bg-[#5E6AD2] border-[#727BE0] text-white shadow-[#5E6AD2]/10"
+                          : "bg-accent border-accent text-white shadow-accent/10"
                       )}
                       style={style}
                       onClick={() => onEdit(issue)}
@@ -241,10 +241,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
 
               {/* Today line indicator */}
               <div
-                className="absolute top-0 bottom-0 w-[2px] bg-[#5E6AD2] z-20 pointer-events-none"
+                className="absolute top-0 bottom-0 w-[2px] bg-accent z-20 pointer-events-none"
                 style={{ left: getPosition(new Date()) + (CELL_WIDTH / 2) }}
               >
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-[#5E6AD2] shadow-[0_0_10px_#5E6AD2]" />
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-accent shadow-[0_0_10px_var(--accent-color)]" />
               </div>
             </div>
           </div>

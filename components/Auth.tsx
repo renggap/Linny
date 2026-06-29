@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, Shield, Cpu, Activity, ArrowRight, Lock, Mail, User as UserIcon, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { PasswordResetModal } from './PasswordResetModal';
 
 export const Auth: React.FC = () => {
@@ -80,12 +80,12 @@ export const Auth: React.FC = () => {
     <div className="flex min-h-screen bg-[#0A0A0C] items-center justify-center p-6 relative overflow-hidden font-sans">
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#5E6AD2]/5 rounded-full blur-[120px] animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#5E6AD2]/5 rounded-full blur-[120px] animate-pulse delay-700" />
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-accent/5 rounded-full blur-[120px] animate-pulse delay-700" />
 
         {/* Subtle Grid */}
         <div className="absolute inset-0 opacity-[0.03]"
-          style={{ backgroundImage: 'linear-gradient(#5E6AD2 1px, transparent 1px), linear-gradient(90deg, #5E6AD2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+          style={{ backgroundImage: 'linear-gradient(var(--accent-color) 1px, transparent 1px), linear-gradient(90deg, var(--accent-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
       </div>
 
       <motion.div
@@ -94,15 +94,15 @@ export const Auth: React.FC = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-[440px] relative z-10"
       >
-        <div className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+        <div className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-popover">
 
           <div className="flex flex-col items-center mb-10">
             <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="w-14 h-14 bg-[#14151A] border border-[#2C2D35] rounded-2xl flex items-center justify-center text-[#5E6AD2] mb-8 shadow-2xl relative group"
+              className="w-14 h-14 bg-[#14151A] border border-[#2C2D35] flex items-center justify-center text-accent mb-8 shadow-popover relative group"
             >
               <Terminal className="w-7 h-7" />
-              <div className="absolute inset-0 bg-[#5E6AD2]/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
 
             <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linear</h1>
@@ -126,12 +126,12 @@ export const Auth: React.FC = () => {
                 >
                   <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Identity Name</label>
                   <div className="relative group">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                     <input
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                      className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                       placeholder="Specify identity..."
                       disabled={isLoading}
                     />
@@ -143,13 +143,13 @@ export const Auth: React.FC = () => {
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Access Email</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   disabled={isLoading || inviteMode}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
                   placeholder="address@nodex.network"
                 />
               </div>
@@ -158,12 +158,12 @@ export const Auth: React.FC = () => {
             <div className="space-y-2 text-left">
               <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Pass-Key</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="••••••••••••"
                   disabled={isLoading}
                 />
@@ -173,7 +173,7 @@ export const Auth: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowForgotPassword(true)}
-                    className="text-[10px] text-[#5E6AD2] hover:text-[#7c7bf4] transition-colors font-medium"
+                    className="text-[10px] text-accent hover:text-[#7c7bf4] transition-colors font-medium"
                   >
                     Lupa Password?
                   </button>
@@ -185,7 +185,7 @@ export const Auth: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 p-3 rounded-xl"
+                className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 p-3"
               >
                 <Shield className="w-4 h-4 text-red-500 shrink-0" />
                 <span className="text-red-400 text-[11px] font-medium leading-tight">{displayError}</span>
@@ -195,7 +195,7 @@ export const Auth: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-30 text-white text-[12px] font-bold py-4 rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/10 flex items-center justify-center group"
+              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-4 transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/10 flex items-center justify-center group"
             >
               {isLoading ? (
                 <Activity className="w-4 h-4 animate-spin" />
@@ -215,7 +215,7 @@ export const Auth: React.FC = () => {
                 onClick={handleToggleMode}
                 className="text-[10px] font-bold text-[#5E6068] hover:text-[#C0C4CC] uppercase tracking-widest transition-colors flex items-center justify-center mx-auto group"
               >
-                <Cpu className="w-3.5 h-3.5 mr-2 group-hover:text-[#5E6AD2] transition-colors" />
+                <Cpu className="w-3.5 h-3.5 mr-2 group-hover:text-accent transition-colors" />
                 {isLoginMode ? "Create New Account" : "Back to Login Area"}
               </button>
             ) : (

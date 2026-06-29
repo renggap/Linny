@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { authApi } from '../services/api';
 
 interface PasswordResetModalProps {
@@ -54,10 +54,10 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#0F1014] w-full max-w-[420px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] p-10 relative z-10"
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[420px] rounded-3xl shadow-popover border border-[#22242A] p-10 relative z-10"
         >
           <button
             onClick={onClose}
@@ -81,12 +81,12 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
                     Email
                   </label>
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                      className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                       placeholder="address@nodex.network"
                       disabled={isLoading}
                       required
@@ -98,7 +98,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
                   <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-red-400 text-[11px]"
+                    className="bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-[11px]"
                   >
                     {error}
                   </motion.div>
@@ -107,7 +107,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-30 text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
+                  className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-3.5 transition-all uppercase tracking-[0.2em] flex items-center justify-center"
                 >
                   {isLoading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

@@ -6,7 +6,7 @@ import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { UserAvatar } from './UserAvatar';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -29,7 +29,7 @@ interface ProjectRightSidebarProps {
 // Active statuses for completion calculation (excludes Backlog and Canceled)
 const ACTIVE_STATUSES = [Status.Todo, Status.InProgress, Status.InReview, Status.Done];
 
-const ProgressBar = ({ percentage, color = "bg-[#5E6AD2]" }: { percentage: number, color?: string }) => (
+const ProgressBar = ({ percentage, color = "bg-accent" }: { percentage: number, color?: string }) => (
     <div className="h-1.5 w-full bg-[#1A1C23] rounded-full overflow-hidden">
         <motion.div
             initial={{ width: 0 }}
@@ -126,7 +126,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                     <div className="space-y-4">
                         <div className="group">
                             <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider mb-2 block ml-1">Project Lead</label>
-                            <div className="bg-[#14151A] rounded-xl border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
+                            <div className="bg-[#14151A] border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
                                 <UserSelect
                                     users={workspaceUsers || users}
                                     filteredUsers={teamMembers}
@@ -172,7 +172,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                         <BarChart3 className="w-3.5 h-3.5 mr-2" /> Progress
                     </h4>
 
-                    <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-5 space-y-6">
+                    <div className="bg-[#14151A] border border-[#22242A] p-5 space-y-6">
                         <div className="flex items-end justify-between">
                             <div>
                                 <span className="text-4xl font-light text-[#E8E8E8] tracking-tight">{completionPercentage}%</span>
@@ -188,7 +188,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                             <ProgressBar percentage={completionPercentage} />
                             <div className="flex items-center justify-between text-[11px]">
                                 <div className="flex items-center space-x-2">
-                                    <div className="w-2 h-2 rounded-full bg-[#5E6AD2]" />
+                                    <div className="w-2 h-2 rounded-full bg-accent" />
                                     <span className="text-[#8A8F98] font-medium">{completedIssues} Done</span>
                                 </div>
                                 <div className="flex items-center space-x-2">
@@ -224,13 +224,13 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                                 <UserAvatar name={user.name} size="sm" showRing={true} />
                                                 <span className="text-xs font-medium text-[#C0C4CC] group-hover:text-[#E8E8E8] transition-colors">{user.name}</span>
                                             </div>
-                                            <span className="text-[10px] font-mono text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors">{percentage}%</span>
+                                            <span className="text-[10px] font-mono text-[#5E6068] group-hover:text-accent transition-colors">{percentage}%</span>
                                         </div>
                                         <div className="h-1 bg-[#1A1C23] rounded-full overflow-hidden">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${percentage}%` }}
-                                                className="h-full bg-[#2C2D35] group-hover:bg-[#5E6AD2] transition-all duration-500"
+                                                className="h-full bg-[#2C2D35] group-hover:bg-accent transition-all duration-500"
                                             />
                                         </div>
                                     </motion.div>
@@ -238,7 +238,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                             })}
                         </AnimatePresence>
                         {memberProgress.length === 0 && (
-                            <div className="py-8 text-center border border-dashed border-[#22242A] rounded-2xl">
+                            <div className="py-8 text-center border border-dashed border-[#22242A]">
                                 <span className="text-[10px] text-[#3A3C46] font-bold uppercase italic tracking-widest">No active contributors</span>
                             </div>
                         )}
@@ -275,7 +275,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                             {activity.description}
                                             {activity.issueId && issueIdentifier && (
                                                 <span
-                                                    className="text-[#5E6AD2] ml-1 font-bold hover:underline cursor-pointer"
+                                                    className="text-accent ml-1 font-bold hover:underline cursor-pointer"
                                                     onClick={() => onOpenIssue?.(activity.issueId!)}
                                                 >
                                                     #{issueIdentifier}
@@ -293,7 +293,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                         {filteredActivities.length > visibleCount && (
                             <button
                                 onClick={() => setVisibleCount(prev => prev + 10)}
-                                className="w-full py-3 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] uppercase tracking-widest border border-[#22242A] rounded-xl hover:bg-[#14151A] transition-all mt-4"
+                                className="w-full py-3 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] uppercase tracking-widest border border-[#22242A] hover:bg-[#14151A] transition-all mt-4"
                             >
                                 Show full history
                             </button>

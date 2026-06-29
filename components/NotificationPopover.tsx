@@ -59,7 +59,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
 
   if (unreadNotifications.length === 0) {
     return (
-      <div className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 rounded-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 p-10 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
+      <div className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 p-10 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
         <Bell className="w-10 h-10 mb-4 text-gray-800" />
         <span className="text-[11px] font-bold text-gray-600 uppercase tracking-[0.2em]">Signal Clear</span>
         <p className="text-[10px] text-gray-700 mt-2 uppercase tracking-widest">No pending notifications</p>
@@ -68,11 +68,11 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
   }
 
   return (
-    <div className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 rounded-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+    <div className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
       {/* Header */}
       <div className="px-6 h-14 border-b border-[#363840]/30 flex items-center justify-between shrink-0">
         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notification Registry</h3>
-        <span className="text-[10px] bg-[#25262B] px-1.5 py-0.5 rounded text-[#5E6AD2] font-mono font-bold">{unreadNotifications.length}</span>
+        <span className="text-[10px] bg-[#25262B] px-1.5 py-0.5 rounded text-accent font-mono font-bold">{unreadNotifications.length}</span>
       </div>
 
       {/* Notifications List */}
@@ -104,8 +104,8 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
                   className="rounded-full border border-[#363840] w-9 h-9"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#5E6AD2]/10 flex items-center justify-center border border-[#5E6AD2]/20">
-                  <MessageSquare className="w-4 h-4 text-[#5E6AD2]" />
+                <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center border border-accent/20">
+                  <MessageSquare className="w-4 h-4 text-accent" />
                 </div>
               );
             } else if (notification.type === NotificationType.JoinRequest) {
@@ -149,7 +149,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
                 </div>
 
                 {!notification.isRead && (
-                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#5E6AD2] mt-2.5"></div>
+                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-accent mt-2.5"></div>
                 )}
               </div>
             </div>

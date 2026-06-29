@@ -4,7 +4,7 @@ import { Issue, Status, User, Priority } from '../types';
 import { StatusIcon, PriorityIcon, Trash2, Calendar, Plus } from './Icons';
 import { UserCircle } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -48,7 +48,7 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, ca
       onDragStart={(e) => canInteract && onDragStart(e as any, issue.id)}
       onClick={() => onEdit(issue)}
       className={cn(
-        "group relative bg-[#14151A] border border-[#22242A] hover:border-[#2C2D35] rounded-xl p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-xl hover:shadow-black/20",
+        "group relative bg-[#14151A] border border-[#22242A] hover:border-[#2C2D35] p-4 cursor-grab active:cursor-grabbing transition-all hover:shadow-xl hover:shadow-black/20",
         isDragging && "opacity-40 grayscale"
       )}
     >
@@ -186,7 +186,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
             <div
               key={status}
               className={cn(
-                "flex-shrink-0 w-[300px] flex flex-col rounded-2xl transition-all duration-300",
+                "flex-shrink-0 w-[300px] flex flex-col transition-all duration-300",
                 dragOverColumn === status ? "bg-[#1A1C23]/30 scale-[1.01]" : ""
               )}
               onDragOver={(e) => handleDragOver(e, status)}
@@ -231,7 +231,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
                 </AnimatePresence>
 
                 {columnIssues.length === 0 && (
-                  <div className="h-24 border border-dashed border-[#22242A] rounded-xl flex items-center justify-center">
+                  <div className="h-24 border border-dashed border-[#22242A] flex items-center justify-center">
                     <span className="text-[11px] text-[#2C2D35] italic">No active issues</span>
                   </div>
                 )}

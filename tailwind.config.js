@@ -10,11 +10,31 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Inter', 'sans-serif'],
+                sans: ['"Inter Tight Variable"', '"Inter Tight"', 'Inter', 'sans-serif'],
                 mono: ['JetBrains Mono', 'monospace'],
             },
+            colors: {
+                accent: {
+                    DEFAULT: 'var(--accent-color)',
+                    hover: 'var(--accent-hover)',
+                    pressed: 'var(--accent-pressed)',
+                    subtle: 'var(--accent-subtle)',
+                },
+            },
+            borderRadius: {
+                DEFAULT: '0px',
+                sm: '0px',
+                md: '0px',
+                lg: '0px',
+                xl: '0px',
+                '2xl': '0px',
+                pill: '9999px',
+            },
+            boxShadow: {
+                popover: 'var(--shadow-popover)',
+            },
             animation: {
-                'fade-in': 'fadeIn 0.2s ease-out',
+                'fade-in': 'fadeIn 0.15s ease-out',
                 'zoom-in-95': 'zoomIn95 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
             },
             keyframes: {

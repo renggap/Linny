@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Users, Command, ArrowRight, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface TeamModalProps {
   isOpen: boolean;
@@ -59,14 +59,14 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#0F1014] w-full max-w-[440px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] overflow-hidden relative z-10"
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[440px] rounded-3xl shadow-popover border border-[#22242A] overflow-hidden relative z-10"
         >
           {/* Dynamic Background */}
           <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Users className="w-32 h-32 text-[#5E6AD2]" />
+            <Users className="w-32 h-32 text-accent" />
           </div>
 
           {/* Header / Identity */}
@@ -74,10 +74,10 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
             <motion.div
               initial={{ scale: 0.8 }}
               animate={{ scale: 1 }}
-              className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl font-bold text-[#E8E8E8] mb-6 shadow-2xl relative group"
+              className="w-20 h-20 bg-[#14151A] border border-[#22242A] flex items-center justify-center text-4xl font-bold text-[#E8E8E8] mb-6 shadow-popover relative group"
             >
               {icon}
-              <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-[#5E6AD2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
             <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">Create New Workspace</h2>
             <div className="flex items-center space-x-2 mt-1.5">
@@ -93,7 +93,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-4 bg-red-500/5 border border-red-500/10 rounded-xl text-[11px] text-red-500 font-bold text-center uppercase tracking-widest flex items-center justify-center space-x-2"
+                  className="p-4 bg-red-500/5 border border-red-500/10 text-[11px] text-red-500 font-bold text-center uppercase tracking-widest flex items-center justify-center space-x-2"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" />
                   <span>Fault: {error}</span>
@@ -106,7 +106,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] font-medium"
+                  className="w-full bg-[#14151A] border border-[#22242A] px-6 py-4 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] font-medium"
                   placeholder="e.g. Engine Team"
                   autoFocus
                 />
@@ -116,7 +116,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                 <button
                   type="submit"
                   disabled={!name.trim() || isSubmitting}
-                  className="w-full py-4 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-2xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-[#5E6AD2]/20 flex items-center justify-center group"
+                  className="w-full py-4 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-accent/20 flex items-center justify-center group"
                 >
                   <span>{isSubmitting ? 'Creating...' : 'Create Workspace'}</span>
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

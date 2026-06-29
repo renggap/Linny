@@ -3,7 +3,7 @@ import { cn } from '../lib/utils';
 
 // Consistent color palette for avatars
 const AVATAR_COLORS = [
-  'bg-[#5E6AD2]', // Purple
+  'bg-accent', // Purple
   'bg-[#E54D2E]', // Red
   'bg-[#2E9E4E]', // Green
   'bg-[#E5A02E]', // Orange

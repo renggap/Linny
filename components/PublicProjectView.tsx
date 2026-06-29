@@ -5,7 +5,7 @@ import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
 import { Link } from '@tanstack/react-router';
 import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight, Heart, Grid3x3 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { renderMentionsWithBadges, hasMentions } from '../services/mentionUtils';
 
@@ -30,21 +30,21 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
         return (
             <div className="min-h-screen bg-[#070809] flex items-center justify-center p-6 relative overflow-hidden">
                 <div className="absolute inset-0 opacity-[0.03]"
-                    style={{ backgroundImage: 'linear-gradient(#5E6AD2 1px, transparent 1px), linear-gradient(90deg, #5E6AD2 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                    style={{ backgroundImage: 'linear-gradient(var(--accent-color) 1px, transparent 1px), linear-gradient(90deg, var(--accent-color) 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="text-center relative z-10"
                 >
-                    <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                        <Lock className="w-8 h-8 text-[#5E6AD2]" />
+                    <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-popover">
+                        <Lock className="w-8 h-8 text-accent" />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-2 uppercase tracking-widest leading-none">Access Restricted</h1>
                     <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-[0.3em] mb-10">Object not found in public registry</p>
                     <Link
                         to="/"
-                        className="inline-flex items-center space-x-3 px-8 py-3.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 group"
+                        className="inline-flex items-center space-x-3 px-8 py-3.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 group"
                     >
                         <span>Return to Terminal</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -62,13 +62,13 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
             <header className="h-16 border-b border-[#1A1C23] flex items-center justify-between px-8 bg-[#0F1014]/80 backdrop-blur-xl sticky top-0 z-40">
                 <div className="flex items-center space-x-6">
                     <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-[#14151A] border border-[#22242A] rounded-lg flex items-center justify-center text-lg shadow-inner">
+                        <div className="w-8 h-8 bg-[#14151A] border border-[#22242A] flex items-center justify-center text-lg shadow-inner">
                             {project.icon}
                         </div>
                         <div>
                             <h1 className="text-sm font-bold text-[#E8E8E8] tracking-tight">{project.name}</h1>
                             <div className="flex items-center space-x-2 mt-0.5">
-                                <span className="text-[9px] font-black text-[#5E6AD2] uppercase tracking-widest">Public Registry</span>
+                                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Public Registry</span>
                                 <div className="w-1 h-1 rounded-full bg-[#3A3C46]" />
                                 <span className="text-[9px] font-bold text-[#3A3C46] uppercase tracking-widest">Read Only Access</span>
                             </div>
@@ -77,7 +77,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 </div>
 
                 <div className="flex items-center space-x-6">
-                    <Link to="/" className="text-[10px] font-bold text-[#E8E8E8] hover:text-[#5E6AD2] transition-colors uppercase tracking-[0.2em]">
+                    <Link to="/" className="text-[10px] font-bold text-[#E8E8E8] hover:text-accent transition-colors uppercase tracking-[0.2em]">
                         Login
                     </Link>
                 </div>
@@ -88,7 +88,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 <main className="max-w-6xl mx-auto py-12 px-8 space-y-12">
 
                     {/* Project Overview Card */}
-                    <section className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 relative overflow-hidden group shadow-2xl">
+                    <section className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 relative overflow-hidden group shadow-popover">
                         <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.05] transition-opacity">
                             <Terminal className="w-40 h-40" />
                         </div>
@@ -128,9 +128,9 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                                 href={link.url}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="inline-flex items-center space-x-2 px-4 py-2 bg-[#14151A] hover:bg-[#1A1C23] border border-[#22242A] hover:border-[#5E6AD2]/30 rounded-lg transition-all group/link"
+                                                className="inline-flex items-center space-x-2 px-4 py-2 bg-[#14151A] hover:bg-[#1A1C23] border border-[#22242A] hover:border-accent/30 transition-all group/link"
                                             >
-                                                <ExternalLink className="w-3.5 h-3.5 text-[#5E6068] group-hover/link:text-[#5E6AD2]" />
+                                                <ExternalLink className="w-3.5 h-3.5 text-[#5E6068] group-hover/link:text-accent" />
                                                 <span className="text-[11px] font-medium text-[#C0C4CC]">{link.title}</span>
                                             </a>
                                         ))}
@@ -141,7 +141,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                             <div className="flex items-center space-x-8 pt-4">
                                 <div className="space-y-1">
                                     <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-widest block">Issue Count</span>
-                                    <span className="text-sm font-mono text-[#5E6AD2] font-bold">{projectIssues.length}</span>
+                                    <span className="text-sm font-mono text-accent font-bold">{projectIssues.length}</span>
                                 </div>
                                 <div className="w-px h-8 bg-[#1A1C23]" />
                                 <div className="space-y-1">
@@ -156,20 +156,20 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                     <section className="space-y-6 pb-20">
                         <div className="flex items-center justify-between px-2">
                             <div className="flex items-center space-x-3">
-                                <div className="w-1.5 h-1.5 rounded-full bg-[#5E6AD2]" />
+                                <div className="w-1.5 h-1.5 rounded-full bg-accent" />
                                 <h2 className="text-[11px] font-black text-[#E8E8E8] uppercase tracking-[0.3em]">
                                     Active Objectives
                                 </h2>
                             </div>
 
                             {/* View Switcher */}
-                            <div className="flex items-center space-x-1 bg-[#14151A] rounded-lg border border-[#22242A] p-1">
+                            <div className="flex items-center space-x-1 bg-[#14151A] border border-[#22242A] p-1">
                                 <button
                                     onClick={() => setCurrentView('list')}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                                        "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all",
                                         currentView === 'list'
-                                            ? "bg-[#5E6AD2] text-white"
+                                            ? "bg-accent text-white"
                                             : "text-[#5E6068] hover:text-[#C0C4CC]"
                                     )}
                                 >
@@ -179,9 +179,9 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                 <button
                                     onClick={() => setCurrentView('board')}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all flex items-center space-x-1.5",
+                                        "px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center space-x-1.5",
                                         currentView === 'board'
-                                            ? "bg-[#5E6AD2] text-white"
+                                            ? "bg-accent text-white"
                                             : "text-[#5E6068] hover:text-[#C0C4CC]"
                                     )}
                                 >
@@ -194,7 +194,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                         {projectIssues.length > 0 ? (
                             <>
                                 {currentView === 'list' && (
-                                    <div className="bg-[#0F1014] border border-[#22242A] rounded-2xl overflow-hidden shadow-xl">
+                                    <div className="bg-[#0F1014] border border-[#22242A] overflow-hidden shadow-xl">
                                         <IssueList
                                             issues={projectIssues}
                                             users={users}
@@ -237,7 +237,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 <div className="flex items-center space-x-4">
                     <span className="text-[9px] text-[#3A3C46] font-bold uppercase tracking-widest">Transmission Secure</span>
                     <div className="h-3 w-px bg-[#1A1C23]" />
-                    <Link to="/" className="text-[9px] text-[#5E6AD2] hover:text-[#E8E8E8] font-bold uppercase tracking-widest transition-colors">
+                    <Link to="/" className="text-[9px] text-accent hover:text-[#E8E8E8] font-bold uppercase tracking-widest transition-colors">
                         Internal Access
                     </Link>
                 </div>

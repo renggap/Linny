@@ -58,7 +58,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-[#1E1F24] text-[#DEDEDE] font-sans flex items-center justify-center p-4">
-          <div className="max-w-md w-full bg-[#2E3036] border border-[#363840] rounded-lg p-8 shadow-2xl">
+          <div className="max-w-md w-full bg-[#2E3036] border border-[#363840] p-8 shadow-popover">
             <div className="flex items-center justify-center w-16 h-16 bg-red-500/10 rounded-full mb-6 mx-auto">
               <AlertTriangle className="w-8 h-8 text-red-500" />
             </div>
@@ -87,7 +87,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={this.handleReset}
-                className="flex-1 flex items-center justify-center gap-2 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white px-4 py-2.5 rounded font-medium transition-colors"
+                className="flex-1 flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-white px-4 py-2.5 rounded font-medium transition-colors"
               >
                 <RefreshCw className="w-4 h-4" />
                 Reload Application
