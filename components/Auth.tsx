@@ -52,7 +52,7 @@ export const Auth: React.FC = () => {
         // If this is an invitation flow, accept the invitation after registration
         if (inviteToken) {
           try {
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/v1/invitations/accept`, {
+            await fetch(`${(import.meta as any).env?.VITE_API_URL || ''}/api/v1/invitations/accept`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token: inviteToken })

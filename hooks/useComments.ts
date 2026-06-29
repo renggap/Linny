@@ -40,15 +40,18 @@ export function useCreateComment() {
 
   return useMutation({
     mutationFn: ({ content, issueId }: { content: string; issueId: string }) => {
+      console.log('[useCreateComment] mutationFn start', { issueId, contentLength: content.length, currentTeamId });
       return api.comments.create(content, issueId);
     },
     onSuccess: (data, variables) => {
       console.log('[useCreateComment] Comment created successfully:', data);
+      console.log('[useCreateComment] cache key being updated:', commentKeys.forIssue(currentTeamId, variables.issueId));
 
       // Add the new comment to the scoped comments query cache
       queryClient.setQueriesData(
         { queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) },
         (oldData: any) => {
+          console.log('[useCreateComment] setQueriesData callback', { hasOldData: !!oldData, oldCount: Array.isArray(oldData) ? oldData.length : 'n/a' });
           if (!oldData) return [data.comment];
           if (!Array.isArray(oldData)) return oldData;
           // Add the new comment to the array
@@ -57,10 +60,17 @@ export function useCreateComment() {
       );
 
       // Refetch to ensure consistency
-      queryClient.refetchQueries({ queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) });
+      queryClient.refetchQueries({ queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) })
+        .then(() => {
+          const updated = queryClient.getQueryData(commentKeys.forIssue(currentTeamId, variables.issueId));
+          console.log('[useCreateComment] refetch done, current cache count:', Array.isArray(updated) ? updated.length : 'n/a');
+        });
 
       // Invalidate scoped activity queries
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
+    },
+    onError: (error, variables) => {
+      console.error('[useCreateComment] Mutation failed:', error, { issueId: variables.issueId, currentTeamId });
     }
   });
 }

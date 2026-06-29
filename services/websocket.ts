@@ -165,7 +165,11 @@ export class WebSocketService {
 }
 
 // Create singleton instance
-// Use the same base URL as the API but with ws:// protocol
-const apiUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+// Use the same base URL as the API but with ws:// protocol.
+// In production (no VITE_API_URL), fall back to current page origin so the
+// browser connects to the host that served the bundle (nginx proxies /ws/*
+// to the backend). Without this, production builds hardcoded ws://localhost:3001.
+const apiUrl = (import.meta as any).env.VITE_API_URL
+  || (typeof window !== 'undefined' && window.location ? window.location.origin : '');
 const wsUrl = apiUrl.replace(/^http/, 'ws');
 export const websocketService = new WebSocketService(wsUrl);

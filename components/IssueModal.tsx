@@ -184,8 +184,13 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     };
 
     const submitComment = () => {
-        if (!newComment.trim() || !existingIssue || !('id' in existingIssue) || !onAddComment) return;
-        onAddComment((existingIssue as Issue).id, newComment);
+        if (!newComment.trim() || !existingIssue || !('id' in existingIssue) || !onAddComment) {
+            console.warn('[IssueModal.submitComment] early return', { hasContent: !!newComment.trim(), hasIssue: !!existingIssue, hasId: existingIssue && 'id' in existingIssue, hasCallback: !!onAddComment });
+            return;
+        }
+        const issueId = (existingIssue as Issue).id;
+        console.log('[IssueModal.submitComment] posting', { issueId, contentLength: newComment.length });
+        onAddComment(issueId, newComment);
         setNewComment('');
     };
 

@@ -53,7 +53,9 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ users }) => {
   return (
     <div className="space-y-1">
       {recentActivities.map((activity, index) => {
-        const actor = users.find(u => u.id === (activity.payload as any).userId || (activity.payload as any).actorId);
+        if (!activity.payload) return null;
+
+        const actor = users.find(u => u.id === (activity.payload as any)?.userId || (activity.payload as any)?.actorId);
 
         if (activity.type === 'comment') {
           const comment = activity.payload as Comment;
