@@ -89,7 +89,7 @@ export const AcceptInvite: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center p-6">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-[#5E6AD2] animate-spin mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 text-accent animate-spin mx-auto mb-4" />
           <p className="text-[#DEDEDE]">Mengecek undangan...</p>
         </div>
       </div>
@@ -105,7 +105,7 @@ export const AcceptInvite: React.FC = () => {
           <p className="text-[#9CA3AF] text-center mb-6">{error}</p>
           <button
             onClick={() => navigate({ to: '/' })}
-            className="w-full px-4 py-3 bg-[#5E6AD2] hover:bg-[#5E6AD2]/80 rounded-lg text-white transition-colors"
+            className="w-full px-4 py-3 bg-accent hover:bg-accent/80 rounded-lg text-white transition-colors"
           >
             Kembali ke Beranda
           </button>
@@ -135,7 +135,7 @@ export const AcceptInvite: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-[#2A2B30] rounded-2xl p-8 border border-[#3E3F46]">
-          <Mail className="w-16 h-16 text-[#5E6AD2] mx-auto mb-4" />
+          <Mail className="w-16 h-16 text-accent mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white text-center mb-2">Undangan ke Team</h1>
           <p className="text-[#DEDEDE] text-center mb-6">
             Kakak diundang gabung ke <strong>{invitation?.team.name}</strong> sebagai <strong>{invitation?.role}</strong>
@@ -148,7 +148,7 @@ export const AcceptInvite: React.FC = () => {
 
           <button
             onClick={handleRegister}
-            className="w-full px-4 py-3 bg-[#5E6AD2] hover:bg-[#5E6AD2]/80 rounded-lg text-white transition-colors mb-3"
+            className="w-full px-4 py-3 bg-accent hover:bg-accent/80 rounded-lg text-white transition-colors mb-3"
           >
             Daftar & Gabung Team
           </button>
@@ -163,7 +163,7 @@ export const AcceptInvite: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center p-6">
       <div className="max-w-md w-full bg-[#2A2B30] rounded-2xl p-8 border border-[#3E3F46]">
-        <Mail className="w-16 h-16 text-[#5E6AD2] mx-auto mb-4" />
+        <Mail className="w-16 h-16 text-accent mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-white text-center mb-2">Undangan ke Team</h1>
         <p className="text-[#DEDEDE] text-center mb-6">
           Kakak diundang gabung ke <strong>{invitation?.team.name}</strong> sebagai <strong>{invitation?.role}</strong>
@@ -172,7 +172,7 @@ export const AcceptInvite: React.FC = () => {
         <button
           onClick={acceptInvitation}
           disabled={accepting}
-          className="w-full px-4 py-3 bg-[#5E6AD2] hover:bg-[#5E6AD2]/80 rounded-lg text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full px-4 py-3 bg-accent hover:bg-accent/80 rounded-lg text-white transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {accepting ? (
             <>

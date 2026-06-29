@@ -189,7 +189,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
   useEffect(() => {
     // Scroll selected item into view
     if (mentionListRef.current && isMentioning) {
-      const selectedItems = mentionListRef.current.querySelectorAll('.bg-\\[\\#5E6AD2\\]');
+      const selectedItems = mentionListRef.current.querySelectorAll('.bg-accent');
       const selectedItem = selectedItems[selectedMentionIndex];
       if (selectedItem) {
         selectedItem.scrollIntoView({
@@ -225,7 +225,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
-        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] rounded-lg px-3 py-2 text-sm text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-[#5E6AD2] transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] rounded-lg px-3 py-2 text-sm text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-accent transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
 
       {/* Mention Dropdown */}
@@ -241,7 +241,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
           {filteredUsers.map((user, index) => (
             <div
               key={user.id}
-              className={`flex items-center px-3 py-2 cursor-pointer hover:bg-[#363840] transition-colors ${index === selectedMentionIndex ? 'bg-[#5E6AD2]' : ''}`}
+              className={`flex items-center px-3 py-2 cursor-pointer hover:bg-[#363840] transition-colors ${index === selectedMentionIndex ? 'bg-accent' : ''}`}
               onClick={() => handleMentionSelect(user)}
             >
               <UserAvatar

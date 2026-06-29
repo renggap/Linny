@@ -138,7 +138,7 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                     {assignableUsers.map(user => (
                         <div
                             key={user.id}
-                            className="flex items-center px-3 py-1.5 cursor-pointer hover:bg-[#5E6AD2] hover:text-white group transition-colors text-xs text-gray-200"
+                            className="flex items-center px-3 py-1.5 cursor-pointer hover:bg-accent hover:text-white group transition-colors text-xs text-gray-200"
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onSelect(user.id);

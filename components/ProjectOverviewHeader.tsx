@@ -116,7 +116,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                 <div className="flex items-center space-x-4 px-4 py-3 min-w-0 flex-1">
                     <div
                         onClick={onToggleExpand}
-                        className="w-10 h-10 bg-[#1A1C23] border border-[#2C2D35] rounded-lg flex items-center justify-center text-lg cursor-pointer hover:border-[#5E6AD2]/50 hover:text-[#E8E8E8] hover:shadow-[0_0_15px_rgba(94,106,210,0.15)] transition-all duration-300 group shrink-0"
+                        className="w-10 h-10 bg-[#1A1C23] border border-[#2C2D35] rounded-lg flex items-center justify-center text-lg cursor-pointer hover:border-accent/50 hover:text-[#E8E8E8] hover:shadow-[0_0_15px_rgba(94,106,210,0.15)] transition-all duration-300 group shrink-0"
                     >
                         <span className="opacity-80 group-hover:opacity-100 transition-opacity transform group-hover:scale-110 duration-300">
                             {project.icon || <Layout className="w-5 h-5" />}
@@ -140,7 +140,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                             rel="noopener noreferrer"
                             className="hidden sm:flex items-center space-x-2 h-8 px-3 rounded-md bg-[#1A1C23] border border-[#2C2D35] hover:border-[#3A3C46] hover:bg-[#202229] transition-all group"
                         >
-                            <Globe className="w-3.5 h-3.5 text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors" />
+                            <Globe className="w-3.5 h-3.5 text-[#5E6068] group-hover:text-accent transition-colors" />
                             <span className="text-[11px] font-medium text-[#8A8F98] group-hover:text-[#C0C4CC]">Public View</span>
                         </a>
                     )}
@@ -180,7 +180,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
 
                                 {isEditingDesc ? (
                                     <textarea
-                                        className="w-full bg-[#1A1C23] border border-[#2C2D35] focus:border-[#5E6AD2]/50 rounded-lg p-3 text-sm text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none min-h-[120px] transition-all resize-none font-sans leading-relaxed selection:bg-[#5E6AD2]/30"
+                                        className="w-full bg-[#1A1C23] border border-[#2C2D35] focus:border-accent/50 rounded-lg p-3 text-sm text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none min-h-[120px] transition-all resize-none font-sans leading-relaxed selection:bg-accent/30"
                                         value={descValue}
                                         onChange={(e) => setDescValue(e.target.value)}
                                         onBlur={handleDescBlur}
@@ -252,7 +252,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                                     } : undefined}
                                                 >
                                                     <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center text-[12px] text-[#8A8F98] group-hover:text-[#C0C4CC] transition-colors truncate max-w-[85%] font-medium">
-                                                        <Link2 className="w-3 h-3 mr-2.5 text-[#5E6068] group-hover:text-[#5E6AD2] transition-colors" />
+                                                        <Link2 className="w-3 h-3 mr-2.5 text-[#5E6068] group-hover:text-accent transition-colors" />
                                                         <span className="truncate">{link.title}</span>
                                                     </a>
                                                     <button
@@ -281,7 +281,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                             <input
                                                 type="text"
                                                 placeholder="Link Title"
-                                                className="w-full bg-[#0F1014] border border-[#2C2D35] rounded px-2 py-1.5 text-xs text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none focus:border-[#5E6AD2] transition-all"
+                                                className="w-full bg-[#0F1014] border border-[#2C2D35] rounded px-2 py-1.5 text-xs text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none focus:border-accent transition-all"
                                                 value={newLinkTitle}
                                                 onChange={(e) => setNewLinkTitle(e.target.value)}
                                                 autoFocus
@@ -289,14 +289,14 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                             <input
                                                 type="text"
                                                 placeholder="https://..."
-                                                className="w-full bg-[#0F1014] border border-[#2C2D35] rounded px-2 py-1.5 text-xs text-[#C0C4CC] placeholder-[#5E6068] focus:outline-none focus:border-[#5E6AD2] transition-all font-mono"
+                                                className="w-full bg-[#0F1014] border border-[#2C2D35] rounded px-2 py-1.5 text-xs text-[#C0C4CC] placeholder-[#5E6068] focus:outline-none focus:border-accent transition-all font-mono"
                                                 value={newLinkUrl}
                                                 onChange={(e) => setNewLinkUrl(e.target.value)}
                                                 onKeyDown={(e) => e.key === 'Enter' && handleAddLink()}
                                             />
                                             <div className="flex items-center justify-end space-x-2">
                                                 <button onClick={() => setIsAddingLink(false)} className="px-2 py-1 text-[10px] text-[#8A8F98] hover:text-[#E8E8E8]">Cancel</button>
-                                                <button onClick={handleAddLink} className="bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[10px] font-medium px-2 py-1 rounded transition-colors">Add Resource</button>
+                                                <button onClick={handleAddLink} className="bg-accent hover:bg-accent-hover text-white text-[10px] font-medium px-2 py-1 rounded transition-colors">Add Resource</button>
                                             </div>
                                         </motion.div>
                                     )}

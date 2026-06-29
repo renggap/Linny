@@ -115,7 +115,7 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
           <span className="opacity-20 translate-y-[1px]">/</span>
           <div className="flex items-center space-x-2 truncate">
-            <div className={`w-2 h-2 rounded-full shadow-sm shrink-0 ${statusFilter ? 'bg-[#5E6AD2]' : selectedProjectId ? 'bg-orange-500' : 'bg-green-500'}`} />
+            <div className={`w-2 h-2 rounded-full shadow-sm shrink-0 ${statusFilter ? 'bg-accent' : selectedProjectId ? 'bg-orange-500' : 'bg-green-500'}`} />
             <span className="text-white font-bold tracking-tight truncate">{headerTitle}</span>
           </div>
         </div>
@@ -143,7 +143,7 @@ export const Header: React.FC<HeaderProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search... (Press /)"
-            className="w-48 md:w-64 bg-[#2E3036] border border-[#363840] rounded px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-[#5E6AD2] focus:ring-1 focus:ring-[#5E6AD2] transition-all"
+            className="w-48 md:w-64 bg-[#2E3036] border border-[#363840] rounded px-3 py-1.5 text-sm text-gray-300 placeholder-gray-600 focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all"
           />
           {searchQuery && (
             <button onClick={() => { setSearchQuery(''); searchInputRef.current?.blur(); }} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
@@ -164,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Bell className="w-4 h-4" />
             {unreadNotificationCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#5E6AD2] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 {unreadNotificationCount > 9 ? '9+' : unreadNotificationCount}
               </span>
             )}
@@ -186,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Users className="w-4 h-4" />
               {pendingJoinRequestsCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-[#5E6AD2] text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-accent text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                   {pendingJoinRequestsCount > 9 ? '9+' : pendingJoinRequestsCount}
                 </span>
               )}
@@ -207,7 +207,7 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={() => onCreateIssue()}
           disabled={!canCreateContent}
-          className={`bg-[#5E6AD2] text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center shadow-lg shadow-purple-900/20 ${canCreateContent ? 'hover:bg-[#4b55aa]' : 'opacity-50 cursor-not-allowed grayscale'}`}
+          className={`bg-accent text-white px-3 py-1.5 rounded text-xs font-semibold transition-all flex items-center shadow-lg shadow-accent/20 ${canCreateContent ? 'hover:bg-accent-hover' : 'opacity-50 cursor-not-allowed grayscale'}`}
         >
           <Plus className="w-3 h-3 mr-1.5" />
           <span className="hidden sm:inline">New Issue</span>

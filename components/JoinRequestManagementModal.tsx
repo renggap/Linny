@@ -74,7 +74,7 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
           <div className="flex items-center justify-between px-10 h-20 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-[#1A1C23] border border-[#2C2D35] rounded-xl flex items-center justify-center shadow-inner">
-                <Users className="w-5 h-5 text-[#5E6AD2]" />
+                <Users className="w-5 h-5 text-accent" />
               </div>
               <div>
                 <h2 className="text-lg font-bold text-[#E8E8E8] tracking-tight">
@@ -96,7 +96,7 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
           <div className="flex-1 overflow-y-auto no-scrollbar py-2">
             {isLoading ? (
               <div className="flex items-center justify-center h-full">
-                <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
               </div>
             ) : pendingRequests.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full px-10">
@@ -154,7 +154,7 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
                       <button
                         onClick={() => handleApprove(request.id)}
                         disabled={approveMutation.isPending}
-                        className="px-4 py-2.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-xs font-bold rounded-xl flex items-center transition-all disabled:opacity-50"
+                        className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold rounded-xl flex items-center transition-all disabled:opacity-50"
                       >
                         <Check className="w-4 h-4 mr-2" />
                         Approve

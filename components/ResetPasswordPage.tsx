@@ -70,7 +70,7 @@ export const ResetPasswordPage: React.FC = () => {
           </p>
           <button
             onClick={() => navigate({ to: '/' })}
-            className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
+            className="w-full bg-accent hover:bg-accent-hover text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
           >
             <span>Lanjut ke Login</span>
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -104,7 +104,7 @@ export const ResetPasswordPage: React.FC = () => {
             <p className="text-red-400 text-sm mb-4">{error}</p>
             <button
               onClick={() => navigate({ to: '/' })}
-              className="text-[#5E6AD2] hover:text-[#7c7bf4] text-xs font-bold uppercase tracking-wider"
+              className="text-accent hover:text-[#7c7bf4] text-xs font-bold uppercase tracking-wider"
             >
               Request Reset Link Baru
             </button>
@@ -116,12 +116,12 @@ export const ResetPasswordPage: React.FC = () => {
                 Password Baru
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-12 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-12 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="Minimal 8 karakter"
                   disabled={isLoading}
                   required
@@ -129,7 +129,7 @@ export const ResetPasswordPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3A3C46] hover:text-[#5E6AD2] transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[#3A3C46] hover:text-accent transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -141,12 +141,12 @@ export const ResetPasswordPage: React.FC = () => {
                 Konfirmasi Password
               </label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="Ketik lagi password-nya"
                   disabled={isLoading}
                   required
@@ -168,7 +168,7 @@ export const ResetPasswordPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-30 text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
+              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

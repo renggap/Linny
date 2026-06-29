@@ -66,7 +66,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
         >
           {/* Dynamic Background */}
           <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Users className="w-32 h-32 text-[#5E6AD2]" />
+            <Users className="w-32 h-32 text-accent" />
           </div>
 
           {/* Header / Identity */}
@@ -77,7 +77,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
               className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl font-bold text-[#E8E8E8] mb-6 shadow-2xl relative group"
             >
               {icon}
-              <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-[#5E6AD2] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-x-2 bottom-[-1px] h-px bg-gradient-to-r from-transparent via-accent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
             <h2 className="text-xl font-bold text-[#E8E8E8] tracking-tight">Create New Workspace</h2>
             <div className="flex items-center space-x-2 mt-1.5">
@@ -106,7 +106,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                   type="text"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all placeholder:text-[#2C2D35] font-medium"
+                  className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] font-medium"
                   placeholder="e.g. Engine Team"
                   autoFocus
                 />
@@ -116,7 +116,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
                 <button
                   type="submit"
                   disabled={!name.trim() || isSubmitting}
-                  className="w-full py-4 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-2xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-[#5E6AD2]/20 flex items-center justify-center group"
+                  className="w-full py-4 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-2xl transition-all disabled:opacity-20 disabled:grayscale uppercase tracking-[0.3em] shadow-xl shadow-accent/20 flex items-center justify-center group"
                 >
                   <span>{isSubmitting ? 'Creating...' : 'Create Workspace'}</span>
                   <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

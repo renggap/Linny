@@ -108,7 +108,7 @@ const App: React.FC = () => {
   if (authLoading || dataLoading) {
     return (
       <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

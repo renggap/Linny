@@ -274,10 +274,10 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     animate={{ opacity: 1 }}
                                     className={cn(
                                         "flex items-center space-x-2 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tighter border",
-                                        saveStatus === 'saving' ? "bg-[#5E6AD2]/5 border-[#5E6AD2]/20 text-[#5E6AD2]" : "bg-green-500/5 border-green-500/20 text-green-500"
+                                        saveStatus === 'saving' ? "bg-accent/5 border-accent/20 text-accent" : "bg-green-500/5 border-green-500/20 text-green-500"
                                     )}
                                 >
-                                    <div className={cn("w-1 h-1 rounded-full", saveStatus === 'saving' ? "bg-[#5E6AD2] animate-pulse" : "bg-green-500")} />
+                                    <div className={cn("w-1 h-1 rounded-full", saveStatus === 'saving' ? "bg-accent animate-pulse" : "bg-green-500")} />
                                     <span>{saveStatus === 'saving' ? 'Syncing' : 'Synced'}</span>
                                 </motion.div>
                             )}
@@ -328,7 +328,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                 <div
                                                     key={u.id}
                                                     onClick={() => insertMention(u.name)}
-                                                    className="px-4 py-2.5 text-xs text-[#C0C4CC] cursor-pointer hover:bg-[#5E6AD2] hover:text-white transition-colors flex items-center space-x-3"
+                                                    className="px-4 py-2.5 text-xs text-[#C0C4CC] cursor-pointer hover:bg-accent hover:text-white transition-colors flex items-center space-x-3"
                                                 >
                                                     <img src={u.avatarUrl} className="w-5 h-5 rounded-full" alt="" />
                                                     <span className="font-semibold">{u.name}</span>
@@ -365,7 +365,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
                                                             <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
                                                         </div>
-                                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-[#5E6AD2] transition-colors" />
+                                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-accent transition-colors" />
                                                     </motion.div>
                                                 ))}
                                                 {hasExistingIssueId ? (
@@ -416,7 +416,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             transition={{ delay: idx * 0.05 }}
                                                             className="relative pl-8"
                                                         >
-                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
+                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-accent shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name || 'Unknown User'}</span>
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
@@ -456,7 +456,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         <button
                                             onClick={submitComment}
                                             disabled={!newComment.trim()}
-                                            className="w-10 h-10 flex items-center justify-center bg-[#5E6AD2] hover:bg-[#4b55aa] disabled:opacity-20 disabled:grayscale text-white rounded-xl transition-all shadow-lg shadow-[#5E6AD2]/20 group"
+                                            className="w-10 h-10 flex items-center justify-center bg-accent hover:bg-accent-hover disabled:opacity-20 disabled:grayscale text-white rounded-xl transition-all shadow-lg shadow-accent/20 group"
                                         >
                                             <Send className="w-4 h-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                                         </button>
@@ -559,7 +559,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     whileTap={{ scale: 0.98 }}
                                     onClick={handleCreateIssue}
                                     disabled={isCreating || !title || !projectId}
-                                    className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] text-white py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-2 disabled:opacity-20 shadow-xl shadow-[#5E6AD2]/20"
+                                    className="w-full bg-accent hover:bg-accent-hover text-white py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all flex items-center justify-center space-x-2 disabled:opacity-20 shadow-xl shadow-accent/20"
                                 >
                                     {isCreating ? <Activity className="w-4 h-4 animate-spin" /> : <span>Execute Creation</span>}
                                 </motion.button>

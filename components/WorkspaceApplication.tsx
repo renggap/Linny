@@ -68,7 +68,7 @@ export const WorkspaceApplication: React.FC = () => {
   if (teamsLoading || requestsLoading) {
     return (
       <div className="min-h-screen bg-[#1E1F24] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#5E6AD2] border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -96,8 +96,8 @@ export const WorkspaceApplication: React.FC = () => {
 
         {/* Pending requests section */}
         {hasPendingRequests && (
-          <div className="mb-6 p-4 bg-[#2A2B30] rounded-lg border border-[#5E6AD2]/30">
-            <h2 className="text-lg font-medium mb-3 text-[#5E6AD2]">
+          <div className="mb-6 p-4 bg-[#2A2B30] rounded-lg border border-accent/30">
+            <h2 className="text-lg font-medium mb-3 text-accent">
               Pending Applications
             </h2>
             {myRequests
@@ -152,7 +152,7 @@ export const WorkspaceApplication: React.FC = () => {
                 return (
                   <div
                     key={team.id}
-                    className="p-4 bg-[#2A2B30] rounded-lg border border-[#3E3F46] hover:border-[#5E6AD2]/50 transition-colors"
+                    className="p-4 bg-[#2A2B30] rounded-lg border border-[#3E3F46] hover:border-accent/50 transition-colors"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -170,13 +170,13 @@ export const WorkspaceApplication: React.FC = () => {
                           Approved
                         </span>
                       ) : pending ? (
-                        <span className="px-3 py-1.5 bg-[#5E6AD2]/20 text-[#5E6AD2] rounded-lg text-sm">
+                        <span className="px-3 py-1.5 bg-accent/20 text-accent rounded-lg text-sm">
                           Pending
                         </span>
                       ) : rejected ? (
                         <button
                           onClick={() => handleApply(team.id)}
-                          className="px-3 py-1.5 bg-[#5E6AD2] hover:bg-[#5E6AD2]/80 rounded-lg text-sm transition-colors"
+                          className="px-3 py-1.5 bg-accent hover:bg-accent/80 rounded-lg text-sm transition-colors"
                         >
                           Re-apply
                         </button>
@@ -184,7 +184,7 @@ export const WorkspaceApplication: React.FC = () => {
                         <button
                           onClick={() => handleApply(team.id)}
                           disabled={createJoinRequest.isPending}
-                          className="px-3 py-1.5 bg-[#5E6AD2] hover:bg-[#5E6AD2]/80 rounded-lg text-sm transition-colors disabled:opacity-50"
+                          className="px-3 py-1.5 bg-accent hover:bg-accent/80 rounded-lg text-sm transition-colors disabled:opacity-50"
                         >
                           {createJoinRequest.isPending ? 'Applying...' : 'Apply'}
                         </button>

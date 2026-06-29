@@ -72,7 +72,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
       {/* Header */}
       <div className="px-6 h-14 border-b border-[#363840]/30 flex items-center justify-between shrink-0">
         <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notification Registry</h3>
-        <span className="text-[10px] bg-[#25262B] px-1.5 py-0.5 rounded text-[#5E6AD2] font-mono font-bold">{unreadNotifications.length}</span>
+        <span className="text-[10px] bg-[#25262B] px-1.5 py-0.5 rounded text-accent font-mono font-bold">{unreadNotifications.length}</span>
       </div>
 
       {/* Notifications List */}
@@ -104,8 +104,8 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
                   className="rounded-full border border-[#363840] w-9 h-9"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-[#5E6AD2]/10 flex items-center justify-center border border-[#5E6AD2]/20">
-                  <MessageSquare className="w-4 h-4 text-[#5E6AD2]" />
+                <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center border border-accent/20">
+                  <MessageSquare className="w-4 h-4 text-accent" />
                 </div>
               );
             } else if (notification.type === NotificationType.JoinRequest) {
@@ -149,7 +149,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
                 </div>
 
                 {!notification.isRead && (
-                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-[#5E6AD2] mt-2.5"></div>
+                  <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-accent mt-2.5"></div>
                 )}
               </div>
             </div>

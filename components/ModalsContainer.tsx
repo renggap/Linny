@@ -179,12 +179,12 @@ export const ModalsContainer: React.FC<ModalsContainerProps> = ({
                   <img
                     src={selectedUserForModal.avatarUrl}
                     alt={selectedUserForModal.name}
-                    className="w-16 h-16 rounded-full border-2 border-[#5E6AD2]"
+                    className="w-16 h-16 rounded-full border-2 border-accent"
                   />
                   <div>
                     <h3 className="text-[16px] font-bold text-[#E8E8E8]">{selectedUserForModal.name}</h3>
                     <p className="text-[12px] text-[#5E6068]">{selectedUserForModal.email}</p>
-                    <span className="inline-block mt-1 text-[9px] font-bold text-[#5E6AD2] bg-[#5E6AD2]/10 px-2 py-0.5 rounded uppercase tracking-wider border border-[#5E6AD2]/20">
+                    <span className="inline-block mt-1 text-[9px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded uppercase tracking-wider border border-accent/20">
                       {selectedUserForModal.role}
                     </span>
                   </div>

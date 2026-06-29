@@ -101,7 +101,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     {/* Header Bar */}
                     <div className="flex items-center justify-between px-8 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
                         <div className="flex items-center space-x-3">
-                            <Settings className="w-4 h-4 text-[#5E6AD2]" />
+                            <Settings className="w-4 h-4 text-accent" />
                             <h2 className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.3em]">Project Settings • {project.identifier}</h2>
                         </div>
                         <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
@@ -114,7 +114,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         <div className="flex items-center space-x-6 pb-12 border-b border-[#1A1C23]">
                             <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl shadow-inner relative group">
                                 {project.icon}
-                                <div className="absolute inset-x-2 bottom-[-1px] h-px bg-[#5E6AD2] opacity-30" />
+                                <div className="absolute inset-x-2 bottom-[-1px] h-px bg-accent opacity-30" />
                             </div>
                             <div>
                                 <h3 className="text-2xl font-bold text-[#E8E8E8] tracking-tight leading-none mb-2">{project.name}</h3>
@@ -126,7 +126,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         <div className="space-y-4">
                             <div className="flex items-center space-x-3">
                                 <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
-                                    <FileText className="w-3 h-3 text-[#5E6AD2]" />
+                                    <FileText className="w-3 h-3 text-accent" />
                                 </div>
                                 <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Description</label>
                             </div>
@@ -134,7 +134,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 value={localDescription}
                                 onChange={(e) => setLocalDescription(e.target.value)}
                                 onBlur={handleSaveDescription}
-                                className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
+                                className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
                                 placeholder="Add a project description..."
                             />
                         </div>
@@ -143,7 +143,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         <div className="space-y-6">
                             <div className="flex items-center space-x-3">
                                 <div className="p-1.5 rounded bg-[#1A1C23] border border-[#2C2D35]">
-                                    <Globe className="w-3 h-3 text-[#5E6AD2]" />
+                                    <Globe className="w-3 h-3 text-accent" />
                                 </div>
                                 <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Public Access</label>
                             </div>
@@ -153,7 +153,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                     <div className="space-y-1">
                                         <h4 className="text-sm font-bold text-[#E8E8E8]">Visibility</h4>
                                         <div className="flex items-center space-x-2">
-                                            <div className={cn("w-1.5 h-1.5 rounded-full", isPublic ? "bg-[#5E6AD2] shadow-[0_0_8px_rgba(94,106,210,0.6)]" : "bg-[#3A3C46]")} />
+                                            <div className={cn("w-1.5 h-1.5 rounded-full", isPublic ? "bg-accent shadow-[0_0_8px_rgba(94,106,210,0.6)]" : "bg-[#3A3C46]")} />
                                             <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-wider">
                                                 {isPublic ? 'Public' : 'Private'}
                                             </p>
@@ -163,7 +163,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                         onClick={handleTogglePublic}
                                         className={cn(
                                             "relative w-11 h-6 rounded-full transition-all duration-300 border",
-                                            isPublic ? "bg-[#5E6AD2] border-[#5E6AD2]" : "bg-[#0F1014] border-[#22242A]"
+                                            isPublic ? "bg-accent border-accent" : "bg-[#0F1014] border-[#22242A]"
                                         )}
                                     >
                                         <motion.div
@@ -190,7 +190,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                                         value={publicSlug}
                                                         onChange={handleSlugChange}
                                                         onBlur={handleSlugBlur}
-                                                        className="w-full bg-[#0F1014] border border-[#22242A] rounded-xl pl-[72px] pr-4 py-3 text-sm font-mono text-[#5E6AD2] font-bold focus:outline-none focus:border-[#5E6AD2]/30 transition-all"
+                                                        className="w-full bg-[#0F1014] border border-[#22242A] rounded-xl pl-[72px] pr-4 py-3 text-sm font-mono text-accent font-bold focus:outline-none focus:border-accent/30 transition-all"
                                                     />
                                                 </div>
                                             </div>
@@ -213,7 +213,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                                             href={publicUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="p-1.5 rounded-lg hover:bg-[#1A1C23] text-[#3A3C46] hover:text-[#5E6AD2] transition-all"
+                                                            className="p-1.5 rounded-lg hover:bg-[#1A1C23] text-[#3A3C46] hover:text-accent transition-all"
                                                         >
                                                             <ExternalLink className="w-3.5 h-3.5" />
                                                         </a>
@@ -272,7 +272,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             )}
                             {!showDeleteConfirm && (
                                 <div className="flex items-center space-x-2">
-                                    <Activity className="w-3 h-3 text-[#5E6AD2]" />
+                                    <Activity className="w-3 h-3 text-accent" />
                                     <span className="text-[9px] font-black text-[#5E6068] uppercase tracking-widest">Ready</span>
                                 </div>
                             )}
@@ -280,7 +280,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         {!showDeleteConfirm && (
                             <button
                                 onClick={onClose}
-                                className="px-10 py-3 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-[#5E6AD2]/20 flex items-center group"
+                                className="px-10 py-3 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 flex items-center group"
                             >
                                 <span>Done</span>
                                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

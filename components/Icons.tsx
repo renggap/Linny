@@ -55,7 +55,7 @@ export const StatusIcon: React.FC<{ status: Status; className?: string }> = ({ s
     case Status.Todo: return <Circle className={`${className} text-gray-400`} />;
     case Status.InProgress: return <div className={`${className} rounded-full border-2 border-[#F2C94C] border-r-transparent border-b-transparent rotate-45`} />;
     case Status.InReview: return <CircleDot className={`${className} text-[#F2C94C]`} />;
-    case Status.Done: return <CheckCircle2 className={`${className} text-[#5E6AD2]`} />;
+    case Status.Done: return <CheckCircle2 className={`${className} text-accent`} />;
     case Status.Canceled: return <X className={`${className} text-gray-500`} />;
     default: return <Circle className={className} />;
   }

@@ -200,7 +200,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
                 borderRight: '4px solid transparent',
                 borderBottom: `6px solid ${color?.includes('amber') ? '#F59E0B' :
                                     color?.includes('emerald') ? '#10B981' :
-                                    color?.includes('indigo') ? '#818CF8' : '#5E6AD2'}`
+                                    color?.includes('indigo') ? '#818CF8' : 'var(--accent-color)'}`
             }}
             animate={{
                 rotate: [0, 180, 360],
@@ -221,7 +221,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
             style={{
                 stroke: color?.includes('amber') ? '#F59E0B' :
                        color?.includes('emerald') ? '#10B981' :
-                       color?.includes('indigo') ? '#818CF8' : '#5E6AD2'
+                       color?.includes('indigo') ? '#818CF8' : 'var(--accent-color)'
             }}
         >
             <motion.path
@@ -247,7 +247,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
             style={{
                 background: color?.includes('amber') ? '#F59E0B' :
                            color?.includes('emerald') ? '#10B981' :
-                           color?.includes('indigo') ? '#818CF8' : '#5E6AD2',
+                           color?.includes('indigo') ? '#818CF8' : 'var(--accent-color)',
                 transform: 'rotate(45deg)'
             }}
             animate={{
@@ -374,7 +374,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
     if (!team) return null;
 
     return (
-        <div className="flex-1 h-full overflow-y-auto bg-[#0F1014] text-[#E8E8E8] font-sans selection:bg-[#5E6AD2]/30">
+        <div className="flex-1 h-full overflow-y-auto bg-[#0F1014] text-[#E8E8E8] font-sans selection:bg-accent/30">
             <motion.div
                 className="max-w-[1600px] mx-auto p-8 space-y-10"
                 variants={containerVariants}
@@ -408,7 +408,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         label="Total Issues"
                         value={stats.total}
                         icon={Zap}
-                        color="text-[#5E6AD2]"
+                        color="text-accent"
                     />
                     <StatCard
                         label="Completion"
@@ -444,7 +444,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                                     <StatusIcon status={status as Status} className="w-3.5 h-3.5" />
                                                     <span className="font-medium">{status}</span>
                                                 </div>
-                                                <span className="font-mono text-[#5E6AD2]">{count}</span>
+                                                <span className="font-mono text-accent">{count}</span>
                                             </div>
                                             <div className="h-1 bg-[#1D1E24] rounded-full overflow-hidden">
                                                 <motion.div
@@ -452,7 +452,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                                     animate={{ x: 0 }}
                                                     transition={{ duration: 0.8, delay: idx * 0.1 }}
                                                     className={cn(
-                                                        "h-full rounded-full bg-[#3A3C46] group-hover:bg-[#5E6AD2] transition-colors duration-300",
+                                                        "h-full rounded-full bg-[#3A3C46] group-hover:bg-accent transition-colors duration-300",
                                                         status === Status.Done && "bg-emerald-500/50 group-hover:bg-emerald-500",
                                                         status === Status.InProgress && "bg-amber-500/50 group-hover:bg-amber-500"
                                                     )}
@@ -481,7 +481,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                                 <span className="text-lg">{p.icon}</span>
                                             </div>
                                             <div>
-                                                <h4 className="text-[14px] font-medium text-[#E8E8E8] group-hover:text-[#5E6AD2] transition-colors">{p.name}</h4>
+                                                <h4 className="text-[14px] font-medium text-[#E8E8E8] group-hover:text-accent transition-colors">{p.name}</h4>
                                                 <span className="text-[11px] text-[#8A8F98]">{p.identifier} • {p.total} issues</span>
                                             </div>
                                         </div>
@@ -489,7 +489,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                             <span className="text-[11px] font-mono text-[#C0C4CC]">{p.progress}% Complete</span>
                                             <div className="w-full h-1 bg-[#1D1E24] rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-[#5E6AD2] rounded-full"
+                                                    className="h-full bg-accent rounded-full"
                                                     style={{ width: `${p.progress}%` }}
                                                 />
                                             </div>

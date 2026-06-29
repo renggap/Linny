@@ -72,7 +72,7 @@ const SidebarItem = ({
       <Icon
         className={cn(
           "w-4 h-4 mr-3 transition-colors",
-          isActive ? "text-[#5E6AD2]" : "text-[#5E6068] group-hover:text-[#8A8F98]"
+          isActive ? "text-accent" : "text-[#5E6068] group-hover:text-[#8A8F98]"
         )}
       />
     )}
@@ -178,7 +178,7 @@ export const Sidebar: React.FC = () => {
             onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
             className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all cursor-pointer group select-none"
           >
-            <div className="w-6 h-6 bg-[#1A1C23] border border-[#2C2D35] rounded-md flex items-center justify-center text-xs font-bold text-[#E8E8E8] shadow-sm group-hover:border-[#5E6AD2]/50 group-hover:text-white transition-all">
+            <div className="w-6 h-6 bg-[#1A1C23] border border-[#2C2D35] rounded-md flex items-center justify-center text-xs font-bold text-[#E8E8E8] shadow-sm group-hover:border-accent/50 group-hover:text-white transition-all">
               {currentTeam?.icon || <LayoutGrid className="w-3.5 h-3.5" />}
             </div>
             <span className="ml-3 font-medium text-[13px] text-[#E8E8E8] tracking-tight truncate flex-1">
@@ -234,7 +234,7 @@ export const Sidebar: React.FC = () => {
                           className={cn(
                             "flex items-center px-3 py-2 transition-colors border-l-2",
                             ui.currentTeamId === team.id
-                              ? "bg-[#1A1C23] border-[#5E6AD2] text-white"
+                              ? "bg-[#1A1C23] border-accent text-white"
                               : "border-transparent text-[#8A8F98]",
                             !isMember && !hasPendingRequest && "hover:bg-[#15161A] hover:text-[#C0C4CC] cursor-pointer",
                             hasPendingRequest && "cursor-default opacity-70"
@@ -250,13 +250,13 @@ export const Sidebar: React.FC = () => {
                           {!isMember && (
                             <div className="flex items-center gap-2">
                               {joiningTeamId === team.id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#5E6AD2]" />
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-accent" />
                               ) : hasPendingRequest ? (
                                 <span className="text-[10px] bg-amber-500/10 text-amber-400 px-1.5 py-0.5 rounded border border-amber-500/20">
                                   Pending
                                 </span>
                               ) : (
-                                <span className="text-[10px] bg-[#5E6AD2]/10 text-[#5E6AD2] px-1.5 py-0.5 rounded border border-[#5E6AD2]/20">
+                                <span className="text-[10px] bg-accent/10 text-accent px-1.5 py-0.5 rounded border border-accent/20">
                                   Join
                                 </span>
                               )}
@@ -300,8 +300,8 @@ export const Sidebar: React.FC = () => {
             )}
           >
             <div className="flex items-center">
-              <div className="w-5 h-5 rounded bg-[#5E6AD2]/10 flex items-center justify-center mr-2 border border-[#5E6AD2]/20 group-hover:border-[#5E6AD2]/50 transition-colors">
-                <Plus className="w-3.5 h-3.5 text-[#5E6AD2]" />
+              <div className="w-5 h-5 rounded bg-accent/10 flex items-center justify-center mr-2 border border-accent/20 group-hover:border-accent/50 transition-colors">
+                <Plus className="w-3.5 h-3.5 text-accent" />
               </div>
               <span className="text-[13px] font-medium">New Issue</span>
             </div>
@@ -365,7 +365,7 @@ export const Sidebar: React.FC = () => {
                       }}
                       icon={({ className }: { className?: string }) => (
                         <div className="mr-3 ml-0.5">
-                          <StatusIcon status={view.status} className={cn("w-3.5 h-3.5", className?.replace('text-[#5E6AD2]', ''))} />
+                          <StatusIcon status={view.status} className={cn("w-3.5 h-3.5", className?.replace('text-accent', ''))} />
                         </div>
                       )}
                     />

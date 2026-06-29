@@ -119,7 +119,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                 onClick={() => setActiveTab('profile')}
                                 className={cn(
                                     "text-[10px] font-black uppercase tracking-[0.2em] pb-1 transition-all border-b-2",
-                                    activeTab === 'profile' ? "text-white border-[#5E6AD2]" : "text-[#5E6068] border-transparent hover:text-[#C0C4CC]"
+                                    activeTab === 'profile' ? "text-white border-accent" : "text-[#5E6068] border-transparent hover:text-[#C0C4CC]"
                                 )}
                             >
                                 Identity
@@ -128,7 +128,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                 onClick={() => setActiveTab('security')}
                                 className={cn(
                                     "text-[10px] font-black uppercase tracking-[0.2em] pb-1 transition-all border-b-2",
-                                    activeTab === 'security' ? "text-white border-[#5E6AD2]" : "text-[#5E6068] border-transparent hover:text-[#C0C4CC]"
+                                    activeTab === 'security' ? "text-white border-accent" : "text-[#5E6068] border-transparent hover:text-[#C0C4CC]"
                                 )}
                             >
                                 Security
@@ -160,12 +160,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Name</label>
                                             <div className="relative group">
-                                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                                                <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                                                 <input
                                                     type="text"
                                                     value={name}
                                                     onChange={(e) => setName(e.target.value)}
-                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all font-medium"
+                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all font-medium"
                                                     placeholder="Enter your name..."
                                                 />
                                             </div>
@@ -189,7 +189,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         <div className="bg-[#14151A] p-4 rounded-2xl border border-[#22242A]">
                                             <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] block mb-2">Role</span>
                                             <div className="flex items-center text-[11px] font-bold text-[#C0C4CC] uppercase tracking-wider">
-                                                <ShieldCheck className="w-3.5 h-3.5 mr-2 text-[#5E6AD2]" />
+                                                <ShieldCheck className="w-3.5 h-3.5 mr-2 text-accent" />
                                                 {currentUser.role}
                                             </div>
                                         </div>
@@ -204,7 +204,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                     <button
                                         type="submit"
                                         disabled={isSaving || !name.trim() || name === currentUser.name}
-                                        className="w-full bg-[#5E6AD2] hover:bg-[#4b55aa] text-white py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all disabled:opacity-20 shadow-xl shadow-[#5E6AD2]/20 flex items-center justify-center group"
+                                        className="w-full bg-accent hover:bg-accent-hover text-white py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all disabled:opacity-20 shadow-xl shadow-accent/20 flex items-center justify-center group"
                                     >
                                         {isSaving ? <Activity className="w-4 h-4 animate-spin" /> : (
                                             <>
@@ -227,12 +227,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Current Password</label>
                                             <div className="relative group">
-                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                                                 <input
                                                     type="password"
                                                     value={currentPassword}
                                                     onChange={(e) => setCurrentPassword(e.target.value)}
-                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all"
+                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all"
                                                     placeholder="••••••••••••"
                                                 />
                                             </div>
@@ -241,12 +241,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">New Password</label>
                                             <div className="relative group">
-                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                                                 <input
                                                     type="password"
                                                     value={newPassword}
                                                     onChange={(e) => setNewPassword(e.target.value)}
-                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all"
+                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all"
                                                     placeholder="••••••••••••"
                                                 />
                                             </div>
@@ -255,12 +255,12 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] ml-1">Confirm New Password</label>
                                             <div className="relative group">
-                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-[#5E6AD2] transition-colors" />
+                                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                                                 <input
                                                     type="password"
                                                     value={confirmPassword}
                                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 focus:ring-4 focus:ring-[#5E6AD2]/5 transition-all"
+                                                    className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all"
                                                     placeholder="••••••••••••"
                                                 />
                                             </div>
@@ -292,7 +292,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({ isOpen, onCl
                                     <button
                                         type="submit"
                                         disabled={isUpdatingPassword}
-                                        className="w-full bg-[#14151A] hover:bg-[#1C1D24] text-[#C0C4CC] hover:text-white py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all border border-[#22242A] hover:border-[#5E6AD2]/30 flex items-center justify-center group"
+                                        className="w-full bg-[#14151A] hover:bg-[#1C1D24] text-[#C0C4CC] hover:text-white py-4 rounded-xl font-bold text-[11px] uppercase tracking-[0.2em] transition-all border border-[#22242A] hover:border-accent/30 flex items-center justify-center group"
                                     >
                                         {isUpdatingPassword ? <Activity className="w-4 h-4 animate-spin" /> : (
                                             <>

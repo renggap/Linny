@@ -83,7 +83,7 @@ const IssueRow: React.FC<{
       onClick={() => onEdit(issue)}
     >
       {/* Selection/Hover Indicator */}
-      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-[#5E6AD2] opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-accent opacity-0 group-hover:opacity-100 transition-opacity" />
 
       {/* Drag Handle */}
       {canInteract && (
@@ -160,7 +160,7 @@ const IssueRow: React.FC<{
         <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all bg-[#0F1014]/80 backdrop-blur-sm pl-2 rounded-l-lg border-l border-[#22242A]">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(issue); }}
-            className="p-1.5 text-[#5E6068] hover:text-[#5E6AD2] hover:bg-[#1A1C23] rounded-md transition-colors"
+            className="p-1.5 text-[#5E6068] hover:text-accent hover:bg-[#1A1C23] rounded-md transition-colors"
             title="Edit Issue"
           >
             <Edit2 className="w-3.5 h-3.5" />
@@ -228,7 +228,7 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
         key={status}
         className={cn(
           "mb-6 transition-all duration-300 rounded-lg border border-transparent",
-          isDropTarget ? "bg-[#1A1C23]/50 border-[#5E6AD2]/30" : ""
+          isDropTarget ? "bg-[#1A1C23]/50 border-accent/30" : ""
         )}
         onDragOver={(e) => canInteract && handleDragOver(e, status)}
         onDrop={(e) => canInteract && handleDrop(e, status)}

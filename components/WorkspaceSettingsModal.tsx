@@ -154,7 +154,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                     {/* Header Bar */}
                     <div className="flex items-center justify-between px-6 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
                         <div className="flex items-center space-x-3">
-                            <Settings className="w-4 h-4 text-[#5E6AD2]" />
+                            <Settings className="w-4 h-4 text-accent" />
                             <h2 className="text-[11px] font-black text-[#5E6068] uppercase tracking-[0.2em]">Workspace Settings</h2>
                         </div>
                         <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
@@ -184,13 +184,13 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                                        className="flex-1 bg-[#14151A] border border-[#22242A] rounded-xl px-4 py-2.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-[#5E6AD2]/50 transition-all font-medium"
+                                        className="flex-1 bg-[#14151A] border border-[#22242A] rounded-xl px-4 py-2.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 transition-all font-medium"
                                         placeholder="Workspace name"
                                     />
                                     <button
                                         onClick={handleSaveName}
                                         disabled={isSaving || !name.trim() || name === team.name}
-                                        className="px-4 py-2.5 bg-[#5E6AD2] hover:bg-[#4b55aa] text-white text-[11px] font-bold rounded-xl transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase tracking-wider flex items-center space-x-1"
+                                        className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase tracking-wider flex items-center space-x-1"
                                     >
                                         {isSaving ? (
                                             <span>Saving...</span>
@@ -222,7 +222,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                                 type="button"
                                                 onClick={() => handleSaveIcon(emoji)}
                                                 className={`w-7 h-7 flex items-center justify-center rounded transition-all text-sm ${icon === emoji
-                                                    ? 'bg-[#5E6AD2] text-white shadow-lg shadow-[#5E6AD2]/20 scale-95'
+                                                    ? 'bg-accent text-white shadow-lg shadow-accent/20 scale-95'
                                                     : 'hover:bg-[#1A1C23] text-[#3A3C46] hover:text-[#C0C4CC]'
                                                     }`}
                                             >
@@ -252,7 +252,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                     <button
                                         onClick={handleToggleStealth}
                                         className={`relative w-14 h-7 rounded-full transition-all duration-300 shrink-0 ${isStealth
-                                            ? 'bg-[#5E6AD2] shadow-lg shadow-[#5E6AD2]/20'
+                                            ? 'bg-accent shadow-lg shadow-accent/20'
                                             : 'bg-[#22242A] hover:bg-[#2C2D35]'
                                             }`}
                                     >
