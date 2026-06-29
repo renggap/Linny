@@ -94,7 +94,7 @@ export const Auth: React.FC = () => {
         transition={{ duration: 0.6, ease: "easeOut" }}
         className="w-full max-w-[440px] relative z-10"
       >
-        <div className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)]">
+        <div className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-popover">
 
           <div className="flex flex-col items-center mb-10">
             <motion.div

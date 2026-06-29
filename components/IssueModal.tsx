@@ -247,7 +247,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                     initial={{ opacity: 0, scale: 0.98, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                    className="bg-[#0F1014] w-full max-w-[1000px] h-[85vh] shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
+                    className="bg-[#0F1014] w-full max-w-[1000px] h-[85vh] shadow-popover border border-[#22242A] flex flex-col overflow-hidden relative z-10"
                 >
                     {/* Header Bar */}
                     <div className="flex items-center justify-between px-6 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
@@ -322,7 +322,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         <motion.div
                                             initial={{ opacity: 0, y: 5 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            className="fixed z-50 bg-[#14151A] border border-[#22242A] shadow-[0_20px_50px_rgba(0,0,0,0.5)] py-2 w-64 overflow-hidden"
+                                            className="fixed z-50 bg-[#14151A] border border-[#22242A] shadow-popover py-2 w-64 overflow-hidden"
                                         >
                                             {filteredUsers.map((u) => (
                                                 <div

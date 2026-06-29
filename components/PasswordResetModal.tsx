@@ -54,10 +54,10 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#0F1014] w-full max-w-[420px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] p-10 relative z-10"
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[420px] rounded-3xl shadow-popover border border-[#22242A] p-10 relative z-10"
         >
           <button
             onClick={onClose}

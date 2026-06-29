@@ -161,9 +161,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                 />
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    exit={{ opacity: 0, y: 20 }}
                     className="bg-[#0F1014] w-full max-w-[700px] h-[85vh] rounded-[32px] shadow-[0_48px_140px_-20px_rgba(0,0,0,0.9)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
                 >
                     {/* Header Bar */}

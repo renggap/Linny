@@ -83,10 +83,10 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#0F1014] w-full max-w-[540px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] overflow-hidden relative z-10"
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[540px] shadow-popover border border-[#22242A] overflow-hidden relative z-10"
         >
           {/* Header */}
           <div className="flex items-center justify-between px-8 h-20 border-b border-[#1A1C23] bg-[#14151A]/30">

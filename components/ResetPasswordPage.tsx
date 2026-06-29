@@ -61,7 +61,7 @@ export const ResetPasswordPage: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] max-w-[420px] w-full text-center"
+          className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-popover max-w-[420px] w-full text-center"
         >
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white mb-2">Password Berhasil Diupdate!</h1>
@@ -85,7 +85,7 @@ export const ResetPasswordPage: React.FC = () => {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] max-w-[420px] w-full"
+        className="bg-[#0F1014] border border-[#22242A] rounded-3xl p-10 shadow-popover max-w-[420px] w-full"
       >
         <div className="text-center mb-8">
           <h1 className="text-2xl font-bold text-white mb-2">Reset Password</h1>

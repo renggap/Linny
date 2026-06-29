@@ -59,10 +59,10 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
         />
 
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
+          initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="bg-[#0F1014] w-full max-w-[440px] rounded-3xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] overflow-hidden relative z-10"
+          exit={{ opacity: 0, y: 20 }}
+          className="bg-[#0F1014] w-full max-w-[440px] rounded-3xl shadow-popover border border-[#22242A] overflow-hidden relative z-10"
         >
           {/* Dynamic Background */}
           <div className="absolute top-0 right-0 p-8 opacity-5">
