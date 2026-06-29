@@ -13,6 +13,8 @@
  * - Health check endpoint with Redis status
  */
 
+import './env.js';
+
 import Fastify, { FastifyInstance } from 'fastify';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyCors from '@fastify/cors';
@@ -23,22 +25,12 @@ import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyWebsocket from '@fastify/websocket';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 import crypto from 'crypto';
-import dotenv from 'dotenv';
 import fp from 'fastify-plugin';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { getDatabase } from './database.js';
 import { getRedisClient } from './cache/redis.js';
 import { registerWebSocketRoutes } from './websocket/fastifyWebSocketRoutes.js';
 import { schedulePeriodicJobs } from './jobs/jobQueue.js';
 import { BANNER } from './utils/banner.js';
-
-// ESM equivalent of __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Load environment variables from parent directory
-dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 // Show banner on startup (only in production or if explicitly enabled)
 if (process.env.NODE_ENV === 'production' || process.env.SHOW_BANNER === 'true') {

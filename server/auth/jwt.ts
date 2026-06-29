@@ -1,33 +1,36 @@
 import jwt from 'jsonwebtoken';
 
-// Validate JWT_SECRET exists and is sufficiently long
-const SECRET = process.env.JWT_SECRET;
-const isProduction = process.env.NODE_ENV === 'production';
+const ACCESS_EXPIRY = '3d';
+const REFRESH_EXPIRY = '7d';
+const FALLBACK_DEV_SECRET = 'dev-secret-change-in-production';
 
-if (!SECRET) {
-  if (isProduction) {
-    throw new Error(
-      'CRITICAL: JWT_SECRET environment variable is required in production. ' +
-      'Set a strong, random secret (minimum 32 characters).'
-    );
-  } else {
+function getSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  const isProduction = process.env.NODE_ENV === 'production';
+
+  if (!secret) {
+    if (isProduction) {
+      throw new Error(
+        'CRITICAL: JWT_SECRET environment variable is required in production. ' +
+        'Set a strong, random secret (minimum 32 characters).'
+      );
+    }
     console.warn(
       '⚠️  WARNING: JWT_SECRET not set. Using development secret. ' +
       'Set JWT_SECRET environment variable for production use.'
     );
+    return FALLBACK_DEV_SECRET;
   }
-}
 
-if (SECRET && SECRET.length < 32) {
-  throw new Error(
-    'CRITICAL: JWT_SECRET must be at least 32 characters long for security. ' +
-    'Current length: ' + SECRET.length + ' characters.'
-  );
-}
+  if (secret.length < 32) {
+    throw new Error(
+      'CRITICAL: JWT_SECRET must be at least 32 characters long for security. ' +
+      'Current length: ' + secret.length + ' characters.'
+    );
+  }
 
-const JWT_SECRET = SECRET || 'dev-secret-change-in-production';
-const ACCESS_EXPIRY = '3d';
-const REFRESH_EXPIRY = '7d';
+  return secret;
+}
 
 export interface TokenPayload {
   userId: string;
@@ -44,14 +47,14 @@ export interface TokenPair {
  * Generate an access token (short-lived)
  */
 export function generateAccessToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_EXPIRY });
+  return jwt.sign(payload, getSecret(), { expiresIn: ACCESS_EXPIRY });
 }
 
 /**
  * Generate a refresh token (long-lived)
  */
 export function generateRefreshToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: REFRESH_EXPIRY });
+  return jwt.sign(payload, getSecret(), { expiresIn: REFRESH_EXPIRY });
 }
 
 /**
@@ -70,7 +73,7 @@ export function generateTokenPair(payload: TokenPayload): TokenPair {
  */
 export function verifyToken(token: string): TokenPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as TokenPayload;
+    return jwt.verify(token, getSecret()) as TokenPayload;
   } catch {
     return null;
   }
