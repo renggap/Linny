@@ -213,6 +213,7 @@ const fastify = Fastify({
   },
   bodyLimit: 5 * 1024 * 1024, // 5MB - reduced from 10MB for security
   requestIdHeader: 'x-request-id',
+  trustProxy: true, // Behind nginx — read X-Forwarded-For so rate limits key per-client
   disableRequestLogging: !isDevelopment // Disable request logging in production for performance
 });
 
