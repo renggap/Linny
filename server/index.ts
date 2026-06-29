@@ -146,6 +146,16 @@ if (JWT_SECRET === 'dev-secret-change-in-production' || JWT_SECRET.length < 32) 
   console.error('WARNING: JWT_SECRET is insecure. Use a strong secret in production.');
 }
 
+// Production CSP requires FRONTEND_URL so connectSrc can derive wss:// for WebSocket.
+// Without it, deployed browsers will block API/WS requests.
+if (process.env.NODE_ENV === 'production') {
+  const frontendUrl = process.env.FRONTEND_URL;
+  if (!frontendUrl || frontendUrl.trim().length === 0) {
+    console.error('FATAL: FRONTEND_URL environment variable is required in production (used for CSP connectSrc and WebSocket wss:// derivation)');
+    process.exit(1);
+  }
+}
+
 // Type assertion for TypeScript after validation
 const JWT_SECRET_VALIDATED = JWT_SECRET as string;
 

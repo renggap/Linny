@@ -116,7 +116,7 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   fastify.get('/:id', {
-    onRequest: [authenticate],
+    onRequest: [authenticate, requireProjectMember],
     schema: {
       params: z.object({ id: z.string() })
     }

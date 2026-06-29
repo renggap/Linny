@@ -93,7 +93,7 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   fastify.get('/:id', {
-    onRequest: [authenticate],
+    onRequest: [authenticate, requireIssueTeamMember],
     schema: {
       params: z.object({ id: z.string() })
     }

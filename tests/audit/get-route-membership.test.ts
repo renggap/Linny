@@ -38,3 +38,25 @@ describe('GET /projects membership gate', () => {
     expect(block).toMatch(/Forbidden|403|membership/);
   });
 });
+
+describe('GET /issues/:id membership gate', () => {
+  it('declares requireIssueTeamMember in onRequest', () => {
+    const startIdx = issuesSrc.indexOf(`fastify.get('/:id'`);
+    expect(startIdx).toBeGreaterThan(-1);
+    const after = issuesSrc.slice(startIdx);
+    const next = after.match(/\n\s*fastify\.(post|get|put|patch|delete)\(/);
+    const block = after.slice(0, next ? next.index : after.length);
+    expect(block).toMatch(/onRequest:\s*\[authenticate,\s*requireIssueTeamMember\]/);
+  });
+});
+
+describe('GET /projects/:id membership gate', () => {
+  it('declares requireProjectMember in onRequest', () => {
+    const startIdx = projectsSrc.indexOf(`fastify.get('/:id'`);
+    expect(startIdx).toBeGreaterThan(-1);
+    const after = projectsSrc.slice(startIdx);
+    const next = after.match(/\n\s*fastify\.(post|get|put|patch|delete)\(/);
+    const block = after.slice(0, next ? next.index : after.length);
+    expect(block).toMatch(/onRequest:\s*\[authenticate,\s*requireProjectMember\]/);
+  });
+});
