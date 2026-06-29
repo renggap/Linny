@@ -1,5 +1,6 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { registerSchema, loginSchema } from '../validation/schemas.js';
 import { hashPassword, verifyPassword, validatePasswordStrength } from '../auth/password.js';
 import { getRefreshTokenExpiryDate } from '../auth/jwt.js';
@@ -36,7 +37,10 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     };
 
     const accessToken = fastify.jwt.sign(payload);
-    const refreshToken = fastify.jwt.sign(payload, { expiresIn: '7d' });
+    const refreshToken = fastify.jwt.sign(
+      { ...payload, jti: crypto.randomUUID() },
+      { expiresIn: '7d' }
+    );
 
     await prisma.refreshToken.create({
       data: {
