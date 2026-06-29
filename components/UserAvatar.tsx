@@ -48,10 +48,10 @@ interface UserAvatarProps {
 }
 
 const sizeClasses = {
-  sm: 'w-4 h-4 text-[8px]',
-  md: 'w-6 h-6 text-[10px]',
-  lg: 'w-8 h-8 text-[12px]',
-  xl: 'w-12 h-12 text-[16px]',
+  sm: 'w-4 h-4 text-[6px]',
+  md: 'w-6 h-6 text-[9px]',
+  lg: 'w-8 h-8 text-[11px]',
+  xl: 'w-12 h-12 text-[14px]',
 };
 
 /**
