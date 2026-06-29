@@ -25,12 +25,13 @@ export class WebSocketService {
             throw new Error('No access token available for WebSocket connection');
         }
 
-        // Extract room type and ID from roomId (e.g., "issue:123" -> "/ws/issue/123")
+        // Extract room type and optional ID from roomId (e.g., "issue:123" -> "/ws/issue/123")
         const [roomType, roomParam] = roomId.split(':');
 
-        // User notifications route is /ws/user (userId comes from JWT token, not URL)
-        if (roomType === 'user') {
-            return `${this.baseUrl}/ws/user?token=${token}`;
+        // Routes that take no path param (room is implicit per authenticated user)
+        const noParamRooms = new Set(['user', 'join-requests']);
+        if (noParamRooms.has(roomType)) {
+            return `${this.baseUrl}/ws/${roomType}?token=${token}`;
         }
 
         return `${this.baseUrl}/ws/${roomType}/${roomParam}?token=${token}`;
