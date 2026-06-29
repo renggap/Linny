@@ -3,6 +3,19 @@ import { z } from 'zod';
 import { getDatabase } from '../database.js';
 import { authenticate, requireAdmin } from '../middleware/authHooks.js';
 
+/**
+ * Prefix dangerous characters to prevent CSV/formula injection when the
+ * exported file is opened in Excel or Google Sheets.
+ */
+function escapeCsvCell(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  return str;
+}
+
 const exportRoutes: FastifyPluginAsyncZod = async (fastify) => {
   // GET /api/v1/export/issues - Export issues as JSON or CSV
   fastify.get('/issues', {
@@ -76,13 +89,13 @@ const exportRoutes: FastifyPluginAsyncZod = async (fastify) => {
       // CSV format
       const csvHeaders = ['identifier', 'title', 'description', 'status', 'priority', 'project_id', 'assignees'];
       const csvRows = exportData.map((issue: any) => [
-        issue.identifier,
-        `"${issue.title.replace(/"/g, '""')}"`,
-        `"${(issue.description || '').replace(/"/g, '""')}"`,
-        issue.status,
-        issue.priority,
-        issue.project_id,
-        `"${issue.assignees.map((a: any) => a.email).join(', ')}"`
+        escapeCsvCell(issue.identifier),
+        `"${escapeCsvCell(issue.title).replace(/"/g, '""')}"`,
+        `"${escapeCsvCell(issue.description || '').replace(/"/g, '""')}"`,
+        escapeCsvCell(issue.status),
+        escapeCsvCell(issue.priority),
+        escapeCsvCell(issue.project_id),
+        `"${escapeCsvCell(issue.assignees.map((a: any) => a.email).join(', ')).replace(/"/g, '""')}"`
       ]);
 
       const csv = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
@@ -142,11 +155,11 @@ const exportRoutes: FastifyPluginAsyncZod = async (fastify) => {
       // CSV format
       const csvHeaders = ['identifier', 'name', 'description', 'team_id', 'issue_count'];
       const csvRows = exportData.map((project: any) => [
-        project.identifier,
-        `"${project.name.replace(/"/g, '""')}"`,
-        `"${(project.description || '').replace(/"/g, '""')}"`,
-        project.team_id,
-        project.issue_count
+        escapeCsvCell(project.identifier),
+        `"${escapeCsvCell(project.name).replace(/"/g, '""')}"`,
+        `"${escapeCsvCell(project.description || '').replace(/"/g, '""')}"`,
+        escapeCsvCell(project.team_id),
+        escapeCsvCell(project.issue_count)
       ]);
 
       const csv = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
@@ -178,11 +191,11 @@ const exportRoutes: FastifyPluginAsyncZod = async (fastify) => {
       // CSV format
       const csvHeaders = ['id', 'name', 'email', 'role', 'created_at'];
       const csvRows = users.map((user: any) => [
-        user.id,
-        `"${user.name.replace(/"/g, '""')}"`,
-        user.email,
-        user.role,
-        user.created_at
+        escapeCsvCell(user.id),
+        `"${escapeCsvCell(user.name).replace(/"/g, '""')}"`,
+        escapeCsvCell(user.email),
+        escapeCsvCell(user.role),
+        escapeCsvCell(user.created_at)
       ]);
 
       const csv = [csvHeaders.join(','), ...csvRows.map(row => row.join(','))].join('\n');
