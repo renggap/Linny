@@ -74,7 +74,9 @@ export function recordFailedAttempt(email: string): void {
     // Lock account if max attempts reached
     if (existing.count >= MAX_ATTEMPTS) {
         existing.lockedUntil = now + LOCKOUT_DURATION_MS;
-        console.warn(`🔒 Account locked for email: ${email} due to too many failed attempts`);
+        const [localPart, domain] = email.split('@');
+        const redacted = `${localPart?.slice(0, 2)}**@${domain?.length ?? 0}-chars`;
+        console.warn(`🔒 Account locked for ${redacted} due to too many failed attempts`);
     }
 
     failedAttempts.set(email, existing);
