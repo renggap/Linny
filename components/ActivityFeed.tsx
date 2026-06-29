@@ -61,7 +61,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ users }) => {
             <div
               key={activity.id}
               className={cn(
-                "flex items-start gap-3 p-3 rounded-lg hover:bg-[#1A1C23]/30 transition-colors group",
+                "flex items-start gap-3 p-3 hover:bg-[#1A1C23]/30 transition-colors group",
                 index === recentActivities.length - 1 ? "" : "border-b border-[#22242A]/30"
               )}
             >
@@ -93,7 +93,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({ users }) => {
           <div
             key={activity.id}
             className={cn(
-              "flex items-start gap-3 p-3 rounded-lg hover:bg-[#1A1C23]/30 transition-colors group",
+              "flex items-start gap-3 p-3 hover:bg-[#1A1C23]/30 transition-colors group",
               index === recentActivities.length - 1 ? "" : "border-b border-[#22242A]/30"
             )}
           >

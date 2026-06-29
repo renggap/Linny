@@ -126,7 +126,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                     <div className="space-y-4">
                         <div className="group">
                             <label className="text-[10px] font-semibold text-[#3A3C46] uppercase tracking-wider mb-2 block ml-1">Project Lead</label>
-                            <div className="bg-[#14151A] rounded-xl border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
+                            <div className="bg-[#14151A] border border-[#22242A] p-0.5 hover:border-[#2C2D35] transition-all">
                                 <UserSelect
                                     users={workspaceUsers || users}
                                     filteredUsers={teamMembers}
@@ -172,7 +172,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                         <BarChart3 className="w-3.5 h-3.5 mr-2" /> Progress
                     </h4>
 
-                    <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-5 space-y-6">
+                    <div className="bg-[#14151A] border border-[#22242A] p-5 space-y-6">
                         <div className="flex items-end justify-between">
                             <div>
                                 <span className="text-4xl font-light text-[#E8E8E8] tracking-tight">{completionPercentage}%</span>
@@ -238,7 +238,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                             })}
                         </AnimatePresence>
                         {memberProgress.length === 0 && (
-                            <div className="py-8 text-center border border-dashed border-[#22242A] rounded-2xl">
+                            <div className="py-8 text-center border border-dashed border-[#22242A]">
                                 <span className="text-[10px] text-[#3A3C46] font-bold uppercase italic tracking-widest">No active contributors</span>
                             </div>
                         )}
@@ -293,7 +293,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                         {filteredActivities.length > visibleCount && (
                             <button
                                 onClick={() => setVisibleCount(prev => prev + 10)}
-                                className="w-full py-3 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] uppercase tracking-widest border border-[#22242A] rounded-xl hover:bg-[#14151A] transition-all mt-4"
+                                className="w-full py-3 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] uppercase tracking-widest border border-[#22242A] hover:bg-[#14151A] transition-all mt-4"
                             >
                                 Show full history
                             </button>

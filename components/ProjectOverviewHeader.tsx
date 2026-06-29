@@ -106,7 +106,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
     return (
         <motion.div
             layout
-            className="mx-6 mb-6 bg-[#14151A] border border-[#26272F] rounded-xl overflow-hidden shadow-sm"
+            className="mx-6 mb-6 bg-[#14151A] border border-[#26272F] overflow-hidden shadow-sm"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
@@ -116,7 +116,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                 <div className="flex items-center space-x-4 px-4 py-3 min-w-0 flex-1">
                     <div
                         onClick={onToggleExpand}
-                        className="w-10 h-10 bg-[#1A1C23] border border-[#2C2D35] rounded-lg flex items-center justify-center text-lg cursor-pointer hover:border-accent/50 hover:text-[#E8E8E8] hover:shadow-[0_0_15px_rgba(94,106,210,0.15)] transition-all duration-300 group shrink-0"
+                        className="w-10 h-10 bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center text-lg cursor-pointer hover:border-accent/50 hover:text-[#E8E8E8] hover:shadow-[0_0_15px_rgba(94,106,210,0.15)] transition-all duration-300 group shrink-0"
                     >
                         <span className="opacity-80 group-hover:opacity-100 transition-opacity transform group-hover:scale-110 duration-300">
                             {project.icon || <Layout className="w-5 h-5" />}
@@ -138,7 +138,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                             href={`/public/${project.publicSlug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hidden sm:flex items-center space-x-2 h-8 px-3 rounded-md bg-[#1A1C23] border border-[#2C2D35] hover:border-[#3A3C46] hover:bg-[#202229] transition-all group"
+                            className="hidden sm:flex items-center space-x-2 h-8 px-3 bg-[#1A1C23] border border-[#2C2D35] hover:border-[#3A3C46] hover:bg-[#202229] transition-all group"
                         >
                             <Globe className="w-3.5 h-3.5 text-[#5E6068] group-hover:text-accent transition-colors" />
                             <span className="text-[11px] font-medium text-[#8A8F98] group-hover:text-[#C0C4CC]">Public View</span>
@@ -148,7 +148,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                     <button
                         onClick={onToggleExpand}
                         className={cn(
-                            "h-8 w-8 flex items-center justify-center rounded-md border transition-all",
+                            "h-8 w-8 flex items-center justify-center border transition-all",
                             isExpanded
                                 ? "bg-[#1A1C23] border-[#2C2D35] text-[#8A8F98] hover:text-[#E8E8E8]"
                                 : "bg-[#1A1C23] border-[#2C2D35] text-[#5E6068] hover:text-[#8A8F98]"
@@ -180,7 +180,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
 
                                 {isEditingDesc ? (
                                     <textarea
-                                        className="w-full bg-[#1A1C23] border border-[#2C2D35] focus:border-accent/50 rounded-lg p-3 text-sm text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none min-h-[120px] transition-all resize-none font-sans leading-relaxed selection:bg-accent/30"
+                                        className="w-full bg-[#1A1C23] border border-[#2C2D35] focus:border-accent/50 p-3 text-sm text-[#E8E8E8] placeholder-[#5E6068] focus:outline-none min-h-[120px] transition-all resize-none font-sans leading-relaxed selection:bg-accent/30"
                                         value={descValue}
                                         onChange={(e) => setDescValue(e.target.value)}
                                         onBlur={handleDescBlur}
@@ -245,7 +245,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                                     initial={{ opacity: 0, x: -10 }}
                                                     animate={{ opacity: 1, x: 0 }}
                                                     exit={{ opacity: 0, height: 0 }}
-                                                    className="flex items-center justify-between group py-1.5 px-2 rounded-md hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all"
+                                                    className="flex items-center justify-between group py-1.5 px-2 hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all"
                                                     style={(project.links?.length || 0) > 3 ? {
                                                         scrollbarWidth: 'thin',
                                                         scrollbarColor: '#2C2D35 transparent'
@@ -267,7 +267,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                     </div>
 
                                     {(project.links || []).length === 0 && !isAddingLink && (
-                                        <div className="p-4 border border-dashed border-[#22242A] rounded-lg text-center">
+                                        <div className="p-4 border border-dashed border-[#22242A] text-center">
                                             <span className="text-[11px] text-[#5E6068] italic">No resources linked</span>
                                         </div>
                                     )}
@@ -276,7 +276,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                                         <motion.div
                                             initial={{ opacity: 0, scale: 0.95 }}
                                             animate={{ opacity: 1, scale: 1 }}
-                                            className="p-3 bg-[#1A1C23] rounded-lg border border-[#2C2D35] space-y-3 mt-2 shadow-lg"
+                                            className="p-3 bg-[#1A1C23] border border-[#2C2D35] space-y-3 mt-2 shadow-lg"
                                         >
                                             <input
                                                 type="text"

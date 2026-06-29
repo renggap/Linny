@@ -70,7 +70,7 @@ export const ResetPasswordPage: React.FC = () => {
           </p>
           <button
             onClick={() => navigate({ to: '/' })}
-            className="w-full bg-accent hover:bg-accent-hover text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
+            className="w-full bg-accent hover:bg-accent-hover text-white text-[12px] font-bold py-3.5 transition-all uppercase tracking-[0.2em] flex items-center justify-center"
           >
             <span>Lanjut ke Login</span>
             <ArrowRight className="w-4 h-4 ml-2" />
@@ -121,7 +121,7 @@ export const ResetPasswordPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-12 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-12 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="Minimal 8 karakter"
                   disabled={isLoading}
                   required
@@ -146,7 +146,7 @@ export const ResetPasswordPage: React.FC = () => {
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="Ketik lagi password-nya"
                   disabled={isLoading}
                   required
@@ -158,7 +158,7 @@ export const ResetPasswordPage: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="bg-red-500/10 border border-red-500/20 p-3 rounded-xl text-red-400 text-[11px] flex items-center"
+                className="bg-red-500/10 border border-red-500/20 p-3 text-red-400 text-[11px] flex items-center"
               >
                 <AlertCircle className="w-4 h-4 mr-2 shrink-0" />
                 {error}
@@ -168,7 +168,7 @@ export const ResetPasswordPage: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-3.5 rounded-xl transition-all uppercase tracking-[0.2em] flex items-center justify-center"
+              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-3.5 transition-all uppercase tracking-[0.2em] flex items-center justify-center"
             >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

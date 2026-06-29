@@ -60,7 +60,7 @@ const SidebarItem = ({
     whileHover={{ x: 2 }}
     whileTap={{ scale: 0.98 }}
     className={cn(
-      "group flex items-center px-3 py-1.5 mx-2 rounded-md cursor-pointer transition-all duration-200 border border-transparent",
+      "group flex items-center px-3 py-1.5 mx-2 cursor-pointer transition-all duration-200 border border-transparent",
       isActive
         ? "bg-[#1A1C23] border-[#2C2D35] text-[#E8E8E8]"
         : "text-[#8A8F98] hover:bg-[#15161A] hover:text-[#C0C4CC]",
@@ -163,7 +163,7 @@ export const Sidebar: React.FC = () => {
       <aside
         className={cn(
           "w-[240px] bg-[#0F1014] border-r border-[#22242A] flex flex-col h-full select-none z-50 transition-all duration-300",
-          ui.isSidebarCollapsed ? "hidden md:flex" : "fixed inset-y-0 left-0 flex shadow-2xl md:static md:shadow-none"
+          ui.isSidebarCollapsed ? "hidden md:flex" : "fixed inset-y-0 left-0 flex shadow-popover md:static md:shadow-none"
         )}
       >
         <button
@@ -176,9 +176,9 @@ export const Sidebar: React.FC = () => {
         <div className="relative shrink-0 z-40 px-3 pt-4 pb-2">
           <div
             onClick={() => setIsTeamMenuOpen(!isTeamMenuOpen)}
-            className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all cursor-pointer group select-none"
+            className="flex items-center p-2 hover:bg-[#1A1C23] border border-transparent hover:border-[#2C2D35] transition-all cursor-pointer group select-none"
           >
-            <div className="w-6 h-6 bg-[#1A1C23] border border-[#2C2D35] rounded-md flex items-center justify-center text-xs font-bold text-[#E8E8E8] shadow-sm group-hover:border-accent/50 group-hover:text-white transition-all">
+            <div className="w-6 h-6 bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center text-xs font-bold text-[#E8E8E8] shadow-sm group-hover:border-accent/50 group-hover:text-white transition-all">
               {currentTeam?.icon || <LayoutGrid className="w-3.5 h-3.5" />}
             </div>
             <span className="ml-3 font-medium text-[13px] text-[#E8E8E8] tracking-tight truncate flex-1">
@@ -197,7 +197,7 @@ export const Sidebar: React.FC = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.15 }}
-                className="absolute top-full left-3 right-3 mt-1 bg-[#14151A] border border-[#26272F] shadow-xl rounded-xl overflow-hidden z-[60]"
+                className="absolute top-full left-3 right-3 mt-1 bg-[#14151A] border border-[#26272F] shadow-xl overflow-hidden z-[60]"
               >
                 <div className="px-3 py-2 bg-[#1A1C23]/50 border-b border-[#26272F]">
                   <span className="text-[10px] font-semibold text-[#5E6068] uppercase tracking-wider">Switch Team</span>
@@ -293,7 +293,7 @@ export const Sidebar: React.FC = () => {
             onClick={() => ui.setIssueModalOpen(true)}
             disabled={!canCreateContentCheck}
             className={cn(
-              "w-full flex items-center justify-between px-3 py-1.5 rounded-lg border transition-all text-left group shadow-lg shadow-black/20",
+              "w-full flex items-center justify-between px-3 py-1.5 border transition-all text-left group shadow-lg shadow-black/20",
               canCreateContentCheck
                 ? "bg-[#1A1C23] border-[#2C2D35] text-[#C0C4CC] hover:border-[#3A3C46] hover:bg-[#202229] hover:text-white"
                 : "opacity-40 cursor-not-allowed border-transparent bg-[#1A1C23]"
@@ -450,7 +450,7 @@ export const Sidebar: React.FC = () => {
                     onClick={() => ui.setAssigneeFilter(user.id)}
                     icon={() => <UserAvatar name={user.name} size="sm" className="mr-3" showRing={true} />}
                     rightElement={
-                      <span className={cn("flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded-md", roleStyle.bg, roleStyle.text, "border border-[#2C2D35] gap-1")}>
+                      <span className={cn("flex items-center text-[10px] font-medium px-1.5 py-0.5", roleStyle.bg, roleStyle.text, "border border-[#2C2D35] gap-1")}>
                         {showCrownOnly && <Crown className="w-3 h-3 text-amber-400" />}
                         {!showCrownOnly && roleStyle.label}
                       </span>
@@ -465,7 +465,7 @@ export const Sidebar: React.FC = () => {
         <div className="mt-auto px-3 py-3 border-t border-[#22242A] bg-[#0F1014]/50 backdrop-blur-sm">
           <div
             onClick={() => ui.setUserProfileOpen(true)}
-            className="flex items-center p-2 rounded-lg hover:bg-[#1A1C23] cursor-pointer group transition-all"
+            className="flex items-center p-2 hover:bg-[#1A1C23] cursor-pointer group transition-all"
           >
             <UserAvatar name={currentUser.name} size="lg" className="mr-3" />
             <div className="flex-1 min-w-0">
@@ -474,7 +474,7 @@ export const Sidebar: React.FC = () => {
             </div>
             <button
               onClick={async (e) => { e.stopPropagation(); await api.auth.logout(); window.location.href = '/'; }}
-              className="p-1.5 rounded-md hover:bg-[#2C2D35] text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+              className="p-1.5 hover:bg-[#2C2D35] text-[#5E6068] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
             >
               <LogOut className="w-3.5 h-3.5" />
             </button>

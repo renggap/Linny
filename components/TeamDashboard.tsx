@@ -66,7 +66,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
 }) => (
     <motion.div
         variants={itemVariants}
-        className="group relative p-5 bg-[#14151A] rounded-xl border border-[#26272F] hover:border-[#3A3C46] transition-all duration-300 overflow-hidden"
+        className="group relative p-5 bg-[#14151A] border border-[#26272F] hover:border-[#3A3C46] transition-all duration-300 overflow-hidden"
     >
         {/* Animated decorative background */}
         <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500">
@@ -267,7 +267,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
 
         <div className="flex flex-col justify-between h-full space-y-4 relative z-10">
             <div className="flex items-center space-x-3">
-                <div className={cn("p-2 rounded-lg bg-[#1D1E24] border border-[#2C2D35] group-hover:scale-105 transition-transform duration-300", color)}>
+                <div className={cn("p-2 bg-[#1D1E24] border border-[#2C2D35] group-hover:scale-105 transition-transform duration-300", color)}>
                     <Icon className="w-4 h-4" />
                 </div>
                 <span className="text-[13px] font-medium text-[#8A8F98] tracking-tight">{label}</span>
@@ -384,7 +384,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                 {/* Header */}
                 <motion.header variants={itemVariants} className="flex items-center justify-between pb-6 border-b border-[#22242A]">
                     <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 rounded-xl bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center text-xl shadow-lg shadow-black/20">
+                        <div className="w-12 h-12 bg-[#1A1C23] border border-[#2C2D35] flex items-center justify-center text-xl shadow-lg shadow-black/20">
                             {team.icon || <Layout className="w-5 h-5 text-[#8A8F98]" />}
                         </div>
                         <div className="flex items-center gap-2">
@@ -435,7 +435,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                 <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Pipeline Overview</h3>
                             </div>
 
-                            <div className="bg-[#14151A] border border-[#26272F] rounded-xl p-6 relative overflow-hidden">
+                            <div className="bg-[#14151A] border border-[#26272F] p-6 relative overflow-hidden">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-y-8 gap-x-4">
                                     {Object.entries(stats.byStatus).map(([status, count], idx) => (
                                         <div key={status} className="space-y-2 group">
@@ -474,7 +474,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                                         key={p.id}
                                         whileHover={{ x: 4 }}
                                         onClick={() => handleProjectClick(p)}
-                                        className="flex items-center justify-between p-4 bg-[#14151A] border border-[#26272F] rounded-lg hover:border-[#3A3C46] transition-colors group cursor-pointer"
+                                        className="flex items-center justify-between p-4 bg-[#14151A] border border-[#26272F] hover:border-[#3A3C46] transition-colors group cursor-pointer"
                                     >
                                         <div className="flex items-center space-x-4">
                                             <div className="w-10 h-10 rounded bg-[#1D1E24] border border-[#2C2D35] flex items-center justify-center">
@@ -506,7 +506,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         {/* Team Members */}
                         <motion.section variants={itemVariants} className="space-y-4">
                             <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Team Velocity</h3>
-                            <div className="bg-[#14151A] border border-[#26272F] rounded-xl overflow-hidden">
+                            <div className="bg-[#14151A] border border-[#26272F] overflow-hidden">
                                 {stats.activeMembers.map((stat) => {
                                     // Determine completion color
                                     const completionColor = stat.completion >= 75 ? 'bg-emerald-500' :
@@ -573,7 +573,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         {/* Priorities */}
                         <motion.section variants={itemVariants} className="space-y-4">
                             <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Priority Breakdown</h3>
-                            <div className="bg-[#14151A] border border-[#26272F] rounded-xl p-5 space-y-4">
+                            <div className="bg-[#14151A] border border-[#26272F] p-5 space-y-4">
                                 {[Priority.Urgent, Priority.High, Priority.Medium].map((p, idx) => (
                                     <div key={p} className="flex items-center justify-between group">
                                         <div className="flex items-center space-x-3">
@@ -602,7 +602,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         {/* Recent Activity Feed */}
                         <motion.section variants={itemVariants} className="space-y-4">
                             <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Recent Activity</h3>
-                            <div className="bg-[#14151A] border border-[#26272F] rounded-xl p-4 max-h-[400px overflow-y-auto no-scrollbar">
+                            <div className="bg-[#14151A] border border-[#26272F] p-4 max-h-[400px overflow-y-auto no-scrollbar">
                                 <ActivityFeed users={users} />
                             </div>
                         </motion.section>

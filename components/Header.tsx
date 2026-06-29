@@ -94,14 +94,14 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="flex items-center space-x-3 text-sm min-w-0">
         <button
           onClick={() => setSidebarCollapsed(!isSidebarCollapsed)}
-          className="md:hidden p-1.5 bg-[#2E3036] hover:bg-[#3E4049] rounded-lg text-gray-400 hover:text-white transition-all active:scale-95"
+          className="md:hidden p-1.5 bg-[#2E3036] hover:bg-[#3E4049] text-gray-400 hover:text-white transition-all active:scale-95"
         >
           <Layout className="w-4 h-4" />
         </button>
 
         <div className="flex items-center space-x-2 text-gray-500 font-medium truncate">
           <span
-            className="hover:text-white cursor-pointer transition-colors bg-white/5 px-2 py-0.5 rounded-md border border-white/5 active:scale-95 whitespace-nowrap"
+            className="hover:text-white cursor-pointer transition-colors bg-white/5 px-2 py-0.5 border border-white/5 active:scale-95 whitespace-nowrap"
             onClick={() => {
               const teamSlug = currentTeam?.name.toLowerCase().replace(/\s+/g, '-');
               if (teamSlug) navigate({ to: `/team/${teamSlug}` });
@@ -123,7 +123,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       <div className="flex items-center justify-between md:justify-end space-x-2 relative">
         {!isDashboard && (
-          <div className="flex items-center bg-[#2E3036] rounded-md p-0.5 border border-[#363840]">
+          <div className="flex items-center bg-[#2E3036] p-0.5 border border-[#363840]">
             <button onClick={() => setCurrentView('list')} className={`p-1.5 rounded-sm ${currentView === 'list' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`} title="List View">
               <List className="w-4 h-4" />
             </button>

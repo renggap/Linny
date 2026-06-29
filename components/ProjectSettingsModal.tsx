@@ -104,7 +104,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             <Settings className="w-4 h-4 text-accent" />
                             <h2 className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.3em]">Project Settings • {project.identifier}</h2>
                         </div>
-                        <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
+                        <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] transition-all">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -112,7 +112,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                     <div className="p-8 space-y-12 overflow-y-auto no-scrollbar max-h-[75vh]">
                         {/* Identity Section */}
                         <div className="flex items-center space-x-6 pb-12 border-b border-[#1A1C23]">
-                            <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] rounded-2xl flex items-center justify-center text-4xl shadow-inner relative group">
+                            <div className="w-20 h-20 bg-[#14151A] border border-[#22242A] flex items-center justify-center text-4xl shadow-inner relative group">
                                 {project.icon}
                                 <div className="absolute inset-x-2 bottom-[-1px] h-px bg-accent opacity-30" />
                             </div>
@@ -134,7 +134,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 value={localDescription}
                                 onChange={(e) => setLocalDescription(e.target.value)}
                                 onBlur={handleSaveDescription}
-                                className="w-full bg-[#14151A] border border-[#22242A] rounded-2xl px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
+                                className="w-full bg-[#14151A] border border-[#22242A] px-6 py-4 text-sm text-[#C0C4CC] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all resize-none h-32 placeholder:text-[#2C2D35] leading-relaxed"
                                 placeholder="Add a project description..."
                             />
                         </div>
@@ -148,7 +148,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                 <label className="text-[10px] font-black text-[#E8E8E8] uppercase tracking-[0.2em]">Public Access</label>
                             </div>
 
-                            <div className="bg-[#14151A] border border-[#22242A] rounded-2xl p-6 space-y-8 relative overflow-hidden">
+                            <div className="bg-[#14151A] border border-[#22242A] p-6 space-y-8 relative overflow-hidden">
                                 <div className="flex items-center justify-between relative z-10">
                                     <div className="space-y-1">
                                         <h4 className="text-sm font-bold text-[#E8E8E8]">Visibility</h4>
@@ -190,20 +190,20 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                                         value={publicSlug}
                                                         onChange={handleSlugChange}
                                                         onBlur={handleSlugBlur}
-                                                        className="w-full bg-[#0F1014] border border-[#22242A] rounded-xl pl-[72px] pr-4 py-3 text-sm font-mono text-accent font-bold focus:outline-none focus:border-accent/30 transition-all"
+                                                        className="w-full bg-[#0F1014] border border-[#22242A] pl-[72px] pr-4 py-3 text-sm font-mono text-accent font-bold focus:outline-none focus:border-accent/30 transition-all"
                                                     />
                                                 </div>
                                             </div>
 
                                             <div className="space-y-2">
                                                 <span className="text-[9px] font-black text-[#3A3C46] uppercase tracking-[0.2em] ml-1">Public Link</span>
-                                                <div className="flex items-center space-x-2 bg-[#0F1014] border border-[#22242A] rounded-xl px-4 py-3 group">
+                                                <div className="flex items-center space-x-2 bg-[#0F1014] border border-[#22242A] px-4 py-3 group">
                                                     <div className="flex-1 text-[11px] text-[#5E6068] font-mono truncate">{publicUrl}</div>
                                                     <div className="flex items-center space-x-3">
                                                         <button
                                                             onClick={handleCopyLink}
                                                             className={cn(
-                                                                "p-1.5 rounded-lg transition-all",
+                                                                "p-1.5 transition-all",
                                                                 copied ? "bg-green-500/10 text-green-500" : "hover:bg-[#1A1C23] text-[#3A3C46] hover:text-[#E8E8E8]"
                                                             )}
                                                         >
@@ -213,7 +213,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                                             href={publicUrl}
                                                             target="_blank"
                                                             rel="noopener noreferrer"
-                                                            className="p-1.5 rounded-lg hover:bg-[#1A1C23] text-[#3A3C46] hover:text-accent transition-all"
+                                                            className="p-1.5 hover:bg-[#1A1C23] text-[#3A3C46] hover:text-accent transition-all"
                                                         >
                                                             <ExternalLink className="w-3.5 h-3.5" />
                                                         </a>
@@ -233,7 +233,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             {canDeleteProject && !showDeleteConfirm && (
                                 <button
                                     onClick={() => setShowDeleteConfirm(true)}
-                                    className="flex items-center space-x-2 px-4 py-2 text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/5 rounded-lg transition-all uppercase tracking-wider"
+                                    className="flex items-center space-x-2 px-4 py-2 text-[10px] font-bold text-red-400 hover:text-red-300 hover:bg-red-500/5 transition-all uppercase tracking-wider"
                                 >
                                     <Trash2 className="w-3.5 h-3.5" />
                                     <span>Delete</span>
@@ -241,7 +241,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                             )}
                             {showDeleteConfirm && (
                                 <div className="flex items-center space-x-3">
-                                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-red-500/5 border border-red-500/20 rounded-lg">
+                                    <div className="flex items-center space-x-2 px-3 py-1.5 bg-red-500/5 border border-red-500/20">
                                         <AlertTriangle className="w-3 h-3 text-red-400" />
                                         <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Confirm deletion?</span>
                                     </div>
@@ -257,14 +257,14 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                             }
                                         }}
                                         disabled={isDeleting || !onDelete}
-                                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded-lg transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isDeleting ? 'Deleting...' : 'Confirm'}
                                     </button>
                                     <button
                                         onClick={() => setShowDeleteConfirm(false)}
                                         disabled={isDeleting}
-                                        className="px-3 py-1.5 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] rounded-lg transition-all uppercase tracking-wider"
+                                        className="px-3 py-1.5 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] transition-all uppercase tracking-wider"
                                     >
                                         Cancel
                                     </button>
@@ -280,7 +280,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                         {!showDeleteConfirm && (
                             <button
                                 onClick={onClose}
-                                className="px-10 py-3 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 flex items-center group"
+                                className="px-10 py-3 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 flex items-center group"
                             >
                                 <span>Done</span>
                                 <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

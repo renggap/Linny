@@ -99,7 +99,7 @@ export const Auth: React.FC = () => {
           <div className="flex flex-col items-center mb-10">
             <motion.div
               whileHover={{ scale: 1.05, rotate: 5 }}
-              className="w-14 h-14 bg-[#14151A] border border-[#2C2D35] rounded-2xl flex items-center justify-center text-accent mb-8 shadow-2xl relative group"
+              className="w-14 h-14 bg-[#14151A] border border-[#2C2D35] flex items-center justify-center text-accent mb-8 shadow-popover relative group"
             >
               <Terminal className="w-7 h-7" />
               <div className="absolute inset-0 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -131,7 +131,7 @@ export const Auth: React.FC = () => {
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
-                      className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
+                      className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                       placeholder="Specify identity..."
                       disabled={isLoading}
                     />
@@ -149,7 +149,7 @@ export const Auth: React.FC = () => {
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   disabled={isLoading || inviteMode}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
                   placeholder="address@nodex.network"
                 />
               </div>
@@ -163,7 +163,7 @@ export const Auth: React.FC = () => {
                   type="password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#14151A] border border-[#22242A] rounded-xl pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
+                  className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
                   placeholder="••••••••••••"
                   disabled={isLoading}
                 />
@@ -185,7 +185,7 @@ export const Auth: React.FC = () => {
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 p-3 rounded-xl"
+                className="flex items-center space-x-2 bg-red-500/10 border border-red-500/20 p-3"
               >
                 <Shield className="w-4 h-4 text-red-500 shrink-0" />
                 <span className="text-red-400 text-[11px] font-medium leading-tight">{displayError}</span>
@@ -195,7 +195,7 @@ export const Auth: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-4 rounded-xl transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/10 flex items-center justify-center group"
+              className="w-full bg-accent hover:bg-accent-hover disabled:opacity-30 text-white text-[12px] font-bold py-4 transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/10 flex items-center justify-center group"
             >
               {isLoading ? (
                 <Activity className="w-4 h-4 animate-spin" />

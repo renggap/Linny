@@ -82,7 +82,7 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
     return (
         <div className={`relative ${className}`} ref={containerRef}>
             <div
-                className="flex items-center space-x-2 cursor-pointer hover:bg-[#2E3036] p-1.5 -ml-1.5 rounded-md transition-colors w-full border border-transparent focus:border-accent"
+                className="flex items-center space-x-2 cursor-pointer hover:bg-[#2E3036] p-1.5 -ml-1.5 transition-colors w-full border border-transparent focus:border-accent"
                 onClick={() => setIsOpen(!isOpen)}
             >
                 <div className="flex items-center flex-1">
@@ -95,7 +95,7 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className="absolute z-[9999] bg-[#25262B] border border-[#363840] rounded-md shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
+                    className="absolute z-[9999] bg-[#25262B] border border-[#363840] shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
                     style={{ ...dropdownStyle, position: 'absolute' }}
                 >
                     {priorities.map(priority => (

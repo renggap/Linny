@@ -113,7 +113,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
         return ReactDOM.createPortal(
             <div
                 ref={calendarRef}
-                className="fixed z-[9999] bg-[#1A1B1F] border border-[#363840]/60 rounded-xl shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] p-4 w-64 animate-in fade-in zoom-in-95 duration-100"
+                className="fixed z-[9999] bg-[#1A1B1F] border border-[#363840]/60 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] p-4 w-64 animate-in fade-in zoom-in-95 duration-100"
                 style={{ top: coords.top, left: coords.left }}
             >
                 <div className="flex items-center justify-between mb-4">
@@ -153,7 +153,7 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
         <div className={`relative ${className}`} ref={containerRef}>
             <div
                 onClick={() => setIsOpen(!isOpen)}
-                className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-[#25262B]/30 border border-[#363840]/30 hover:border-accent/30 cursor-pointer text-[11px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-all min-w-[120px]"
+                className="flex items-center space-x-2 px-3 py-1.5 bg-[#25262B]/30 border border-[#363840]/30 hover:border-accent/30 cursor-pointer text-[11px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-all min-w-[120px]"
             >
                 <Calendar className="w-3.5 h-3.5" />
                 <span className={value ? 'text-gray-300' : 'text-gray-600'}>{displayValue}</span>

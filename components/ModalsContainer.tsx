@@ -170,7 +170,7 @@ export const ModalsContainer: React.FC<ModalsContainerProps> = ({
           onClick={() => setSelectedUserForModal(false, null)}
         />
         <div
-          className={`bg-[#0F1014] w-full max-w-md rounded-2xl shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] border border-[#22242A] overflow-hidden relative z-10 transform transition-transform duration-200 ${selectedUserForModal ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
+          className={`bg-[#0F1014] w-full max-w-md shadow-[0_40px_120px_-20px_rgba(0,0,0,0.7)] border border-[#22242A] overflow-hidden relative z-10 transform transition-transform duration-200 ${selectedUserForModal ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'}`}
         >
           <div className="p-6">
             {selectedUserForModal && (

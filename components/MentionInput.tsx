@@ -225,14 +225,14 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
-        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] rounded-lg px-3 py-2 text-sm text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-accent transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] px-3 py-2 text-sm text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-accent transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
 
       {/* Mention Dropdown */}
       {isMentioning && filteredUsers.length > 0 && (
         <div
           ref={mentionListRef}
-          className="absolute z-50 bg-[#25262B] border border-[#363840] rounded-md shadow-2xl overflow-hidden max-h-60 w-64"
+          className="absolute z-50 bg-[#25262B] border border-[#363840] shadow-popover overflow-hidden max-h-60 w-64"
           style={{
             top: `${mentionPosition.top}px`,
             left: `${mentionPosition.left}px`

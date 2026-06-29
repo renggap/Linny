@@ -149,7 +149,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    className="bg-[#0F1014] w-full max-w-[500px] rounded-2xl shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
+                    className="bg-[#0F1014] w-full max-w-[500px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] border border-[#22242A] flex flex-col overflow-hidden relative z-10"
                 >
                     {/* Header Bar */}
                     <div className="flex items-center justify-between px-6 h-14 border-b border-[#1A1C23] bg-[#14151A]/30 shrink-0">
@@ -157,7 +157,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                             <Settings className="w-4 h-4 text-accent" />
                             <h2 className="text-[11px] font-black text-[#5E6068] uppercase tracking-[0.2em]">Workspace Settings</h2>
                         </div>
-                        <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] rounded-lg transition-all">
+                        <button onClick={onClose} className="p-1.5 text-[#5E6068] hover:text-[#E8E8E8] hover:bg-[#1C1D24] transition-all">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -165,7 +165,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                     <div className="p-6 space-y-8">
                         {/* Current Workspace Display */}
                         <div className="flex items-center space-x-4 pb-6 border-b border-[#1A1C23]">
-                            <div className="w-14 h-14 bg-[#14151A] border border-[#22242A] rounded-xl flex items-center justify-center text-2xl shadow-inner">
+                            <div className="w-14 h-14 bg-[#14151A] border border-[#22242A] flex items-center justify-center text-2xl shadow-inner">
                                 {team.icon}
                             </div>
                             <div>
@@ -184,13 +184,13 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
-                                        className="flex-1 bg-[#14151A] border border-[#22242A] rounded-xl px-4 py-2.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 transition-all font-medium"
+                                        className="flex-1 bg-[#14151A] border border-[#22242A] px-4 py-2.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 transition-all font-medium"
                                         placeholder="Workspace name"
                                     />
                                     <button
                                         onClick={handleSaveName}
                                         disabled={isSaving || !name.trim() || name === team.name}
-                                        className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold rounded-xl transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase tracking-wider flex items-center space-x-1"
+                                        className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold transition-all disabled:opacity-20 disabled:cursor-not-allowed uppercase tracking-wider flex items-center space-x-1"
                                     >
                                         {isSaving ? (
                                             <span>Saving...</span>
@@ -211,8 +211,8 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                         {canManageWorkspace && (
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-[#5E6068] uppercase tracking-[0.2em] ml-1">Workspace Icon</label>
-                                <div className="flex items-center space-x-3 p-3 bg-[#14151A] border border-[#22242A] rounded-xl">
-                                    <div className="w-10 h-10 bg-[#0F1014] border border-[#1A1C23] rounded-lg flex items-center justify-center text-xl shrink-0">
+                                <div className="flex items-center space-x-3 p-3 bg-[#14151A] border border-[#22242A]">
+                                    <div className="w-10 h-10 bg-[#0F1014] border border-[#1A1C23] flex items-center justify-center text-xl shrink-0">
                                         {icon}
                                     </div>
                                     <div className="flex-1 grid grid-cols-12 gap-1">
@@ -275,13 +275,13 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                     {!showLeaveConfirm ? (
                                         <button
                                             onClick={() => setShowLeaveConfirm(true)}
-                                            className="w-full flex items-center justify-between px-4 py-2.5 text-[10px] font-medium text-[#5E6068] hover:text-[#8A8F98] hover:bg-[#14151A] rounded-lg transition-all group"
+                                            className="w-full flex items-center justify-between px-4 py-2.5 text-[10px] font-medium text-[#5E6068] hover:text-[#8A8F98] hover:bg-[#14151A] transition-all group"
                                         >
                                             <span className="uppercase tracking-wider">Leave Team</span>
                                             <LogOut className="w-3.5 h-3.5 text-[#3A3C46] group-hover:text-[#5E6068] transition-colors" />
                                         </button>
                                     ) : (
-                                        <div className="bg-[#14151A]/50 border border-[#22242A] rounded-xl p-4 space-y-3">
+                                        <div className="bg-[#14151A]/50 border border-[#22242A] p-4 space-y-3">
                                             <div className="flex items-center space-x-2">
                                                 <AlertTriangle className="w-4 h-4 text-[#E8E8E8]" />
                                                 <span className="text-[10px] font-bold text-[#E8E8E8] uppercase tracking-wider">Leaving Team</span>
@@ -296,7 +296,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                                 <button
                                                     onClick={handleLeaveTeam}
                                                     disabled={isLeavingTeam}
-                                                    className="flex-1 px-4 py-2 bg-[#25262B] hover:bg-[#2C2D35] text-[10px] font-bold text-[#8A8F98] hover:text-[#E8E8E8] rounded-lg transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    className="flex-1 px-4 py-2 bg-[#25262B] hover:bg-[#2C2D35] text-[10px] font-bold text-[#8A8F98] hover:text-[#E8E8E8] transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed"
                                                 >
                                                     {isLeavingTeam ? (
                                                         <>
@@ -310,7 +310,7 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                                 <button
                                                     onClick={() => setShowLeaveConfirm(false)}
                                                     disabled={isLeavingTeam}
-                                                    className="px-4 py-2 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] rounded-lg transition-all uppercase tracking-wider"
+                                                    className="px-4 py-2 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] transition-all uppercase tracking-wider"
                                                 >
                                                     Cancel
                                                 </button>
@@ -326,13 +326,13 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                     {!showDeleteConfirm ? (
                                         <button
                                             onClick={() => setShowDeleteConfirm(true)}
-                                            className="w-full flex items-center justify-between px-4 py-2.5 text-[10px] font-medium text-[#5E6068] hover:text-[#8A8F98] hover:bg-[#14151A] rounded-lg transition-all group"
+                                            className="w-full flex items-center justify-between px-4 py-2.5 text-[10px] font-medium text-[#5E6068] hover:text-[#8A8F98] hover:bg-[#14151A] transition-all group"
                                         >
                                             <span className="uppercase tracking-wider">Delete Workspace</span>
                                             <Trash2 className="w-3.5 h-3.5 text-[#3A3C46] group-hover:text-[#5E6068] transition-colors" />
                                         </button>
                                     ) : (
-                                        <div className="bg-[#14151A]/50 border border-[#22242A] rounded-xl p-4 space-y-3">
+                                        <div className="bg-[#14151A]/50 border border-[#22242A] p-4 space-y-3">
                                             <div className="flex items-center space-x-2">
                                                 <AlertTriangle className="w-4 h-4 text-red-400" />
                                                 <span className="text-[10px] font-bold text-red-400 uppercase tracking-wider">Delete Workspace</span>
@@ -344,14 +344,14 @@ export const WorkspaceSettingsModal: React.FC<WorkspaceSettingsModalProps> = ({
                                                 <button
                                                     onClick={handleDeleteWorkspace}
                                                     disabled={isDeleting}
-                                                    className="flex-1 px-4 py-2 bg-[#25262B] hover:bg-red-500/10 text-[10px] font-bold text-[#8A8F98] hover:text-red-400 rounded-lg transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed border border-[#22242A] hover:border-red-500/30"
+                                                    className="flex-1 px-4 py-2 bg-[#25262B] hover:bg-red-500/10 text-[10px] font-bold text-[#8A8F98] hover:text-red-400 transition-all uppercase tracking-wider disabled:opacity-50 disabled:cursor-not-allowed border border-[#22242A] hover:border-red-500/30"
                                                 >
                                                     {isDeleting ? 'Deleting...' : 'Confirm Delete'}
                                                 </button>
                                                 <button
                                                     onClick={() => setShowDeleteConfirm(false)}
                                                     disabled={isDeleting}
-                                                    className="px-4 py-2 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] rounded-lg transition-all uppercase tracking-wider"
+                                                    className="px-4 py-2 text-[10px] font-bold text-[#5E6068] hover:text-[#E8E8E8] transition-all uppercase tracking-wider"
                                                 >
                                                     Cancel
                                                 </button>

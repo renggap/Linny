@@ -222,7 +222,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.02 }}
                       className={cn(
-                        "absolute top-[10px] bottom-[10px] rounded-lg border px-3 flex items-center overflow-hidden transition-all z-10 cursor-pointer shadow-lg hover:brightness-110",
+                        "absolute top-[10px] bottom-[10px] border px-3 flex items-center overflow-hidden transition-all z-10 cursor-pointer shadow-lg hover:brightness-110",
                         isDone
                           ? "bg-[#1A1C23] border-[#2C2D35] text-[#5E6068]"
                           : "bg-accent border-accent text-white shadow-accent/10"
