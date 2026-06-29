@@ -78,6 +78,14 @@ const usersRoutes: FastifyPluginAsyncZod = async (fastify) => {
       return reply.code(403).send({ error: 'Team Leads cannot assign Administrator role' });
     }
 
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return reply.code(404).send({ error: 'User not found' });
+    }
+    if (targetUser.role === 'Administrator' && request.userRole !== 'Administrator') {
+      return reply.code(403).send({ error: 'Forbidden: Only Administrators can modify an Administrator' });
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: {
