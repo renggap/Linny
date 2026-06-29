@@ -225,8 +225,7 @@ Neo-Linear/
 │   │   ├── rateLimit.ts  # Rate limiting
 │   │   └── validation.ts # Request validation with Zod
 │   ├── websocket/        # WebSocket implementation
-│   │   ├── fastifyWebSocketServer.ts  # WebSocket manager
-│   │   └── fastifyWebSocketRoutes.ts  # WebSocket routes
+│   │   └── fastifyWebSocketRoutes.ts  # WebSocket routes + broadcast helpers
 │   ├── cache/            # Cache implementations
 │   │   └── redis.ts      # Redis client with graceful degradation
 │   ├── jobs/             # Background job queues

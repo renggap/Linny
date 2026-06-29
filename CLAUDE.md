@@ -118,13 +118,14 @@ The backend (`server/` directory) uses **Fastify** with a modular route structur
 - **Rate Limiting**: Configurable per-endpoint (100 req/15min API, higher in dev)
 - **Health Check**: `/api/health` endpoint with DB and Redis status
 
-**WebSocket** (`server/websocket/fastifyWebSocketServer.ts`):
+**WebSocket** (`server/websocket/fastifyWebSocketRoutes.ts`):
 - Uses `@fastify/websocket` plugin for native Fastify integration
-- Room-based broadcasting for real-time updates
+- Routes: `/ws/user`, `/ws/issue/:issueId`, `/ws/project/:projectId`
+- Stealth-team membership gate on issue/project rooms (Administrators bypass)
 - JWT authentication via query parameter token
-- Automatic reconnection support (client-side)
+- Room-based broadcasting via `broadcastIssueUpdate`, `broadcastCommentUpdate`, `broadcastNotification`, `broadcastProjectUpdate`, `broadcastNewIssue`, `broadcastJoinRequestCreated/Updated`
 - Used for live comment, notification, and issue updates
-- Singleton pattern with `createWebSocketManager()` and `getWebSocketManager()`
+- Frontend auto-reconnects (client-side `services/websocket.ts`)
 
 **Frontend WebSocket Integration**:
 - `services/websocket.ts` - WebSocket client with auto-reconnect
@@ -315,7 +316,7 @@ All types defined in `types.ts` including enums for `Status`, `Priority`, `UserR
 
 **WebSocket Real-time Updates**:
 To add real-time notifications for new features:
-1. Import helper functions from `server/websocket/fastifyWebSocketServer.ts`
+1. Import broadcaster helpers from `server/websocket/fastifyWebSocketRoutes.ts` (e.g., `broadcastIssueUpdate`, `broadcastNotification`)
 2. Frontend WebSocket client (`services/websocket.ts`) handles automatic reconnection
 3. Add cache update functions to `services/websocketQuerySync.ts`
 
