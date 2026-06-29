@@ -8,15 +8,16 @@ const src = fs.readFileSync(
 );
 
 describe('CSP FRONTEND_URL production guard', () => {
-  it('checks FRONTEND_URL when NODE_ENV is production', () => {
-    expect(src).toMatch(/process\.env\.NODE_ENV\s*===\s*['"]production['"]/);
-    expect(src).toMatch(/FRONTEND_URL/);
-    expect(src).toMatch(/process\.exit\(1\)/);
+  it('co-locates NODE_ENV=production, FRONTEND_URL, and process.exit(1) within one guard block', () => {
+    // Tight window — guard must be a small contiguous block, not scattered across the file.
+    // If someone removes the guard, this regex no longer matches.
+    const re = /process\.env\.NODE_ENV\s*===\s*['"]production['"][\s\S]{0,400}?FRONTEND_URL[\s\S]{0,400}?process\.exit\(1\)/;
+    expect(src).toMatch(re);
   });
 
-  it('logs a clear FATAL message mentioning FRONTEND_URL and CSP', () => {
-    const guardBlock = src.match(/process\.env\.NODE_ENV\s*===\s*['"]production['"][\s\S]*?process\.exit\(1\)/)?.[0] ?? '';
-    expect(guardBlock).toMatch(/FRONTEND_URL/);
-    expect(guardBlock).toMatch(/FATAL|required|CSP/i);
+  it('logs a FATAL message that mentions FRONTEND_URL within the guard block', () => {
+    // FATAL + FRONTEND_URL + exit(1) must all sit inside the same small block.
+    const re = /FATAL:[\s\S]{0,300}?FRONTEND_URL[\s\S]{0,300}?process\.exit\(1\)/;
+    expect(src).toMatch(re);
   });
 });
