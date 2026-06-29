@@ -173,6 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
             <NotificationPopover
               users={users}
               onOpenIssue={onOpenIssueFromNotification}
+              onClose={() => setNotificationOpen(false)}
             />
           )}
         </div>
