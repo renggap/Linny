@@ -36,10 +36,22 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
     const calendarRef = useRef<HTMLDivElement>(null);
 
     const updateCoords = () => {
-        if (containerRef.current) {
-            const rect = containerRef.current.getBoundingClientRect();
-            setCoords({ top: rect.bottom + 8, left: rect.left });
-        }
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const calendarWidth = 256; // w-64
+        const calendarHeight = 320; // approx: header + day grid + padding
+        const margin = 8;
+
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const openAbove = spaceBelow < calendarHeight + margin && rect.top > calendarHeight + margin;
+
+        const maxLeft = window.innerWidth - calendarWidth - margin;
+        const left = Math.max(margin, Math.min(rect.left, maxLeft));
+
+        setCoords({
+            top: openAbove ? rect.top - calendarHeight - margin : rect.bottom + margin,
+            left,
+        });
     };
 
     useEffect(() => {
