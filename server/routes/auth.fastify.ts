@@ -62,13 +62,14 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     config: { rateLimit: { max: 5, timeWindow: '1 hour' } }
   }, async (request: any, reply: any) => {
     const { name, email, password } = request.body;
+    const normalizedEmail = email.toLowerCase();
 
     const passwordValidation = validatePasswordStrength(password);
     if (!passwordValidation.valid) {
       return reply.code(400).send({ error: 'Password does not meet requirements', details: passwordValidation.errors });
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findUnique({ where: { email: normalizedEmail } });
     if (existingUser) {
       return reply.code(409).send({ error: 'Email already registered' });
     }
@@ -81,7 +82,7 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const newUser = await prisma.user.create({
       data: {
         name,
-        email,
+        email: normalizedEmail,
         passwordHash,
         avatarUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=random`,
         role,
@@ -159,45 +160,32 @@ const authRoutes: FastifyPluginAsyncZod = async (fastify) => {
       body: z.object({})
     }
   }, async (request: any, reply: any) => {
-    console.log('[auth.refresh] Request received');
     const refreshToken = request.cookies['refreshToken'];
-    console.log('[auth.refresh] Cookie:', refreshToken ? 'exists' : 'missing');
 
     if (!refreshToken) {
-      console.log('[auth.refresh] No token, returning 401');
       return reply.code(401).send({ error: 'Refresh token not found' });
     }
 
     try {
-      console.log('[auth.refresh] Verifying JWT...');
       const decoded = fastify.jwt.verify(refreshToken) as any;
-      console.log('[auth.refresh] JWT decoded:', decoded.userId);
 
-      console.log('[auth.refresh] Looking up token in database...');
       const storedToken = await prisma.refreshToken.findUnique({
         where: { token: refreshToken }
       });
-      console.log('[auth.refresh] Stored token found:', !!storedToken);
 
       if (!storedToken || storedToken.expiresAt < new Date()) {
-        console.log('[auth.refresh] Token invalid or expired');
         if (storedToken) await prisma.refreshToken.delete({ where: { id: storedToken.id } });
         return reply.code(401).send({ error: 'Invalid or expired refresh token' });
       }
 
-      console.log('[auth.refresh] Finding user...');
       const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
       if (!user) {
-        console.log('[auth.refresh] User not found');
         return reply.code(401).send({ error: 'User not found' });
       }
 
-      console.log('[auth.refresh] User found, deleting old token...');
       await prisma.refreshToken.delete({ where: { id: storedToken.id } });
-      console.log('[auth.refresh] Sending auth response...');
       return sendAuthResponse(reply, user);
     } catch (err) {
-      console.log('[auth.refresh] Error:', err);
       fastify.log.error({ err }, 'Refresh token error');
       return reply.code(401).send({ error: 'Invalid or expired refresh token' });
     }

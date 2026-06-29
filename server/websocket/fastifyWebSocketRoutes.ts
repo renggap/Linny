@@ -269,7 +269,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         }
 
         const teamId = issue.project.teamId;
-        if (issue.project.team?.isStealth) {
+        if (issue.project.team?.isStealth && ws.userRole !== 'Administrator') {
             const membership = await fastify.prisma.teamMember.findUnique({
                 where: { teamId_userId: { teamId, userId: ws.userId } }
             });
@@ -364,7 +364,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
             return;
         }
 
-        if (project.team?.isStealth) {
+        if (project.team?.isStealth && ws.userRole !== 'Administrator') {
             const membership = await fastify.prisma.teamMember.findUnique({
                 where: { teamId_userId: { teamId: project.teamId, userId: ws.userId } }
             });

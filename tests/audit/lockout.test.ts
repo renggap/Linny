@@ -37,4 +37,14 @@ describe('account lockout state machine', () => {
     for (let i = 0; i < 4; i++) recordFailedAttempt('lockout-test@example.com');
     expect(isAccountLocked('lockout-test@example.com')).toBe(false);
   });
+
+  it('cleanup interval is unrefed so process can exit cleanly', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../server/middleware/accountLockout.ts'),
+      'utf8'
+    );
+    expect(src).toMatch(/\.unref\(\)/);
+  });
 });

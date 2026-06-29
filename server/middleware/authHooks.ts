@@ -103,10 +103,36 @@ export async function requireTeamAccess(request: FastifyRequest, reply: FastifyR
 }
 
 /**
- * @deprecated Use requireTeamAccess instead
- * This alias is kept for backward compatibility
+ * Strict team membership hook.
+ * Denies non-members for BOTH stealth and non-stealth teams.
+ * Administrators always bypass.
+ *
+ * Use this for state-changing operations (PATCH, DELETE) on team resources.
+ * Use requireTeamAccess for read operations where non-stealth visibility applies.
  */
-export const requireTeamMember = requireTeamAccess;
+export async function requireTeamMember(request: FastifyRequest, reply: FastifyReply) {
+  await authenticate(request, reply);
+  const { prisma } = request.server as any;
+  const params = request.params as any;
+  const body = request.body as any;
+  const teamId = params.teamId || params.id || (body && body.teamId);
+
+  if (!teamId) {
+    return reply.code(400).send({ error: 'Team ID is required' });
+  }
+
+  if ((request.userRole as any) === 'Administrator') {
+    return;
+  }
+
+  const membership = await prisma.teamMember.findUnique({
+    where: { teamId_userId: { teamId, userId: request.userId } }
+  });
+
+  if (!membership) {
+    return reply.code(403).send({ error: 'Forbidden: Team membership required' });
+  }
+}
 
 /**
  * Project member hook

@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { createTeamSchema } from '../validation/schemas.js';
-import { authenticate, requireAdminOrTeamLead, requireTeamMember, requireAdmin, requireTeamAdminOrTeamLead } from '../middleware/authHooks.js';
+import { authenticate, requireAdminOrTeamLead, requireTeamMember, requireTeamAccess, requireAdmin, requireTeamAdminOrTeamLead } from '../middleware/authHooks.js';
 
 const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;
@@ -148,7 +148,7 @@ const teamsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   });
 
   fastify.get('/:id/members', {
-    onRequest: [requireTeamMember],
+    onRequest: [requireTeamAccess],
     schema: {
       params: z.object({ id: z.string() })
     }

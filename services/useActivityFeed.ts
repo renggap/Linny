@@ -1,5 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Comment, Notification } from '../types';
+import { activityKeys } from './queryKeys';
+import { useUIStore } from '../stores/uiStore';
 
 /**
  * Activity Feed is DERIVED server state.
@@ -66,9 +68,10 @@ function mergeAndSort(
  */
 export function useActivityFeed() {
   const queryClient = useQueryClient();
+  const currentTeamId = useUIStore(state => state.currentTeamId);
 
   return useQuery({
-    queryKey: ['activity'],
+    queryKey: currentTeamId ? activityKeys.all(currentTeamId) : ['activity', 'no-team'],
     queryFn: () => {
       // Read from existing query caches
       const allCommentQueries = queryClient.getQueriesData({
@@ -96,6 +99,6 @@ export function useActivityFeed() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     // Disable automatic refetching - we handle refetching via invalidation
-    enabled: true,
+    enabled: !!currentTeamId,
   });
 }
