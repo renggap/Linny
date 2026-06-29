@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { X, Settings, Trash2, AlertTriangle, Check, Eye, EyeOff, LogOut, Activity } from 'lucide-react';
 import { Team, User, UserRole } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
 
 interface WorkspaceSettingsModalProps {

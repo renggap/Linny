@@ -13,12 +13,12 @@ import {
     CheckCircle2,
     EyeOff,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { ActivityFeed } from './ActivityFeed';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-import { Variants } from 'framer-motion';
+import { Variants } from 'motion/react';
 
 // Utility for merging tailwind classes
 function cn(...inputs: ClassValue[]) {

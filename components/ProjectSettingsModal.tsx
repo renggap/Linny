@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Globe, Lock, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Layout, Trash2, AlertTriangle } from 'lucide-react';
 import { Project, User, UserRole } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

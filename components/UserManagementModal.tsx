@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { X, Shield, Trash2, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, Crown, Loader2 } from 'lucide-react';
 import { User, UserRole, Team } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
 import { UserAvatar } from './UserAvatar';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';

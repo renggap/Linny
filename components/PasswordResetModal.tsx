@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Mail, ArrowRight, Loader2, CheckCircle } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { authApi } from '../services/api';
 
 interface PasswordResetModalProps {

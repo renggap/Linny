@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { X, User as UserIcon, Mail, ShieldCheck, Lock, Activity, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { User, Team } from '../types';
 import { UserAvatar } from './UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
 import { cn } from '../lib/utils';
 

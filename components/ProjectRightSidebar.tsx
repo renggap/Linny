@@ -6,7 +6,7 @@ import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { UserAvatar } from './UserAvatar';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

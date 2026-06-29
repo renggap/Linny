@@ -5,7 +5,7 @@ import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
 import { Link } from '@tanstack/react-router';
 import { ExternalLink, Lock, Hash, Layout, Terminal, ArrowRight, Heart, Grid3x3 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion } from 'motion/react';
 import { cn } from '../lib/utils';
 import { renderMentionsWithBadges, hasMentions } from '../services/mentionUtils';
 

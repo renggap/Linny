@@ -7,7 +7,7 @@ import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
 import { MentionInput } from './MentionInput';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { renderMentionsWithBadges } from '../services/mentionUtils';
 

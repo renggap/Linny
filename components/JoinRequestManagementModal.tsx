@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { X, Users, UserPlus, Check, X as XIcon, Clock, User } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useJoinRequests } from '../hooks/useJoinRequests';
 import { useApproveJoinRequest, useRejectJoinRequest } from '../hooks/useJoinRequests';
 import { JoinRequest } from '../types';

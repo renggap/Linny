@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { StatusIcon } from './Icons';
 import { Team, User, UserRole, Status } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { UserAvatar } from './UserAvatar';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';

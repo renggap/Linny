@@ -13,7 +13,7 @@ import {
     Layout,
     User as UserIcon
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { renderMentionsWithBadges, hasMentions } from '../services/mentionUtils';

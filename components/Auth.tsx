@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Terminal, Shield, Cpu, Activity, ArrowRight, Lock, Mail, User as UserIcon, Heart } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { PasswordResetModal } from './PasswordResetModal';
 
 export const Auth: React.FC = () => {

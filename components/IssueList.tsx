@@ -16,7 +16,7 @@ import {
   ArrowRight
 } from 'lucide-react'; // Standard icons from lucide-react
 import { UserAvatar } from './UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 

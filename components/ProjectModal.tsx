@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Hash, Layout, ArrowRight } from 'lucide-react';
 import { Team } from '../types';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface ProjectModalProps {
   isOpen: boolean;

@@ -4,7 +4,7 @@ import { Issue, Status, User, Priority } from '../types';
 import { StatusIcon, PriorityIcon, Trash2, Calendar, Plus } from './Icons';
 import { UserCircle } from 'lucide-react';
 import { UserAvatar } from './UserAvatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
