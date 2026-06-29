@@ -54,4 +54,11 @@ describe('WebSocket team-membership gate', () => {
     expect(issueBlock).toMatch(/isStealth/);
     expect(projectBlock).toMatch(/isStealth/);
   });
+
+  it('both handlers bypass the membership check for Administrators', () => {
+    const issueBlock = extractHandler('/ws/issue/:issueId');
+    const projectBlock = extractHandler('/ws/project/:projectId');
+    expect(issueBlock).toMatch(/ws\.userRole\s*!==\s*['"]Administrator['"]/);
+    expect(projectBlock).toMatch(/ws\.userRole\s*!==\s*['"]Administrator['"]/);
+  });
 });
