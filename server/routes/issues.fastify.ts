@@ -23,6 +23,18 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
       });
     }
 
+    // Membership gate: deny non-members unless Administrator
+    if (request.userRole !== 'Administrator') {
+      const membership = await prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId, userId: request.userId } }
+      });
+      if (!membership) {
+        return reply.code(403).send({
+          error: 'Forbidden: You are not a member of this team'
+        });
+      }
+    }
+
     const skip = (page - 1) * limit;
 
     const where: any = {};

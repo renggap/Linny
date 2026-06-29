@@ -80,8 +80,20 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     schema: {
       querystring: workspaceScopeSchema.pick({ teamId: true }) // Require teamId
     }
-  }, async (request: any) => {
+  }, async (request: any, reply: any) => {
     const { teamId } = request.query;
+
+    // Membership gate: deny non-members unless Administrator
+    if (request.userRole !== 'Administrator') {
+      const membership = await prisma.teamMember.findUnique({
+        where: { teamId_userId: { teamId, userId: request.userId } }
+      });
+      if (!membership) {
+        return reply.code(403).send({
+          error: 'Forbidden: You are not a member of this team'
+        });
+      }
+    }
 
     const projects = await prisma.project.findMany({
       where: { teamId },
