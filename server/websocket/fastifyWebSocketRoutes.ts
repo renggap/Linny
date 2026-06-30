@@ -230,6 +230,7 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
 
     // Join-requests room WebSocket route
     // Used by team admins/leads to receive real-time join_request.created / .updated events.
+    // DEFENSE IN DEPTH: frontend also gates subscription on isGlobalAdministrator.
     fastify.get('/ws/join-requests', {
         websocket: true,
         logLevel: 'warn',
@@ -248,6 +249,15 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         ws.userId = authResult.userId!;
         ws.userEmail = authResult.userEmail!;
         ws.userRole = authResult.userRole!;
+
+        // Authorization: only global admins may join the broadcast room.
+        // Team-lead real-time push is intentionally not supported yet —
+        // team leads refetch on view via TanStack Query.
+        if (ws.userRole !== 'Administrator') {
+            console.warn(`⛔ /ws/join-requests rejected non-admin: ${ws.userEmail} (role=${ws.userRole})`);
+            ws.close(1008, 'Forbidden: administrator role required');
+            return;
+        }
 
         // Track user connection
         if (!trackUserConnection(ws.userId, ws)) {

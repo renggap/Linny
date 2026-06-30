@@ -116,12 +116,11 @@ interface TokenResponse {
   refreshToken: string;
 }
 
-// Access token is stored in memory only for security (XSS prevention)
-// The httpOnly refresh token cookie handles persistence across page reloads.
-// The access token is also mirrored to localStorage so that page reloads don't
-// trigger a 401 → refresh round-trip on every cold load (eliminates console
-// noise from parallel queries firing before the refresh resolves).
+// Access token lives in memory + localStorage mirror for reload persistence.
+// XSS tradeoff accepted by design — see audit/access-token-persistence.test.ts.
+// httpOnly refresh-cookie stays the long-lived credential.
 const TOKEN_STORAGE_KEY = 'neo_linear_access_token';
+const LEGACY_TOKEN_STORAGE_KEYS = ['linear_clone_access_token']; // pre-rebrand orphans
 
 function readTokenFromStorage(): string | null {
   if (typeof window === 'undefined') return null;
@@ -132,21 +131,26 @@ function readTokenFromStorage(): string | null {
   }
 }
 
-function writeTokenToStorage(token: string): void {
-  if (typeof window === 'undefined') return;
+function writeTokenToStorage(token: string): boolean {
+  if (typeof window === 'undefined') return false;
   try {
     window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-  } catch {
-    // Storage full / disabled — fall back to memory-only
+    return true;
+  } catch (e) {
+    // Quota exceeded / private mode / disabled storage — memory-only fallback.
+    console.warn('[api] localStorage.setItem failed; falling back to memory-only token:', e);
+    return false;
   }
 }
 
 function removeTokenFromStorage(): void {
   if (typeof window === 'undefined') return;
-  try {
-    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
-  } catch {
-    // no-op
+  for (const key of [TOKEN_STORAGE_KEY, ...LEGACY_TOKEN_STORAGE_KEYS]) {
+    try {
+      window.localStorage.removeItem(key);
+    } catch {
+      // no-op — storage may be disabled
+    }
   }
 }
 
@@ -157,6 +161,17 @@ let refreshPromise: Promise<boolean> | null = null;
 // Global auth failure callbacks - triggered when refresh completely fails
 let authFailureCallbacks: Array<() => void> = [];
 
+// Cross-tab logout sync: when another tab removes the token, clear ours too.
+// Without this, logout in tab A leaves tab B's in-memory token alive until 401.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (event) => {
+    if (event.key === TOKEN_STORAGE_KEY && event.newValue === null && accessToken) {
+      console.log('[api] storage event: token cleared in another tab, clearing local');
+      accessToken = null;
+    }
+  });
+}
+
 /**
  * Register a callback to be invoked when authentication completely fails
  * (e.g., refresh token is invalid/expired). This allows the app to
@@ -164,17 +179,15 @@ let authFailureCallbacks: Array<() => void> = [];
  */
 export function onAuthFailure(callback: () => void): () => void {
   authFailureCallbacks.push(callback);
-  // Return unsubscribe function
   return () => {
     authFailureCallbacks = authFailureCallbacks.filter(cb => cb !== callback);
   };
 }
 
-/**
- * Trigger all registered auth failure callbacks.
- * Called when token refresh completely fails.
- */
 function triggerAuthFailure(): void {
+  // Refresh truly failed — clear tokens so the next request doesn't loop
+  // sending a known-bad bearer and retriggering the failed refresh.
+  clearTokens();
   authFailureCallbacks.forEach(cb => {
     try {
       cb();

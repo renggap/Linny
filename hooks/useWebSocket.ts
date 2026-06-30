@@ -3,21 +3,31 @@ import { websocketService } from '../services/websocket';
 import { setupAllWebSocketSync, cleanupAllWebSocketSync } from '../services/websocketQuerySync';
 import { useAuth } from '../contexts/AuthContext';
 import { useUIStore } from '../stores/uiStore';
+import { isGlobalAdministrator } from '../lib/roleUtils';
 
 export function useWebSocket() {
   const { isAuthenticated, user: currentUser } = useAuth();
   const { isIssueModalOpen, editingIssue, selectedProjectId } = useUIStore();
 
-  // Main WebSocket connection - connect to user notifications + join-requests when authenticated
+  // Main WebSocket connection - user notifications always; join-requests only for admins
+  // (route broadcasts to a global room, so non-admins would leak other teams' applicant PII)
   useEffect(() => {
     if (isAuthenticated && currentUser) {
       websocketService.subscribe(`user:${currentUser.id}`);
-      websocketService.subscribe('join-requests');
+      // Only global admins subscribe to the join-requests room — broadcasts are
+      // unfiltered and would leak applicant PII across teams to non-admins.
+      // Team leads fall back to refetch on view (TanStack Query).
+      const canSeeJoinRequests = isGlobalAdministrator(currentUser);
+      if (canSeeJoinRequests) {
+        websocketService.subscribe('join-requests');
+      }
       setupAllWebSocketSync();
 
       return () => {
         websocketService.unsubscribe(`user:${currentUser.id}`);
-        websocketService.unsubscribe('join-requests');
+        if (canSeeJoinRequests) {
+          websocketService.unsubscribe('join-requests');
+        }
         cleanupAllWebSocketSync();
       };
     }

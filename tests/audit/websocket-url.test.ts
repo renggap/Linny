@@ -31,8 +31,6 @@ describe('production URL fallback (no hardcoded localhost)', () => {
 
 describe('join-requests WebSocket route', () => {
   it('frontend maps join-requests room to /ws/join-requests (no path param)', () => {
-    // Bug: subscribe('join-requests') produced /ws/join-requests/undefined because
-    // getRoomUrl always appended roomParam. noParamRooms handles rooms with no :id.
     const fnBlock = wsSrc.match(/private getRoomUrl[\s\S]*?^\s{4}\}/m)?.[0] ?? '';
     expect(fnBlock).toMatch(/noParamRooms/);
     expect(fnBlock).toMatch(/'user',\s*'join-requests'/);
@@ -41,5 +39,22 @@ describe('join-requests WebSocket route', () => {
   it('backend exposes /ws/join-requests route', () => {
     expect(wsServerSrc).toMatch(/fastify\.get\(['"]\/ws\/join-requests['"]/);
     expect(wsServerSrc).toMatch(/const roomId = ['"]join-requests['"]/);
+  });
+
+  it('frontend gates join-requests subscription on isGlobalAdministrator', () => {
+    // Security: route broadcasts to a global room with no team filter, so
+    // subscribing non-admins would leak applicant PII across teams.
+    const useWsSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../hooks/useWebSocket.ts'),
+      'utf8'
+    );
+    expect(useWsSrc).toMatch(/isGlobalAdministrator/);
+    // The subscribe('join-requests') call must be inside a role-gated branch.
+    expect(useWsSrc).toMatch(/canSeeJoinRequests\s*=\s*isGlobalAdministrator/);
+  });
+
+  it('backend rejects non-admin connections to /ws/join-requests', () => {
+    // Defense in depth: frontend gate can be bypassed by crafted WS upgrade.
+    expect(wsServerSrc).toMatch(/ws\.userRole !== ['"]Administrator['"]/);
   });
 });
