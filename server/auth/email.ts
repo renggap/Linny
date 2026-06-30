@@ -149,18 +149,18 @@ export function generateVerificationEmailHTML(token: string): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Neo Linear</h1>
+          <h1>Linny</h1>
         </div>
         <div class="content">
-          <h2>Verifikasi Email Kakak</h2>
-          <p>Makasih sudah daftar! Tolong verifikasi email kakak dengan klik tombol di bawah ini ya:</p>
-          <center><a href="${verifyUrl}" class="button">Verifikasi Email</a></center>
-          <p>Atau copy-paste link ini ke browser kakak:</p>
+          <h2>Verify Your Email</h2>
+          <p>Thanks for signing up! Please verify your email by clicking the button below:</p>
+          <center><a href="${verifyUrl}" class="button">Verify Email</a></center>
+          <p>Or copy and paste this link into your browser:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${verifyUrl}</p>
-          <p>Link ini bakal kadaluarsa dalam 24 jam.</p>
+          <p>This link will expire in 24 hours.</p>
         </div>
         <div class="footer">
-          <p>Kalau kakak nggak bikin akun, bisa diabaikan aja email ini.</p>
+          <p>If you did not create an account, you can safely ignore this email.</p>
         </div>
       </div>
     </body>
@@ -191,18 +191,18 @@ export function generatePasswordResetEmailHTML(token: string): string {
     <body>
       <div class="container">
         <div class="header">
-          <h1>Neo Linear</h1>
+          <h1>Linny</h1>
         </div>
         <div class="content">
-          <h2>Reset Password Kakak</h2>
-          <p>Kami ada request buat reset password kakak. Klik tombol di bawah ini buat bikin password baru:</p>
+          <h2>Reset Your Password</h2>
+          <p>We received a request to reset your password. Click the button below to set a new password:</p>
           <center><a href="${resetUrl}" class="button">Reset Password</a></center>
-          <p>Atau copy-paste link ini ke browser kakak:</p>
+          <p>Or copy and paste this link into your browser:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${resetUrl}</p>
-          <p>Link ini bakal kadaluarsa dalam 1 jam.</p>
+          <p>This link will expire in 1 hour.</p>
         </div>
         <div class="footer">
-          <p>Kalau kakak nggak request reset password, bisa diabaikan aja email ini.</p>
+          <p>If you did not request a password reset, you can safely ignore this email.</p>
         </div>
       </div>
     </body>
@@ -232,24 +232,24 @@ export function generate2FASetupEmailHTML(secret: string, backupCodes: string[])
     <body>
       <div class="container">
         <div class="header">
-          <h1>Neo Linear</h1>
+          <h1>Linny</h1>
         </div>
         <div class="content">
-          <h2>Setup Autentikasi Dua Faktor</h2>
-          <p>Scan QR code ini pake authenticator app kakak:</p>
+          <h2>Set Up Two-Factor Authentication</h2>
+          <p>Scan this QR code with your authenticator app:</p>
           <div class="code">${secret}</div>
-          <p>Atau masukin kode ini manual:</p>
+          <p>Or enter this code manually:</p>
           <div class="code">${secret}</div>
           <div class="backup-codes">
-            <h3>⚠️ Simpan Kode Backup Ini</h3>
-            <p>Simpan kode-kode ini di tempat aman. Kakak bisa pake ini kalau sewaktu-waktu nggak bisa akses authenticator app:</p>
+            <h3>⚠️ Save These Backup Codes</h3>
+            <p>Store these codes in a safe place. You can use them if you ever lose access to your authenticator app:</p>
             <ul>
               ${backupCodes.map(code => `<li>${code}</li>`).join('')}
             </ul>
           </div>
         </div>
         <div class="footer">
-          <p>Simpan kode-kode ini dengan aman ya kak. Setiap kode cuma bisa dipake sekali aja.</p>
+          <p>Keep these codes safe. Each code can only be used once.</p>
         </div>
       </div>
     </body>
@@ -280,20 +280,20 @@ export function generateInvitationEmailHTML(teamName: string, role: string, invi
     <body>
       <div class="container">
         <div class="header">
-          <h1>Neo Linear</h1>
+          <h1>Linny</h1>
         </div>
         <div class="content">
-          <h2>Kakak Diundang ke ${teamName}</h2>
-          <p>Kakak udah diundang buat gabung ke team <strong>${teamName}</strong> sebagai <strong>${role}</strong>.</p>
-          <p>Untuk terima undangan ini dan gabung ke workspace, klik tombol di bawah ini ya:</p>
+          <h2>You're Invited to ${teamName}</h2>
+          <p>You've been invited to join the <strong>${teamName}</strong> team as <strong>${role}</strong>.</p>
+          <p>To accept this invitation and join the workspace, click the button below:</p>
           <center><a href="${inviteUrl}" class="button">Terima Undangan</a></center>
           <p>Atau copy-paste link ini ke browser kakak:</p>
           <p style="word-break: break-all; color: #5E6AD2;">${inviteUrl}</p>
-          <p>Undangan ini bakal kadaluarsa dalam 7 hari.</p>
+          <p>This invitation will expire in 7 days.</p>
         </div>
         <div class="footer">
-          <p>Kalau kakak belum punya akun, bisa bikin dulu setelah klik link tadi.</p>
-          <p>Kalau kakak nggak ngira ada undangan ini, bisa diabaikan aja.</p>
+          <p>If you don't have an account yet, you can create one after clicking the link above.</p>
+          <p>If you were not expecting this invitation, you can safely ignore this email.</p>
         </div>
       </div>
     </body>

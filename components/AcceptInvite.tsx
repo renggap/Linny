@@ -121,7 +121,7 @@ export const AcceptInvite: React.FC = () => {
           <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white text-center mb-2">Undangan Diterima!</h1>
           <p className="text-[#DEDEDE] text-center mb-2">
-            Kakak sekarang anggota team <strong>{invitation?.team.name}</strong>
+            You are now a member of <strong>{invitation?.team.name}</strong>
           </p>
           <p className="text-[#9CA3AF] text-center text-sm">
             Mengalihkan ke workspace...
@@ -138,7 +138,7 @@ export const AcceptInvite: React.FC = () => {
           <Mail className="w-16 h-16 text-accent mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-white text-center mb-2">Undangan ke Team</h1>
           <p className="text-[#DEDEDE] text-center mb-6">
-            Kakak diundang gabung ke <strong>{invitation?.team.name}</strong> sebagai <strong>{invitation?.role}</strong>
+            You've been invited to join <strong>{invitation?.team.name}</strong> as <strong>{invitation?.role}</strong>
           </p>
 
           <div className="bg-[#1E1F24] p-4 mb-6">
@@ -153,7 +153,7 @@ export const AcceptInvite: React.FC = () => {
             Daftar & Gabung Team
           </button>
           <p className="text-xs text-[#9CA3AF] text-center">
-            Atau login kalau kakak udah punya akun
+            Or log in if you already have an account
           </p>
         </div>
       </div>
@@ -166,7 +166,7 @@ export const AcceptInvite: React.FC = () => {
         <Mail className="w-16 h-16 text-accent mx-auto mb-4" />
         <h1 className="text-2xl font-bold text-white text-center mb-2">Undangan ke Team</h1>
         <p className="text-[#DEDEDE] text-center mb-6">
-          Kakak diundang gabung ke <strong>{invitation?.team.name}</strong> sebagai <strong>{invitation?.role}</strong>
+          You've been invited to join <strong>{invitation?.team.name}</strong> as <strong>{invitation?.role}</strong>
         </p>
 
         <button

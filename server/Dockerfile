@@ -1,5 +1,5 @@
 # =====================================================
-# Neo Linear Backend - Production Dockerfile
+# Linny Backend - Production Dockerfile
 # =====================================================
 # Build arguments - passed from docker-compose or Easypanel
 ARG DATABASE_URL

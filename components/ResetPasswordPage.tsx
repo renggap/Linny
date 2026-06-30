@@ -20,7 +20,7 @@ export const ResetPasswordPage: React.FC = () => {
     setToken(tokenParam);
 
     if (!tokenParam) {
-      setError('Link reset nggak valid atau udah kadaluarsa kak');
+      setError('The reset link is invalid or has expired.');
     }
   }, []);
 
@@ -29,7 +29,7 @@ export const ResetPasswordPage: React.FC = () => {
     setError('');
 
     if (!token) {
-      setError('Link reset nggak valid atau udah kadaluarsa kak');
+      setError('The reset link is invalid or has expired.');
       return;
     }
 

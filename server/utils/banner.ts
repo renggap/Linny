@@ -1,5 +1,5 @@
 /**
- * Neo Linear ASCII Art Banner - Desk Lamp
+ * Linny ASCII Art Banner - Desk Lamp
  */
 
 export const BANNER = `

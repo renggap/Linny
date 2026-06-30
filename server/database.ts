@@ -1,5 +1,5 @@
 /**
- * Neo Linear Database Manager
+ * Linny Database Manager
  *
  * Refactored to use Prisma ORM with PostgreSQL instead of SQLite/sql.js.
  *

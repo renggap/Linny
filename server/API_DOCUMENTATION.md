@@ -1,8 +1,8 @@
-# Neo Linear API Documentation
+# Linny API Documentation
 
 ## Overview
 
-This document provides comprehensive documentation for all API endpoints in the Neo Linear application. All endpoints follow RESTful conventions and use JSON for request/response bodies.
+This document provides comprehensive documentation for all API endpoints in the Linny application. All endpoints follow RESTful conventions and use JSON for request/response bodies.
 
 ## Base URL
 

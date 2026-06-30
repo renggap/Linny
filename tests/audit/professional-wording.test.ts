@@ -71,4 +71,45 @@ describe('professional wording (no cyberpunk/creative terms)', () => {
     expect(src).toMatch(/you@example.com/);
     expect(src).not.toMatch(/address@nodex/);
   });
+
+  it('no Indonesian wording remains (Lupa Password, Halo Kak, etc.)', () => {
+    const files = [
+      'components/Auth.tsx',
+      'components/PasswordResetModal.tsx',
+      'components/ResetPasswordPage.tsx',
+      'server/auth/email.ts',
+      'server/test-email.ts'
+    ];
+    for (const rel of files) {
+      const src = read(rel);
+      expect(src).not.toMatch(/Lupa Password/);
+      expect(src).not.toMatch(/Halo Kak/);
+      expect(src).not.toMatch(/Ini adalah/);
+      expect(src).not.toMatch(/Kalau kakak/);
+    }
+  });
+
+  it('app is branded "Linny" — no Neo Linear or Linear mentions in user-facing text', () => {
+    const files = [
+      'components/Auth.tsx',
+      'components/PublicProjectView.tsx',
+      'components/PasswordResetModal.tsx',
+      'components/ResetPasswordPage.tsx',
+      'index.html',
+      'utils/consoleBanner.ts',
+      'server/auth/email.ts',
+      'server/test-email.ts'
+    ];
+    for (const rel of files) {
+      const src = read(rel);
+      // "Neo Linear" must not appear
+      expect(src).not.toMatch(/Neo Linear/);
+      // ">Linear<" catches the old h1 "Linear" heading
+      expect(src).not.toMatch(/>Linear</);
+    }
+
+    // Positive: index title is Linny, console banner says Linny
+    expect(read('index.html')).toMatch(/<title>Linny</);
+    expect(read('utils/consoleBanner.ts')).toMatch(/Linny/);
+  });
 });

@@ -231,7 +231,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 <div className="flex items-center space-x-2">
                     <Heart className="w-3 h-3 text-red-500 fill-red-500" />
                     <p className="text-[9px] text-[#5E6068] font-bold uppercase tracking-widest">
-                        Made with Love by Neo Digital
+                        Made with love by Linny Team
                     </p>
                 </div>
                 <div className="flex items-center space-x-4">

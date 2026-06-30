@@ -1,4 +1,4 @@
-# Neo Linear - Project Management Application
+# Linny - Project Management Application
 
 A modern, full-stack project management application built as an enhanced version of Linear, featuring issue tracking, team collaboration, multiple view modes, and real-time updates.
 

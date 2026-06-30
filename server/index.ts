@@ -1,5 +1,5 @@
 /**
- * Neo Linear Server - Fastify Implementation
+ * Linny Server - Fastify Implementation
  *
  * Migrated from Express to Fastify for improved performance and Redis caching.
  *
@@ -500,7 +500,7 @@ async function startServer() {
 
     // Server startup info (only show in development or with banner)
     if (isDevelopment || process.env.SHOW_BANNER === 'true') {
-      console.log(`\n🚀 Neo Linear Server running on http://localhost:${PORT}`);
+      console.log(`\n🚀 Linny Server running on http://localhost:${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
       console.log(`🔐 JWT Secret: ${process.env.JWT_SECRET ? 'configured' : 'WARNING: using default!'}`);
       console.log(`🔒 Security: Helmet, CORS, CSRF, Rate Limiting enabled`);
@@ -509,7 +509,7 @@ async function startServer() {
       console.log(`🔴 Redis: ${getRedisClient().isReady() ? 'Connected' : 'Not connected'}`);
     } else {
       // Production: minimal logging
-      fastify.log.info(`Neo Linear server started on port ${PORT}`);
+      fastify.log.info(`Linny server started on port ${PORT}`);
     }
 
     // Schedule periodic background jobs

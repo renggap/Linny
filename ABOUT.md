@@ -1,4 +1,4 @@
-# Neo Linear Project Analysis
+# Linny Project Analysis
 
 ## Overview
 This is a full-stack project management application built as a clone of Linear, featuring issue tracking, team collaboration, and multiple view modes. The application is built with React 19 + TypeScript on the frontend and Node.js + Express + SQLite on the backend.

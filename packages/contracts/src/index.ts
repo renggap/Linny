@@ -1,7 +1,7 @@
 /**
- * Neo Linear Contracts
+ * Linny Contracts
  *
- * Shared contracts, schemas, and types for Neo Linear.
+ * Shared contracts, schemas, and types for Linny.
  * Provides runtime validation (Zod) and compile-time type safety (TypeScript).
  *
  * @packageDocumentation

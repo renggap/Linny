@@ -13,7 +13,7 @@ export const MOCK_TEAMS: Team[] = [
 ];
 
 export const MOCK_PROJECTS: Project[] = [
-  { id: 'p1', name: 'Neo Linear', identifier: 'NEO', icon: '⚡', teamId: 't1', isPublic: true, publicSlug: 'neo-linear' },
+  { id: 'p1', name: 'Linny', identifier: 'LIN', icon: '⚡', teamId: 't1', isPublic: true, publicSlug: 'linny' },
   { id: 'p2', name: 'Mobile App', identifier: 'MOB', icon: '📱', teamId: 't1' },
   { id: 'p3', name: 'Q3 Roadmap', identifier: 'Q3R', icon: '🗺️', teamId: 't2' },
   { id: 'p4', name: 'Public Demo', identifier: 'PUB', icon: '🌐', teamId: 't1', isPublic: true, publicSlug: 'public-demo' },

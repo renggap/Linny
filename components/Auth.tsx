@@ -105,7 +105,7 @@ export const Auth: React.FC = () => {
               <div className="absolute inset-0 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
 
-            <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linear</h1>
+            <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linny</h1>
             <div className="flex items-center space-x-2">
               <div className="h-px w-4 bg-[#2C2D35]" />
               <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">
@@ -175,7 +175,7 @@ export const Auth: React.FC = () => {
                     onClick={() => setShowForgotPassword(true)}
                     className="text-[10px] text-accent hover:text-[#7c7bf4] transition-colors font-medium"
                   >
-                    Lupa Password?
+                    Forgot password?
                   </button>
                 </div>
               )}
@@ -232,7 +232,7 @@ export const Auth: React.FC = () => {
 
         <p className="mt-8 text-center text-[#3A3C46] text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
           <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-          Made with love by Neo DEV Team
+          Made with love by Linny Team
         </p>
       </motion.div>
 

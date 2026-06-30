@@ -1,4 +1,4 @@
-// Prisma Schema for Neo Linear
+// Prisma Schema for Linny
 
 generator client {
   provider = "prisma-client-js"
