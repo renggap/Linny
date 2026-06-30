@@ -37,3 +37,27 @@ describe('team role dropdown shows team-specific role (not global)', () => {
     expect(modalSrc).toMatch(/import.*getTeamRole.*from.*roleUtils/);
   });
 });
+
+describe('Sidebar crown uses team-scoped role, not global', () => {
+  // Bug: after demoting a global Administrator to team Member, the sidebar
+  // still showed a crown next to their name. Sidebar.tsx used
+  // getEffectiveRole which short-circuits on global admin role.
+
+  it('Sidebar no longer uses getEffectiveRole for badge + sort', () => {
+    const sidebarSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../components/Sidebar.tsx'),
+      'utf8'
+    );
+    // Badge display + sort comparator should both use getTeamRole now.
+    const badgeLine = sidebarSrc.match(/const effectiveRole = getTeamRole\(user, currentTeam\)/);
+    expect(badgeLine).toBeTruthy();
+    const sortALine = sidebarSrc.match(/const roleA = getTeamRole\(a, currentTeam\)/);
+    const sortBLine = sidebarSrc.match(/const roleB = getTeamRole\(b, currentTeam\)/);
+    expect(sortALine).toBeTruthy();
+    expect(sortBLine).toBeTruthy();
+    // No remaining getEffectiveRole function CALLS in Sidebar (mentions
+    // in comments are fine — they document the old behavior).
+    const callPattern = /[^/\s]\s*getEffectiveRole\(|=\s*getEffectiveRole\(/;
+    expect(sidebarSrc).not.toMatch(callPattern);
+  });
+});

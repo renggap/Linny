@@ -29,7 +29,7 @@ import { useProjects } from '../hooks/useProjects';
 import { useUsers } from '../hooks/useUsers';
 import { useMyJoinRequests } from '../hooks/useJoinRequests';
 import { api } from '../services/api';
-import { canCreateContent, isGlobalAdministrator, getEffectiveRole } from '../lib/roleUtils';
+import { canCreateContent, isGlobalAdministrator, getTeamRole } from '../lib/roleUtils';
 
 const roleBadgeStyles: Record<UserRole, { bg: string; text: string; label: string; icon?: React.ComponentType<{ className?: string }> }> = {
   [UserRole.Administrator]: { bg: 'bg-amber-500/10', text: 'text-amber-400', label: 'Admin' },
@@ -99,8 +99,8 @@ export const Sidebar: React.FC = () => {
 
   // Sort team users by role: Administrator > TeamLead > Member > Guest, then by name
   const sortedTeamUsers = teamUsers.sort((a, b) => {
-    const roleA = getEffectiveRole(a, currentTeam);
-    const roleB = getEffectiveRole(b, currentTeam);
+    const roleA = getTeamRole(a, currentTeam);
+    const roleB = getTeamRole(b, currentTeam);
 
     const roleOrder = [UserRole.Administrator, UserRole.TeamLead, UserRole.Member, UserRole.Guest];
     const indexA = roleOrder.indexOf(roleA as UserRole);
@@ -423,8 +423,12 @@ export const Sidebar: React.FC = () => {
             </div>
             <div className="space-y-0.5">
               {visibleUsers.map(user => {
-                // Get the effective role for this user in the current team context
-                const effectiveRole = getEffectiveRole(user, currentTeam);
+                // Display the team-scoped role for the badge. Using
+                // getEffectiveRole here caused global Administrators to
+                // always render with a crown even after being demoted to
+                // Member within this team — the crown persisted because
+                // getEffectiveRole short-circuits on the global role.
+                const effectiveRole = getTeamRole(user, currentTeam);
 
                 // Only show badge if role is not Member (default role)
                 if (effectiveRole === UserRole.Member) {
