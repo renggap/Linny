@@ -1,7 +1,7 @@
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../middleware/authHooks.js';
-import { workspaceScopeSchema } from '@neo-linear/contracts';
+import { workspaceScopeSchema } from '@linny/contracts';
 
 const searchRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;

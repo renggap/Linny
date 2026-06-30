@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createProjectSchema, updateProjectSchema } from '../validation/schemas.js';
 import { invalidateCache } from '../middleware/cache.js';
 import { authenticate, requireAdminOrTeamLead, requireProjectMember, requireTeamMember } from '../middleware/authHooks.js';
-import { workspaceScopeSchema } from '@neo-linear/contracts';
+import { workspaceScopeSchema } from '@linny/contracts';
 
 const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   const prisma = fastify.prisma;

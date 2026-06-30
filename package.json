@@ -1,5 +1,5 @@
 {
-  "name": "neo-linear",
+  "name": "linny",
   "private": true,
   "version": "1.0.4",
   "type": "module",
@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@fontsource-variable/inter-tight": "^5.2.7",
-    "@neo-linear/contracts": "file:./packages/contracts",
+    "@linny/contracts": "file:./packages/contracts",
     "@tanstack/react-query": "^5.90.19",
     "@tanstack/react-router": "^1.151.3",
     "clsx": "^2.1.1",

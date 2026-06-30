@@ -1,5 +1,5 @@
 {
-  "name": "@neo-linear/contracts",
+  "name": "@linny/contracts",
   "version": "1.0.0",
   "description": "Shared contracts, schemas, and types for Linny",
   "type": "module",
