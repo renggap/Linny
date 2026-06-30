@@ -195,7 +195,12 @@ const App: React.FC = () => {
             throw error;
           }
         }}
-        handleInviteUser={(email, role) => { alert(`Invite sent to ${email}`); }}
+        handleInviteUser={(email, role) => {
+          // Invalidate teams + members so the new invitee shows up in
+          // the team list, TeamDashboard velocity, and sidebar immediately.
+          queryClient.invalidateQueries({ queryKey: ['teams'] });
+          queryClient.invalidateQueries({ queryKey: ['users'] });
+        }}
         handleUpdateProfile={async (data) => { await api.users.updateProfile(currentUser!.id, data); await refreshUser(); }}
         handleUpdateWorkspace={async (id, updates) => { await api.teams.update(id, updates); }}
         handleDeleteWorkspace={async () => { if (ui.currentTeamId) await api.teams.delete(ui.currentTeamId); }}

@@ -234,10 +234,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                 {canManage && (
                                     <button
                                         onClick={() => setView('invite')}
-                                        className="ml-6 px-6 py-3 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold flex items-center transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 group"
+                                        className="ml-6 px-6 py-3 bg-[#1A1C23] hover:bg-[#22242A] border border-[#2C2D35] hover:border-accent/40 text-[#C0C4CC] text-[11px] font-bold flex items-center transition-all uppercase tracking-[0.2em] group"
+                                        title="Invite a user by email who isn't already registered"
                                     >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Invite User
+                                        <Mail className="w-4 h-4 mr-2" />
+                                        Invite by Email
                                     </button>
                                 )}
                             </div>
@@ -470,7 +471,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                             </div>
                                         ) : (
                                             // === Send Email Invite Tab ===
-                                            <div className="p-10 flex flex-col justify-center">
+                                            <div className="p-10">
                                                 <motion.div
                                                     initial={{ opacity: 0, scale: 0.98 }}
                                                     animate={{ opacity: 1, scale: 1 }}
