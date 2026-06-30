@@ -76,7 +76,7 @@ export const MainView: React.FC<MainViewProps> = ({ activities }) => {
               projects={teamProjects}
             />
           ) : ui.currentView === 'list' ? (
-            <div className="flex-1 overflow-y-auto relative no-scrollbar">
+            <div className="flex-1 overflow-y-auto relative no-scrollbar bg-[#0F1014]">
               <IssueList
                 key={`list-${ui.statusFilter || 'all'}`}
                 issues={issues}
@@ -112,7 +112,7 @@ export const MainView: React.FC<MainViewProps> = ({ activities }) => {
             />
           )}
 
-          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#1E1F24] to-transparent pointer-events-none z-10"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-t from-[#0F1014] to-transparent pointer-events-none z-10"></div>
         </div>
       </div>
 

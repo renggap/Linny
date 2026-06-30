@@ -53,3 +53,16 @@ describe('defensive array access on entities that may have undefined fields', ()
     expect(src).toMatch(/team\.members \|\| \[\]/);
   });
 });
+
+describe('consistent main-content background across views', () => {
+  it('IssueList wrapper uses bg-[#0F1014] to match TeamDashboard / Board / Timeline', () => {
+    // Bug: when user selected a status filter, IssueList rendered inside
+    // MainView's bg-[#1E1F24] (lighter) container, but list items had
+    // bg-[#0F1014] (darker) — visible as a mismatched gray panel.
+    // TeamDashboard, BoardView, and TimelineView all use bg-[#0F1014].
+    const src = read('components/MainView.tsx');
+    // The IssueList wrapper div must include bg-[#0F1014]
+    const issueListWrapper = src.match(/ui\.currentView === 'list'[\s\S]*?<IssueList/)?.[0] ?? '';
+    expect(issueListWrapper).toMatch(/bg-\[#0F1014\]/);
+  });
+});
