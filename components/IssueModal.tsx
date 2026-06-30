@@ -427,7 +427,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
                                                             </div>
                                                             <div className="bg-[#14151A]/40 border border-[#1A1C23] p-3.5">
-                                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">
+                                                                <p className="text-[15px] text-[#C0C4CC] leading-relaxed">
                                                                     {renderMentionsWithBadges(c.content, users)}
                                                                 </p>
                                                             </div>

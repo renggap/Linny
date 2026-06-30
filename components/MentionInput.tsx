@@ -225,7 +225,7 @@ export const MentionInput: React.FC<MentionInputProps> = ({
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}
-        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] px-3 py-2 text-sm text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-accent transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full min-h-[100px] max-h-[200px] resize-none bg-[#14151A] border border-[#25262B] px-3 py-2 text-[15px] text-[#E8E8E8] focus:outline-none focus:ring-1 focus:ring-accent transition-all ${disabled || readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
 
       {/* Mention Dropdown */}
