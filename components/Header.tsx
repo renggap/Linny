@@ -131,7 +131,7 @@ export const Header: React.FC<HeaderProps> = ({
             {currentTeam?.name}
           </span>
           <span className="opacity-20 translate-y-[1px]">/</span>
-          <div className="flex items-center space-x-2 truncate relative">
+          <div className="flex items-center space-x-2 relative">
             <div className={`w-2 h-2 rounded-full shadow-sm shrink-0 ${statusFilter ? 'bg-accent' : selectedProjectId ? 'bg-orange-500' : 'bg-green-500'}`} />
             {currentProject && selectedProjectId ? (
               <button
@@ -148,19 +148,20 @@ export const Header: React.FC<HeaderProps> = ({
               <span className="text-white font-bold tracking-tight truncate">{headerTitle}</span>
             )}
           </div>
-          {currentProject && selectedProjectId && isProjectOverviewExpanded && (
-            <div ref={projectOverviewRef} className="absolute top-full left-0 right-0 mt-0 z-40 px-6">
-              <ProjectOverviewHeader
-                project={currentProject}
-                isExpanded={true}
-                onToggleExpand={() => setProjectOverviewExpanded(false)}
-                users={users}
-                onUserClick={(user) => ui.setUserManagementOpen(true, user)}
-              />
-            </div>
-          )}
         </div>
       </div>
+
+      {currentProject && selectedProjectId && isProjectOverviewExpanded && (
+        <div ref={projectOverviewRef} className="absolute top-full left-0 right-0 z-40 px-6">
+          <ProjectOverviewHeader
+            project={currentProject}
+            isExpanded={true}
+            onToggleExpand={() => setProjectOverviewExpanded(false)}
+            users={users}
+            onUserClick={(user) => ui.setUserManagementOpen(true, user)}
+          />
+        </div>
+      )}
 
       <div className="flex items-center justify-between md:justify-end space-x-2 relative">
         {currentProject?.isPublic && currentProject.publicSlug && (

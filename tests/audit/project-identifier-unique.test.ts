@@ -86,6 +86,24 @@ describe('project overview drawer placement (topbar popover)', () => {
     expect(innerDiv).not.toMatch(/overflow-hidden/);
   });
 
+  it('Header renders popover as sibling of title (not nested inside truncate)', () => {
+    // Bug: the popover was nested inside <div className="... truncate"> which
+    // applies overflow:hidden and clips absolute-positioned descendants.
+    // Fix: lift popover to be a sibling of the breadcrumb row, directly
+    // under <header> (no truncate ancestor).
+    const headerSrcFresh = fs.readFileSync(
+      path.resolve(__dirname, '../../components/Header.tsx'),
+      'utf8'
+    );
+    // Find the popover block (with projectOverviewRef) and capture ~200 chars before it.
+    const popoverIdx = headerSrcFresh.indexOf('ref={projectOverviewRef}');
+    expect(popoverIdx).toBeGreaterThan(-1);
+    const preceding = headerSrcFresh.slice(Math.max(0, popoverIdx - 300), popoverIdx);
+    // The preceding context should include the title row's CLOSING tags (the
+    // breadcrumb div and its parent should be closed before the popover opens).
+    expect(preceding).toMatch(/<\/div>\s*<\/div>/);
+  });
+
   it('Public View button is in Header (topbar), not in ProjectOverviewHeader', () => {
     const overviewSrc = fs.readFileSync(
       path.resolve(__dirname, '../../components/ProjectOverviewHeader.tsx'),
