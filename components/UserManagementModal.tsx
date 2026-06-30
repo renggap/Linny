@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
 import { UserAvatar } from './UserAvatar';
 import { useWorkspaceMembers } from '../hooks/useWorkspaceMembers';
-import { getEffectiveRole, canManageTeam } from '../lib/roleUtils';
+import { getEffectiveRole, getTeamRole, canManageTeam } from '../lib/roleUtils';
 
 interface UserManagementModalProps {
     isOpen: boolean;
@@ -294,7 +294,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                                 {canManage && user.id !== currentUser.id ? (
                                                     <div className="relative group/select">
                                                         <select
-                                                            value={getEffectiveRole(user, currentTeam)}
+                                                            value={getTeamRole(user, currentTeam)}
                                                             onChange={(e) => onUpdateRole(user.id, e.target.value as UserRole)}
                                                             className="bg-[#14151A] border border-[#22242A] text-[10px] font-bold text-[#C0C4CC] pl-4 pr-10 py-2.5 focus:outline-none hover:border-accent/50 cursor-pointer appearance-none uppercase tracking-widest transition-all"
                                                         >
@@ -307,7 +307,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                                     </div>
                                                 ) : (
                                                     <div className="px-4 py-2 border border-[#22242A] bg-[#14151A]/50 text-[10px] font-black uppercase tracking-[0.2em] text-[#5E6068] flex items-center">
-                                                        {getEffectiveRole(user, currentTeam)}
+                                                        {getTeamRole(user, currentTeam)}
                                                     </div>
                                                 )}
 

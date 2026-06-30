@@ -33,6 +33,27 @@ export function getEffectiveRole(user: User | null | undefined, team: Team | nul
 }
 
 /**
+ * Get the team-specific role for a user (ignoring global role overrides).
+ *
+ * This is what should be displayed in the team role dropdown: even if a
+ * user is a global Administrator, their team-scoped role is what the
+ * dropdown writes via api.teams.addMember. Using getEffectiveRole for
+ * the dropdown value made global admins appear permanently stuck on
+ * "ADMINISTRATOR" because the global role always wins and the user
+ * couldn't tell their team role change had actually saved.
+ *
+ * @param user - The user to get the role for
+ * @param team - The team to get the role in
+ * @returns The team-specific role (falls back to the user's global role if no membership record)
+ */
+export function getTeamRole(user: User | null | undefined, team: Team | null | undefined): UserRole {
+  if (!user) return UserRole.Guest;
+  if (!team?.membersWithRoles) return user.role;
+  const memberWithRole = team.membersWithRoles.find(m => m.id === user.id);
+  return memberWithRole ? memberWithRole.role : user.role;
+}
+
+/**
  * Check if a user can create content in a team context.
  * Administrators and TeamLeads can always create content.
  * Members can create content.
