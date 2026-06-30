@@ -151,8 +151,25 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose, cur
                   <div className="w-16 h-16 bg-[#0F1014] border border-[#1A1C23] flex items-center justify-center text-3xl shrink-0 shadow-inner">
                     {icon}
                   </div>
-                  <div className="flex-1 grid grid-cols-8 gap-1 p-2 max-h-24 overflow-y-auto no-scrollbar">
-                    {['⚡', '🚀', '🎯', '📦', '🔧', '🎨', '📱', '💻', '📊', '📈', '🔒', '🛡️', '⚙️', '🔨', '📁', '💼', '✅', '🎉', '⭐', '💎', '🔥', '❤️', '🌍', '🛠️'].map(emoji => (
+                  <div className="flex-1 grid grid-cols-8 gap-1 p-2 max-h-48 overflow-y-auto no-scrollbar">
+                    {[
+                      // Tech & engineering
+                      '⚡', '🚀', '💻', '📱', '⚙️', '🔧', '🔨', '🛠️',
+                      '💾', '🖥️', '⌨️', '🧩', '🔌', '🔋', '📡', '🤖',
+                      // Work & office
+                      '📁', '📦', '📊', '📈', '📋', '📝', '💼', '🗂️',
+                      '📌', '📎', '🖊️', '✏️', '📅', '📆', '🖨️', '🏷️',
+                      // Goals & quality
+                      '🎯', '✅', '⭐', '💎', '🔥', '💡', '🎉', '❤️',
+                      // Creative & design
+                      '🎨', '🎭', '🎬', '🎵', '🎤', '📷', '🌈', '✨',
+                      // Security
+                      '🔒', '🛡️', '🔑', '🗝️',
+                      // Nature & world
+                      '🌍', '🌱', '🌳', '🌟', '☀️', '🌙', '🌵', '💧',
+                      // Communication & people
+                      '💬', '✉️', '📨', '📢', '👥', '👤', '🧠', '💪'
+                    ].map(emoji => (
                       <button
                         key={emoji}
                         type="button"

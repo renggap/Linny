@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Shield, Trash2, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, Crown, Loader2 } from 'lucide-react';
 import { User, UserRole, Team } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -38,6 +38,22 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const [isSending, setIsSending] = useState(false);
     const [inviteStatus, setInviteStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
     const [directInviteLoadingId, setDirectInviteLoadingId] = useState<string | null>(null);
+
+    // Reset all view state when modal closes, so reopening always lands on
+    // the member list. Without this, the component stays mounted (returns null
+    // when !isOpen) but its local state persists — reopening resumes the
+    // invite-by-email view from the previous session.
+    useEffect(() => {
+        if (!isOpen) {
+            setView('list');
+            setInviteMethod('existing');
+            setInviteEmail('');
+            setSearchQuery('');
+            setInviteSearchQuery('');
+            setInviteStatus(null);
+            setDirectInviteLoadingId(null);
+        }
+    }, [isOpen]);
 
     // Use the useWorkspaceMembers hook for base filtering, then apply search query
     // MUST be called before any early return to follow React's Rules of Hooks

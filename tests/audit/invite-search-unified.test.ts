@@ -60,3 +60,36 @@ describe('team cache refresh after invite', () => {
     expect(block).not.toMatch(/alert\(/);
   });
 });
+
+describe('modal state resets on close', () => {
+  it('UserManagementModal resets view state when isOpen becomes false', () => {
+    // Bug: when !isOpen the component returned null but its local state
+    // (view, inviteMethod, searchQuery, etc.) persisted. Reopening the
+    // modal resumed the previous invite-by-email view instead of the
+    // member list.
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../components/UserManagementModal.tsx'),
+      'utf8'
+    );
+    expect(src).toMatch(/useEffect\(\(\) => \{[\s\S]*?if \(!isOpen\)/);
+    // Must reset view, inviteMethod, searchQuery, inviteSearchQuery
+    expect(src).toMatch(/setView\('list'\)/);
+    expect(src).toMatch(/setInviteMethod\('existing'\)/);
+    expect(src).toMatch(/setSearchQuery\(''\)/);
+    expect(src).toMatch(/setInviteSearchQuery\(''\)/);
+  });
+});
+
+describe('project icon picker has expanded icon set', () => {
+  it('ProjectModal offers more icons than the original 24', () => {
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../components/ProjectModal.tsx'),
+      'utf8'
+    );
+    // Count single-quoted emoji literals in the icon array. Emojis are
+    // non-ASCII; matching any non-ASCII char inside single quotes.
+    const iconBlock = src.match(/\[\s*\/\/ Tech[\s\S]*?\]/)?.[0] ?? '';
+    const emojiCount = (iconBlock.match(/'[^']{1,4}'/g) || []).length;
+    expect(emojiCount).toBeGreaterThanOrEqual(48);
+  });
+});
