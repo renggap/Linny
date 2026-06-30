@@ -152,11 +152,14 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return isNaN(num) ? max : Math.max(max, num);
       }, 0);
 
-      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 101;
+      // Start at 1 (was 101 — old default left a confusing gap). Pad to
+      // 3 digits minimum; numbers ≥ 1000 naturally render at 4+ digits.
+      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 1;
+      const paddedNumber = String(nextNumber).padStart(3, '0');
 
       return tx.issue.create({
         data: {
-          identifier: `${project.identifier}-${nextNumber}`,
+          identifier: `${project.identifier}-${paddedNumber}`,
           title: title || 'Untitled',
           description: description || null,
           status: (status as any) || 'Backlog',
@@ -362,11 +365,12 @@ const issuesRoutes: FastifyPluginAsyncZod = async (fastify) => {
         return isNaN(num) ? max : Math.max(max, num);
       }, 0);
 
-      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 101;
+      const nextNumber = highestNumber > 0 ? highestNumber + 1 : 1;
+      const paddedNumber = String(nextNumber).padStart(3, '0');
 
       return tx.issue.create({
         data: {
-          identifier: `${parentIssue.project.identifier}-${nextNumber}`,
+          identifier: `${parentIssue.project.identifier}-${paddedNumber}`,
           title: title || 'Untitled',
           description: null,
           status: 'Backlog',

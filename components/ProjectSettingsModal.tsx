@@ -251,6 +251,12 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
                                                 setIsDeleting(true);
                                                 try {
                                                     await onDelete(project.id);
+                                                    // Close the modal after successful delete so the user
+                                                    // doesn't see a stale form for a project that no longer exists.
+                                                    onClose();
+                                                } catch (e) {
+                                                    // Surface error but keep modal open so the user can retry.
+                                                    console.error('[ProjectSettingsModal] delete failed:', e);
                                                 } finally {
                                                     setIsDeleting(false);
                                                 }
