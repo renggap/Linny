@@ -14,7 +14,8 @@ import {
   Command,
   Crown,
   Loader2,
-  EyeOff
+  EyeOff,
+  Shield
 } from 'lucide-react';
 import { StatusIcon } from './Icons';
 import { Team, User, UserRole, Status } from '../types';
@@ -445,6 +446,7 @@ export const Sidebar: React.FC = () => {
 
                 const roleStyle = roleBadgeStyles[effectiveRole];
                 const showCrownOnly = effectiveRole === UserRole.Administrator;
+                const isGlobalAdmin = isGlobalAdministrator(user);
 
                 return (
                   <SidebarItem
@@ -454,9 +456,19 @@ export const Sidebar: React.FC = () => {
                     onClick={() => ui.setAssigneeFilter(user.id)}
                     icon={() => <UserAvatar name={user.name} size="sm" className="mr-3" showRing={true} />}
                     rightElement={
-                      <span className={cn("flex items-center text-[10px] font-medium px-1.5 py-0.5", roleStyle.bg, roleStyle.text, "border border-[#2C2D35] gap-1")}>
-                        {showCrownOnly && <Crown className="w-3 h-3 text-amber-400" />}
-                        {!showCrownOnly && roleStyle.label}
+                      <span className="flex items-center gap-1">
+                        {isGlobalAdmin && (
+                          <span
+                            className="flex items-center justify-center w-4 h-4 bg-violet-500/15 border border-violet-400/40 text-violet-300"
+                            title="Global Administrator — system-wide superuser"
+                          >
+                            <Shield className="w-2.5 h-2.5" />
+                          </span>
+                        )}
+                        <span className={cn("flex items-center text-[10px] font-medium px-1.5 py-0.5", roleStyle.bg, roleStyle.text, "border border-[#2C2D35] gap-1")}>
+                          {showCrownOnly && <Crown className="w-3 h-3 text-amber-400" />}
+                          {!showCrownOnly && roleStyle.label}
+                        </span>
                       </span>
                     }
                   />
