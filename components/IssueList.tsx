@@ -215,7 +215,29 @@ export const IssueList: React.FC<IssueListProps> = ({ issues, users, onEdit, onD
   };
 
   const renderGroup = (status: Status) => {
-    const groupIssues = issues.filter((i: Issue) => i.status === status);
+    const rawGroupIssues = issues.filter((i: Issue) => i.status === status);
+
+    // Reorder so subtasks whose parent is in this same status group render
+    // immediately after the parent, instead of wherever they happen to be
+    // in the API response. Subtasks whose parent is in a different status
+    // (or no parent at all) render standalone.
+    const groupIssues: Issue[] = [];
+    const placed = new Set<string>();
+    for (const issue of rawGroupIssues) {
+      // Skip subtasks whose parent is in this group — they'll be placed under the parent.
+      if (issue.parentId && rawGroupIssues.some(i => i.id === issue.parentId)) continue;
+      if (placed.has(issue.id)) continue;
+      groupIssues.push(issue);
+      placed.add(issue.id);
+      // Pull in any subtasks of this issue that are also in the group.
+      for (const sub of rawGroupIssues) {
+        if (sub.parentId === issue.id && !placed.has(sub.id)) {
+          groupIssues.push(sub);
+          placed.add(sub.id);
+        }
+      }
+    }
+
     const isDropTarget = dragOverStatus === status;
 
     // Don't render empty groups in public view usually, but assuming we keep structure
