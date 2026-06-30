@@ -37,6 +37,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     const [inviteRole, setInviteRole] = useState<UserRole>(UserRole.Member);
     const [isSending, setIsSending] = useState(false);
     const [inviteStatus, setInviteStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+    const [directInviteLoadingId, setDirectInviteLoadingId] = useState<string | null>(null);
 
     // Use the useWorkspaceMembers hook for base filtering, then apply search query
     // MUST be called before any early return to follow React's Rules of Hooks
@@ -75,6 +76,34 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         u.name.toLowerCase().includes(inviteSearchQuery.toLowerCase()) ||
         u.email.toLowerCase().includes(inviteSearchQuery.toLowerCase())
     );
+
+    // For list view: when the member-search query also matches non-members,
+    // surface them below the member list with a direct Add-to-Team button.
+    // Without this, searching "Henry" (a non-member) in the list view looked
+    // like the user didn't exist.
+    const matchingNonMembers = searchQuery.trim().length === 0 ? [] : availableUsers.filter(u =>
+        u.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        u.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const handleDirectInvite = async (email: string) => {
+        if (!currentTeam) return;
+        setDirectInviteLoadingId(email);
+        try {
+            const result = await api.invitations.sendInvite(email, currentTeam.id, UserRole.Member);
+            if ('user' in result) {
+                setInviteStatus({ type: 'success', message: `${result.user.name} has been added to the team` });
+            } else {
+                setInviteStatus({ type: 'success', message: `Invitation sent to ${email}` });
+            }
+            onInviteUser(email, UserRole.Member);
+            setTimeout(() => setInviteStatus(null), 2500);
+        } catch (error: any) {
+            setInviteStatus({ type: 'error', message: error.message || 'Failed to add user' });
+        } finally {
+            setDirectInviteLoadingId(null);
+        }
+    };
 
     const canManage = canManageTeam(currentUser, currentTeam);
 
@@ -276,6 +305,51 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                             </div>
                                         </motion.div>
                                     ))}
+
+                                    {/* When the member search has matches but there are also non-members
+                                        that fit the query, surface them with a direct Add button. Fixes
+                                        the UX trap where searching for a non-member in the list view
+                                        appeared to find nothing. */}
+                                    {searchQuery.trim().length > 0 && matchingNonMembers.length > 0 && (
+                                        <div className="mt-2 border-t border-[#1A1C23] pt-4">
+                                            <div className="px-10 py-2 text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em]">
+                                                Not in this team · {matchingNonMembers.length}
+                                            </div>
+                                            {matchingNonMembers.map((user) => (
+                                                <div
+                                                    key={user.id}
+                                                    className="flex items-center justify-between px-10 py-4 hover:bg-[#14151A]/30 transition-all group"
+                                                >
+                                                    <div className="flex items-center space-x-4">
+                                                        <UserAvatar name={user.name} size="md" />
+                                                        <div>
+                                                            <div className="text-sm font-bold text-[#E8E8E8]">{user.name}</div>
+                                                            <div className="text-xs text-[#5E6068] font-mono">{user.email}</div>
+                                                        </div>
+                                                    </div>
+                                                    {canManage ? (
+                                                        <button
+                                                            onClick={() => handleDirectInvite(user.email)}
+                                                            disabled={directInviteLoadingId === user.id}
+                                                            className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-[10px] font-bold uppercase tracking-[0.2em] transition-all"
+                                                        >
+                                                            {directInviteLoadingId === user.id ? 'Adding…' : 'Add to Team'}
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-[10px] text-[#3A3C46] uppercase tracking-wider">No permission</span>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {searchQuery.trim().length > 0 && filteredUsers.length === 0 && matchingNonMembers.length === 0 && (
+                                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                                            <Search className="w-12 h-12 text-[#3A3C46] mb-4" />
+                                            <p className="text-sm text-[#5E6068] font-medium">No users match "{searchQuery}"</p>
+                                            <p className="text-xs text-[#3A3C46] mt-1">Try inviting by email instead</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </>
