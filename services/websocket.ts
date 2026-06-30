@@ -87,10 +87,22 @@ export class WebSocketService {
 
     private disconnectFromRoom(roomId: string): void {
         const ws = this.connections.get(roomId);
-        if (ws) {
+        if (!ws) return;
+
+        // Suppress browser "closed before established" warning when the
+        // subscribe/unsubscribe cycle outpaces the WS handshake (e.g., user
+        // opens and quickly closes an issue modal). If still CONNECTING,
+        // defer the close until after open completes.
+        if (ws.readyState === WebSocket.CONNECTING) {
+            ws.onopen = () => {
+                try { ws.close(1000, 'Client disconnecting'); } catch { /* already closed */ }
+            };
+        } else if (ws.readyState === WebSocket.OPEN) {
             ws.close(1000, 'Client disconnecting');
-            this.connections.delete(roomId);
         }
+        // CLOSING / CLOSED — nothing to do; browser will fire onclose eventually.
+
+        this.connections.delete(roomId);
     }
 
     private handleMessage(message: WebSocketMessage): void {

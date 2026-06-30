@@ -343,39 +343,38 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 </AnimatePresence>
 
-                                {!(existingIssue as Issue | PartialIssue)?.parentId && (
+                                {hasExistingIssueId && (
                                     <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
                                         {/* Subtasks Section - Only shown for parent issues, not subtasks */}
-                                        <section className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
-                                                    <GitMerge className="w-3.5 h-3.5 mr-2" /> Sub-objectives
-                                                </h4>
-                                                <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
-                                                    {subtasks.length} ENTRIES
-                                                </span>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                {subtasks.map(s => (
-                                                    <motion.div
-                                                        key={s.id}
-                                                        whileHover={{ x: 4 }}
-                                                        onClick={() => onOpenIssue?.(s.id)}
-                                                        className="flex items-center justify-between px-4 py-3 bg-[#14151A]/30 border border-[#1A1C23] hover:border-[#2C2D35] transition-all cursor-pointer group"
-                                                    >
-                                                        <div className="flex items-center space-x-4">
-                                                            <div className="p-1 rounded bg-[#0F1014] border border-[#1A1C23]">
-                                                                <StatusIcon status={s.status} className="w-3 h-3" />
+                                        {!(existingIssue as Issue | PartialIssue)?.parentId && (
+                                            <section className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                                                        <GitMerge className="w-3.5 h-3.5 mr-2" /> Sub-objectives
+                                                    </h4>
+                                                    <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
+                                                        {subtasks.length} ENTRIES
+                                                    </span>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    {subtasks.map(s => (
+                                                        <motion.div
+                                                            key={s.id}
+                                                            whileHover={{ x: 4 }}
+                                                            onClick={() => onOpenIssue?.(s.id)}
+                                                            className="flex items-center justify-between px-4 py-3 bg-[#14151A]/30 border border-[#1A1C23] hover:border-[#2C2D35] transition-all cursor-pointer group"
+                                                        >
+                                                            <div className="flex items-center space-x-4">
+                                                                <div className="p-1 rounded bg-[#0F1014] border border-[#1A1C23]">
+                                                                    <StatusIcon status={s.status} className="w-3 h-3" />
+                                                                </div>
+                                                                <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
+                                                                <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
                                                             </div>
-                                                            <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
-                                                            <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
-                                                        </div>
-                                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-accent transition-colors" />
-                                                    </motion.div>
-                                                ))}
-                                                {hasExistingIssueId ? (
-                                                    // Existing issue: show the input
-                                                    canEdit && (
+                                                            <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-accent transition-colors" />
+                                                        </motion.div>
+                                                    ))}
+                                                    {canEdit && (
                                                         <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] hover:border-[#2C2D35] transition-colors">
                                                             <Plus className="w-4 h-4 text-[#3A3C46]" />
                                                             <input
@@ -392,19 +391,12 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                                 }}
                                                             />
                                                         </div>
-                                                    )
-                                                ) : (
-                                                    // New issue: show a message
-                                                    <div className="px-4 py-3 border border-dashed border-[#1A1C23]">
-                                                        <p className="text-[11px] text-[#3A3C46] italic text-center">
-                                                            Sub-objectives can be added after creating this issue
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </section>
+                                                    )}
+                                                </div>
+                                            </section>
+                                        )}
 
-                                        {/* Activity/Comments Section */}
+                                        {/* Activity/Comments Section — visible for all existing issues (parent or sub) */}
                                         <section className="space-y-6">
                                             <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
                                                 <MessageSquare className="w-3.5 h-3.5 mr-2" /> Communications
@@ -421,7 +413,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             transition={{ delay: idx * 0.05 }}
                                                             className="relative pl-8"
                                                         >
-                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-accent shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
+                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-accent shadow-[0_0_8px_var(--accent-color)]" />
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name || 'Unknown User'}</span>
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
