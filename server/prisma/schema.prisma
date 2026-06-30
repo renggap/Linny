@@ -123,6 +123,7 @@ model Project {
   activities   Activity[]
 
   @@map("projects")
+  @@unique([teamId, identifier])
   @@index([teamId])
   @@index([publicSlug])
 }

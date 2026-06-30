@@ -106,10 +106,10 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
     return (
         <motion.div
             layout
-            className="mx-6 mb-6 bg-[#14151A] border border-[#26272F] overflow-hidden shadow-sm"
-            initial={{ opacity: 0, y: -20 }}
+            className="bg-[#14151A] border border-[#26272F] overflow-hidden shadow-popover"
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, ease: "easeOut" }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
         >
             {/* Header / Banner Area */}
             <div className="flex items-center justify-between p-1 bg-[#1A1C23]/50 border-b border-[#26272F] min-w-0">

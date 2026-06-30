@@ -187,6 +187,18 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   }, async (request: any, reply: any) => {
     const data = request.body;
 
+    // Pre-check identifier uniqueness within the team (DB constraint is the
+    // safety net, but this gives a friendly 409 instead of a 500 from Prisma).
+    const existing = await prisma.project.findUnique({
+      where: { teamId_identifier: { teamId: data.teamId, identifier: data.identifier } }
+    });
+    if (existing) {
+      return reply.code(409).send({
+        error: 'Identifier already in use',
+        details: [{ field: 'identifier', message: `Identifier "${data.identifier}" is already used by another project in this team` }]
+      });
+    }
+
     const project = await prisma.project.create({
       data: {
         name: data.name,
@@ -320,9 +332,25 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
       params: z.object({ id: z.string() }),
       body: updateProjectSchema
     }
-  }, async (request: any) => {
+  }, async (request: any, reply: any) => {
     const { id } = request.params;
     const updates = request.body;
+
+    // If identifier is being changed, verify uniqueness within the team.
+    if (updates.identifier) {
+      const current = await prisma.project.findUnique({ where: { id }, select: { teamId: true } });
+      if (current) {
+        const clash = await prisma.project.findUnique({
+          where: { teamId_identifier: { teamId: current.teamId, identifier: updates.identifier } }
+        });
+        if (clash && clash.id !== id) {
+          return reply.code(409).send({
+            error: 'Identifier already in use',
+            details: [{ field: 'identifier', message: `Identifier "${updates.identifier}" is already used by another project in this team` }]
+          });
+        }
+      }
+    }
 
     const project = await prisma.project.update({
       where: { id },

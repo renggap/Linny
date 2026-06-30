@@ -1,7 +1,9 @@
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Layout, List, GanttChart, X, Bell, PanelRightClose, Plus, Users } from './Icons';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { NotificationPopover } from './NotificationPopover';
+import { ProjectOverviewHeader } from './ProjectOverviewHeader';
 import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../contexts/AuthContext';
 import { useJoinRequests } from '../hooks/useJoinRequests';
@@ -30,6 +32,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const projectOverviewRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuth();
   const ui = useUIStore();
   const { data: joinRequests = [] } = useJoinRequests();
@@ -57,8 +60,22 @@ export const Header: React.FC<HeaderProps> = ({
     selectedProjectId,
     setSelectedProjectId,
     isNotificationOpen,
-    setNotificationOpen
+    setNotificationOpen,
+    isProjectOverviewExpanded,
+    setProjectOverviewExpanded
   } = ui;
+
+  // Close project overview popover on outside click
+  useEffect(() => {
+    if (!isProjectOverviewExpanded) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (projectOverviewRef.current && !projectOverviewRef.current.contains(event.target as Node)) {
+        setProjectOverviewExpanded(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isProjectOverviewExpanded, setProjectOverviewExpanded]);
 
   // Header title calculation
   let headerTitle = "Overview";
@@ -114,10 +131,34 @@ export const Header: React.FC<HeaderProps> = ({
             {currentTeam?.name}
           </span>
           <span className="opacity-20 translate-y-[1px]">/</span>
-          <div className="flex items-center space-x-2 truncate">
+          <div className="flex items-center space-x-2 truncate relative">
             <div className={`w-2 h-2 rounded-full shadow-sm shrink-0 ${statusFilter ? 'bg-accent' : selectedProjectId ? 'bg-orange-500' : 'bg-green-500'}`} />
-            <span className="text-white font-bold tracking-tight truncate">{headerTitle}</span>
+            {currentProject && selectedProjectId ? (
+              <button
+                onClick={() => setProjectOverviewExpanded(!isProjectOverviewExpanded)}
+                className="flex items-center space-x-1 hover:bg-white/5 px-1.5 py-0.5 -mx-1.5 transition-colors group max-w-full"
+                title="Toggle project brief"
+              >
+                <span className="text-white font-bold tracking-tight truncate group-hover:text-accent transition-colors">{headerTitle}</span>
+                {isProjectOverviewExpanded
+                  ? <ChevronUp className="w-3 h-3 text-gray-500 group-hover:text-accent shrink-0" />
+                  : <ChevronDown className="w-3 h-3 text-gray-500 group-hover:text-accent shrink-0" />}
+              </button>
+            ) : (
+              <span className="text-white font-bold tracking-tight truncate">{headerTitle}</span>
+            )}
           </div>
+          {currentProject && selectedProjectId && isProjectOverviewExpanded && (
+            <div ref={projectOverviewRef} className="absolute top-full left-0 right-0 mt-0 z-40 px-6">
+              <ProjectOverviewHeader
+                project={currentProject}
+                isExpanded={true}
+                onToggleExpand={() => setProjectOverviewExpanded(false)}
+                users={users}
+                onUserClick={(user) => ui.setUserManagementOpen(true, user)}
+              />
+            </div>
+          )}
         </div>
       </div>
 

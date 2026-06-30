@@ -9,7 +9,8 @@ import { TeamDashboard } from './TeamDashboard';
 import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
 import { TimelineView } from './TimelineView';
-import { ProjectOverviewHeader } from './ProjectOverviewHeader';
+// ProjectOverviewHeader was moved to Header.tsx (topbar popover) to avoid
+// eating vertical space in the main content area.
 import { ProjectRightSidebar } from './ProjectRightSidebar';
 import { Status, Activity } from '../types';
 import { api } from '../services/api';
@@ -66,18 +67,6 @@ export const MainView: React.FC<MainViewProps> = ({ activities }) => {
   return (
     <div className="flex-1 flex flex-row overflow-hidden relative">
       <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-[#1E1F24]">
-        {currentProject && ui.selectedProjectId && (
-          <div className="shrink-0 pt-6">
-            <ProjectOverviewHeader
-              project={currentProject}
-              isExpanded={ui.isProjectOverviewExpanded}
-              onToggleExpand={() => ui.setProjectOverviewExpanded(!ui.isProjectOverviewExpanded)}
-              users={users}
-              onUserClick={(user) => ui.setUserManagementOpen(true, user)}
-            />
-          </div>
-        )}
-
         <div className="flex-1 overflow-hidden relative flex flex-col min-h-0">
           {isDashboard ? (
             <TeamDashboard
