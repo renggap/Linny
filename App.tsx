@@ -181,17 +181,31 @@ const App: React.FC = () => {
           }
         }}
         handleRemoveUser={async (id) => {
-          // Optimistic update - remove user from list
-          queryClient.setQueryData(['users'], (oldUsers: any[] = []) => {
-            return oldUsers.filter((u: any) => u.id !== id);
-          });
+          if (!currentTeam) return;
+          // CRITICAL: only remove the user from the current team, NOT from
+          // the entire users table. The user DELETE endpoint destroys the
+          // account across ALL teams — must never be wired to a "remove
+          // from team" UI. Use the team member removal endpoint instead,
+          // which deletes only the TeamMember junction row.
+          const teamId = currentTeam.id;
+          // Optimistic update — drop the user from the current team's
+          // member list in the teams cache.
+          queryClient.setQueryData(['teams'], (oldTeams: any[] = []) =>
+            oldTeams.map((t: any) =>
+              t.id === teamId
+                ? { ...t, members: (t.members || []).filter((mId: string) => mId !== id) }
+                : t
+            )
+          );
 
           try {
-            await api.users.remove(id);
-            // Success - user is already removed optimistically
+            await api.teams.removeMember(teamId, id);
+            // Invalidate both queries so velocity, sidebar, etc. reflect the change.
+            queryClient.invalidateQueries({ queryKey: ['teams'] });
+            queryClient.invalidateQueries({ queryKey: ['users'] });
           } catch (error) {
             // Revert on error
-            queryClient.invalidateQueries({ queryKey: ['users'] });
+            queryClient.invalidateQueries({ queryKey: ['teams'] });
             throw error;
           }
         }}

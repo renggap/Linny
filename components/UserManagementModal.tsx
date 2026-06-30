@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Shield, Trash2, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, Crown, Loader2 } from 'lucide-react';
+import { X, Shield, Search, Plus, ChevronDown, Mail, UserCheck, ShieldAlert, Activity, ArrowRight, Crown, Loader2, UserMinus } from 'lucide-react';
 import { User, UserRole, Team } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { api } from '../services/api';
@@ -313,10 +313,15 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
                                                 {canManage && user.id !== currentUser.id && (
                                                     <button
-                                                        onClick={() => onRemoveUser(user.id)}
+                                                        onClick={() => {
+                                                            if (window.confirm(`Remove ${user.name} from this team?\n\nThey will lose access to this team's projects and issues. Their account is preserved — they can be re-invited later.`)) {
+                                                                onRemoveUser(user.id);
+                                                            }
+                                                        }}
                                                         className="p-2.5 text-[#3A3C46] hover:text-red-500 hover:bg-red-500/5 opacity-0 group-hover:opacity-100 transition-all"
+                                                        title="Remove from team"
                                                     >
-                                                        <Trash2 className="w-5 h-5" />
+                                                        <UserMinus className="w-5 h-5" />
                                                     </button>
                                                 )}
                                             </div>
