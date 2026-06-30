@@ -145,9 +145,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({ issues, users, onEdi
 
                 {/* Assignee Avatar */}
                 <div className="ml-2 flex-shrink-0">
-                  {issue.assigneeIds.length > 0 ? (
+                  {issue.assigneeIds?.length > 0 ? (
                     <div className="flex -space-x-1">
-                      {users.filter(u => issue.assigneeIds.includes(u.id)).slice(0, 3).map(u => (
+                      {users.filter(u => issue.assigneeIds?.includes(u.id)).slice(0, 3).map(u => (
                         <UserAvatar
                           key={u.id}
                           name={u.name}

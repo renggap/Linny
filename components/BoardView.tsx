@@ -35,7 +35,7 @@ const BoardCard = ({ issue, users, onEdit, onDelete, onDragStart, isDragging, ca
   canInteract?: boolean;
   delay?: number;
 }) => {
-  const assignees = users.filter(u => issue.assigneeIds.includes(u.id));
+  const assignees = users.filter(u => issue.assigneeIds?.includes(u.id));
 
   return (
     <motion.div

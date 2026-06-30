@@ -49,7 +49,7 @@ const IssueRow: React.FC<{
 }> = ({ issue, users, onEdit, onDelete, onStatusChange, onDragStart, isDragging, canInteract = true, delay = 0 }) => {
 
   const assignees = users.filter((u: User) =>
-    issue.assigneeIds.includes(u.id)
+    issue.assigneeIds?.includes(u.id)
   );
 
   const isSubtask = !!issue.parentId;

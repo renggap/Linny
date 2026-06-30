@@ -43,7 +43,7 @@ export const MainView: React.FC<MainViewProps> = ({ activities }) => {
   const teamProjects = projects.filter(p => p.teamId === ui.currentTeamId);
 
   const workspaceUsers = currentTeam?.members
-    ? users.filter(u => currentTeam.members.includes(u.id))
+    ? users.filter(u => (currentTeam.members || []).includes(u.id))
     : users;
 
   // Check if user can create content based on team-specific role
