@@ -19,7 +19,15 @@ describe('input autofill / caret / selection theme overrides', () => {
   });
 
   it('sets caret-color globally so cursor is visible on dark inputs', () => {
-    expect(cssSrc).toMatch(/input,\s*\n\s*textarea\s*\{[\s\S]*?caret-color:\s*var\(--text-primary\)/);
+    expect(cssSrc).toMatch(/input,\s*\n\s*textarea,\s*\n\s*select\s*\{[\s\S]*?caret-color:\s*var\(--text-primary\)/);
+  });
+
+  it('removes :focus-visible outline/ring on form elements', () => {
+    // Tailwind's focus:outline-none only handles :focus. Chrome/Safari/Edge
+    // still paint a default ring on :focus-visible (keyboard nav, click on
+    // some elements). Explicit override is needed.
+    expect(cssSrc).toMatch(/input:focus-visible/);
+    expect(cssSrc).toMatch(/outline:\s*none !important/);
   });
 
   it('uses themed text selection (not default pale blue)', () => {

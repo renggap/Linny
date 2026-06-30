@@ -63,8 +63,32 @@ body {
  * white (or pale yellow) background on autofilled fields, producing the
  * 'white blip' visible on focus/click in dark-themed inputs. */
 input,
-textarea {
+textarea,
+select {
   caret-color: var(--text-primary);
+  /* Strip native form widget chrome that paints light backgrounds,
+   * inner shadows, and default focus rings. Tailwind's focus:outline-none
+   * only handles :focus — :focus-visible still shows a default ring in
+   * Chrome/Safari/Edge. */
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* textarea still needs the resize handle bar visible, but appearance:none
+ * removes default inner shadow that some browsers paint. Restore base. */
+textarea {
+  resize: vertical;
 }
 
 input:-webkit-autofill,
