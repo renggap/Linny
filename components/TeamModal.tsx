@@ -101,7 +101,7 @@ export const TeamModal: React.FC<TeamModalProps> = ({ isOpen, onClose, onSave })
               )}
 
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em] ml-1">Terminal Handle</label>
+                <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.3em] ml-1">Workspace Slug</label>
                 <input
                   type="text"
                   value={name}

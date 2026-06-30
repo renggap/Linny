@@ -87,7 +87,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
-                      placeholder="address@nodex.network"
+                      placeholder="you@example.com"
                       disabled={isLoading}
                       required
                     />

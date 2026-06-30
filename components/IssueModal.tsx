@@ -284,7 +284,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 >
                                     <div className={cn("w-1 h-1 rounded-full", saveStatus === 'saving' ? "bg-accent animate-pulse" : "bg-green-500")} />
-                                    <span>{saveStatus === 'saving' ? 'Syncing' : 'Synced'}</span>
+                                    <span>{saveStatus === 'saving' ? 'Saving' : 'Saved'}</span>
                                 </motion.div>
                             )}
                             <button onClick={onClose} className="p-1.5 hover:bg-[#1C1D24] text-[#5E6068] hover:text-[#E8E8E8] transition-all">
@@ -351,7 +351,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                             <section className="space-y-4">
                                                 <div className="flex items-center justify-between">
                                                     <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
-                                                        <GitMerge className="w-3.5 h-3.5 mr-2" /> Sub-objectives
+                                                        <GitMerge className="w-3.5 h-3.5 mr-2" /> Subtasks
                                                     </h4>
                                                     <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
                                                         {subtasks.length} ENTRIES
@@ -380,7 +380,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             <Plus className="w-4 h-4 text-[#3A3C46]" />
                                                             <input
                                                                 type="text"
-                                                                placeholder="Add sub-objective..."
+                                                                placeholder="Add subtask..."
                                                                 className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
                                                                 value={newSubtaskTitle}
                                                                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -400,7 +400,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                         {/* Activity/Comments Section — visible for all existing issues (parent or sub) */}
                                         <section className="space-y-6">
                                             <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
-                                                <MessageSquare className="w-3.5 h-3.5 mr-2" /> Communications
+                                                <MessageSquare className="w-3.5 h-3.5 mr-2" /> Comments
                                             </h4>
                                             <div className="space-y-8 pl-1 relative">
                                                 <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#1A1C23]" />
@@ -495,7 +495,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
                             <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
-                                    <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Criticality
+                                    <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Priority
                                 </label>
                                 <div className="bg-[#0F1014] border border-[#22242A] p-0.5">
                                     <PrioritySelect
@@ -507,7 +507,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
                             <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
-                                    <UserIcon className="w-3 h-3 mr-2" /> Personnel
+                                    <UserIcon className="w-3 h-3 mr-2" /> Assignees
                                 </label>
                                 <div className="bg-[#0F1014] border border-[#22242A] p-0.5">
                                     <UserSelect
