@@ -44,10 +44,24 @@ describe('project identifier uniqueness', () => {
     expect(postHandler).not.toMatch(/reply\.code\(409\)/);
   });
 
-  it('PATCH /:id rejects identifier clash with 409', () => {
+  it('POST + PATCH check identifier uniqueness case-insensitively', () => {
+    // Bug: legacy 'api' (lowercase) coexisted with 'API' (uppercase) in same
+    // team because Postgres text comparison is case-sensitive by default.
+    // Validation regex now forces uppercase on new requests, but legacy data
+    // and any future lowercase leakage must still be caught via case-insensitive
+    // lookup (mode: 'insensitive').
+    expect(projectsRouteSrc).toMatch(/mode:\s*['"]insensitive['"]/);
+    // POST handler must normalize the requested identifier to uppercase before lookup
+    expect(projectsRouteSrc).toMatch(/requestedUpper\s*=\s*requested\.toUpperCase\(\)/);
+    // PATCH handler must normalize updates.identifier too
+    expect(projectsRouteSrc).toMatch(/updates\.identifier\s*=\s*requestedUpper/);
+  });
+
+  it('PATCH /:id rejects identifier clash with 409 (case-insensitive)', () => {
     const patchHandler = projectsRouteSrc.match(/fastify\.patch\('\/:id'[\s\S]*?return \{ project \};\s*\}\);/)?.[0] ?? '';
-    expect(patchHandler).toMatch(/teamId_identifier/);
     expect(patchHandler).toMatch(/409/);
+    // Case-insensitive lookup (no longer uses teamId_identifier compound key)
+    expect(patchHandler).toMatch(/mode:\s*['"]insensitive['"]/);
   });
 });
 

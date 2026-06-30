@@ -190,16 +190,24 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     // Resolve a unique identifier within the team. If the requested one is
     // free, use it as-is. If it clashes, walk through deterministic variations
     // (last char → middle → first replaced with a digit) until we find one.
+    //
+    // Lookup is CASE-INSENSITIVE to prevent 'API' and 'api' from coexisting
+    // (legacy data may have lowercase identifiers from before the regex
+    // validation enforced uppercase).
     const resolveUniqueIdentifier = async (teamId: string, requested: string): Promise<string> => {
-      const taken = async (id: string) => !!(await prisma.project.findUnique({
-        where: { teamId_identifier: { teamId, identifier: id } }
+      const requestedUpper = requested.toUpperCase();
+      const taken = async (id: string) => !!(await prisma.project.findFirst({
+        where: {
+          teamId,
+          identifier: { equals: id.toUpperCase(), mode: 'insensitive' }
+        }
       }));
 
-      if (!(await taken(requested))) return requested;
+      if (!(await taken(requestedUpper))) return requestedUpper;
 
       // Variations: replace last char with 1-9, then middle, then first.
-      const a = requested[0] ?? 'X';
-      const b = requested[1] ?? 'X';
+      const a = requestedUpper[0] ?? 'X';
+      const b = requestedUpper[1] ?? 'X';
       for (let i = 1; i <= 9; i++) {
         const cand = `${a}${b}${i}`;
         if (!(await taken(cand))) return cand;
@@ -242,7 +250,7 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     reply.code(201);
     return {
       project,
-      identifierChanged: finalIdentifier !== data.identifier,
+      identifierChanged: finalIdentifier !== data.identifier.toUpperCase(),
       requestedIdentifier: data.identifier
     };
   });
@@ -365,19 +373,24 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
     const { id } = request.params;
     const updates = request.body;
 
-    // If identifier is being changed, verify uniqueness within the team.
+    // If identifier is being changed, verify uniqueness within the team (case-insensitive).
     if (updates.identifier) {
+      const requestedUpper = updates.identifier.toUpperCase();
       const current = await prisma.project.findUnique({ where: { id }, select: { teamId: true } });
       if (current) {
-        const clash = await prisma.project.findUnique({
-          where: { teamId_identifier: { teamId: current.teamId, identifier: updates.identifier } }
+        const clash = await prisma.project.findFirst({
+          where: {
+            teamId: current.teamId,
+            identifier: { equals: requestedUpper, mode: 'insensitive' }
+          }
         });
         if (clash && clash.id !== id) {
           return reply.code(409).send({
             error: 'Identifier already in use',
-            details: [{ field: 'identifier', message: `Identifier "${updates.identifier}" is already used by another project in this team` }]
+            details: [{ field: 'identifier', message: `Identifier "${requestedUpper}" is already used by another project in this team` }]
           });
         }
+        updates.identifier = requestedUpper;
       }
     }
 
