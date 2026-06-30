@@ -9,7 +9,6 @@ import {
     ChevronUp,
     ChevronDown,
     Plus,
-    Globe,
     Layout,
     User as UserIcon
 } from 'lucide-react';
@@ -106,7 +105,7 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
     return (
         <motion.div
             layout
-            className="bg-[#14151A] border border-[#26272F] overflow-hidden shadow-popover"
+            className="bg-[#14151A] border border-[#26272F] shadow-popover"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
@@ -133,18 +132,6 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
                 </div>
 
                 <div className="flex items-center space-x-2 px-2 lg:px-4 shrink-0">
-                    {project.isPublic && project.publicSlug && (
-                        <a
-                            href={`/public/${project.publicSlug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hidden sm:flex items-center space-x-2 h-8 px-3 bg-[#1A1C23] border border-[#2C2D35] hover:border-[#3A3C46] hover:bg-[#202229] transition-all group"
-                        >
-                            <Globe className="w-3.5 h-3.5 text-[#5E6068] group-hover:text-accent transition-colors" />
-                            <span className="text-[11px] font-medium text-[#8A8F98] group-hover:text-[#C0C4CC]">Public View</span>
-                        </a>
-                    )}
-
                     <button
                         onClick={onToggleExpand}
                         className={cn(
@@ -163,11 +150,10 @@ export const ProjectOverviewHeader: React.FC<ProjectOverviewHeaderProps> = ({ pr
             <AnimatePresence initial={false}>
                 {isExpanded && (
                     <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
-                        className="overflow-hidden"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
                     >
                         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[#22242A]">
 

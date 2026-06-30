@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Layout, List, GanttChart, X, Bell, PanelRightClose, Plus, Users } from './Icons';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronDown, ChevronUp, Globe } from 'lucide-react';
 import { NotificationPopover } from './NotificationPopover';
 import { ProjectOverviewHeader } from './ProjectOverviewHeader';
 import { useUIStore } from '../stores/uiStore';
@@ -163,6 +163,19 @@ export const Header: React.FC<HeaderProps> = ({
       </div>
 
       <div className="flex items-center justify-between md:justify-end space-x-2 relative">
+        {currentProject?.isPublic && currentProject.publicSlug && (
+          <a
+            href={`/public/${currentProject.publicSlug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center space-x-2 h-8 px-3 bg-[#1A1C23] border border-[#2C2D35] hover:border-accent/40 hover:text-[#E8E8E8] transition-all group"
+            title="Open public view"
+          >
+            <Globe className="w-3.5 h-3.5 text-[#5E6068] group-hover:text-accent transition-colors" />
+            <span className="text-[11px] font-medium text-[#8A8F98] group-hover:text-[#C0C4CC]">Public View</span>
+          </a>
+        )}
+
         {!isDashboard && (
           <div className="flex items-center bg-[#2E3036] p-0.5 border border-[#363840]">
             <button onClick={() => setCurrentView('list')} className={`p-1.5 rounded-sm ${currentView === 'list' ? 'bg-[#3E4049] text-white shadow-sm' : 'text-gray-400 hover:text-gray-200'}`} title="List View">

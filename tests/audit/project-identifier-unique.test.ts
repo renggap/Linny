@@ -62,4 +62,33 @@ describe('project overview drawer placement (topbar popover)', () => {
     expect(headerSrc).toMatch(/projectOverviewRef/);
     expect(headerSrc).toMatch(/addEventListener\(['"]mousedown['"]/);
   });
+
+  it('ProjectOverviewHeader does not clip expanding content (no overflow-hidden)', () => {
+    // Bug: previously the outer motion.div had overflow-hidden, which clipped
+    // the add-resource form during the height animation. Popover mode doesn't
+    // need overflow-hidden since sharp corners are radius-0 by design.
+    const overviewSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../components/ProjectOverviewHeader.tsx'),
+      'utf8'
+    );
+    const outerDiv = overviewSrc.match(/<motion\.div[\s\S]*?layout[\s\S]*?shadow-popover[\s\S]*?>/)?.[0] ?? '';
+    expect(outerDiv).not.toMatch(/overflow-hidden/);
+
+    // Inner expandable motion.div also must not have overflow-hidden
+    const innerDiv = overviewSrc.match(/isExpanded && \([\s\S]*?<motion\.div[\s\S]*?>/)?.[0] ?? '';
+    expect(innerDiv).not.toMatch(/overflow-hidden/);
+  });
+
+  it('Public View button is in Header (topbar), not in ProjectOverviewHeader', () => {
+    const overviewSrc = fs.readFileSync(
+      path.resolve(__dirname, '../../components/ProjectOverviewHeader.tsx'),
+      'utf8'
+    );
+    expect(overviewSrc).not.toMatch(/Public View/);
+
+    // Header must render the Public View link when project has publicSlug
+    expect(headerSrc).toMatch(/currentProject\?\.isPublic/);
+    expect(headerSrc).toMatch(/publicSlug/);
+    expect(headerSrc).toMatch(/Public View/);
+  });
 });
