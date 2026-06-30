@@ -7,6 +7,7 @@ import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
 import { MentionInput } from './MentionInput';
+import { UserAvatar } from './UserAvatar';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { renderMentionsWithBadges } from '../services/mentionUtils';
@@ -411,9 +412,16 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             initial={{ opacity: 0, x: -10 }}
                                                             animate={{ opacity: 1, x: 0 }}
                                                             transition={{ delay: idx * 0.05 }}
-                                                            className="relative pl-8"
+                                                            className="relative pl-10"
                                                         >
-                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-accent shadow-[0_0_8px_var(--accent-color)]" />
+                                                            <div className="absolute left-[-10px] top-1">
+                                                                <UserAvatar
+                                                                    name={u?.name || 'Unknown'}
+                                                                    avatarUrl={u?.avatarUrl}
+                                                                    size="md"
+                                                                    className="ring-2 ring-[#0F1014]"
+                                                                />
+                                                            </div>
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name || 'Unknown User'}</span>
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
