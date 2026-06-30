@@ -187,22 +187,47 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
   }, async (request: any, reply: any) => {
     const data = request.body;
 
-    // Pre-check identifier uniqueness within the team (DB constraint is the
-    // safety net, but this gives a friendly 409 instead of a 500 from Prisma).
-    const existing = await prisma.project.findUnique({
-      where: { teamId_identifier: { teamId: data.teamId, identifier: data.identifier } }
-    });
-    if (existing) {
-      return reply.code(409).send({
-        error: 'Identifier already in use',
-        details: [{ field: 'identifier', message: `Identifier "${data.identifier}" is already used by another project in this team` }]
-      });
-    }
+    // Resolve a unique identifier within the team. If the requested one is
+    // free, use it as-is. If it clashes, walk through deterministic variations
+    // (last char → middle → first replaced with a digit) until we find one.
+    const resolveUniqueIdentifier = async (teamId: string, requested: string): Promise<string> => {
+      const taken = async (id: string) => !!(await prisma.project.findUnique({
+        where: { teamId_identifier: { teamId, identifier: id } }
+      }));
+
+      if (!(await taken(requested))) return requested;
+
+      // Variations: replace last char with 1-9, then middle, then first.
+      const a = requested[0] ?? 'X';
+      const b = requested[1] ?? 'X';
+      for (let i = 1; i <= 9; i++) {
+        const cand = `${a}${b}${i}`;
+        if (!(await taken(cand))) return cand;
+      }
+      for (let i = 1; i <= 9; i++) {
+        const cand = `${a}${i}${b}`;
+        if (!(await taken(cand))) return cand;
+      }
+      for (let i = 1; i <= 9; i++) {
+        const cand = `${i}${b}${a}`;
+        if (!(await taken(cand))) return cand;
+      }
+      // Exhausted deterministic options; fall back to random 3-char alphanumeric.
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+      for (let attempt = 0; attempt < 50; attempt++) {
+        let cand = '';
+        for (let j = 0; j < 3; j++) cand += alphabet[Math.floor(Math.random() * alphabet.length)];
+        if (!(await taken(cand))) return cand;
+      }
+      throw new Error('Could not generate a unique project identifier');
+    };
+
+    const finalIdentifier = await resolveUniqueIdentifier(data.teamId, data.identifier);
 
     const project = await prisma.project.create({
       data: {
         name: data.name,
-        identifier: data.identifier,
+        identifier: finalIdentifier,
         icon: data.icon || '📁',
         teamId: data.teamId,
         description: data.description,
@@ -215,7 +240,11 @@ const projectsRoutes: FastifyPluginAsyncZod = async (fastify) => {
 
     await invalidateCache('projects');
     reply.code(201);
-    return { project };
+    return {
+      project,
+      identifierChanged: finalIdentifier !== data.identifier,
+      requestedIdentifier: data.identifier
+    };
   });
 
   // Project Links - moved before DELETE /:id to ensure more specific routes are matched first

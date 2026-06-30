@@ -28,13 +28,20 @@ describe('project identifier uniqueness', () => {
     expect(projectBlock).toMatch(/@@unique\(\[teamId,\s*identifier\]\)/);
   });
 
-  it('POST / rejects duplicate identifier with 409 (friendly error)', () => {
-    // Without pre-check, Prisma throws P2002 which becomes a 500.
-    // Pre-check returns 409 with field-level detail the frontend can surface.
-    const postHandler = projectsRouteSrc.match(/fastify\.post\('\/'[\s\S]*?reply\.code\(201\)/)?.[0] ?? '';
-    expect(postHandler).toMatch(/teamId_identifier/);
-    expect(postHandler).toMatch(/409/);
-    expect(postHandler).toMatch(/Identifier already in use/);
+  it('POST / auto-generates a unique identifier when requested one clashes', () => {
+    // Bug: previously returned 409 with a Prisma-flavored error message.
+    // User intent: keep creation frictionless — walk variations until unique.
+    // Verify on the whole file (no need to slice precisely).
+    expect(projectsRouteSrc).toMatch(/resolveUniqueIdentifier/);
+    expect(projectsRouteSrc).toMatch(/identifierChanged:\s*finalIdentifier\s*!==\s*data\.identifier/);
+    // POST handler must NOT return 409 anymore (only PATCH can).
+    const postHandlerStart = projectsRouteSrc.indexOf("fastify.post('/',");
+    const patchHandlerStart = projectsRouteSrc.indexOf("fastify.patch('/:id',");
+    const postHandler = postHandlerStart >= 0 && patchHandlerStart > postHandlerStart
+      ? projectsRouteSrc.slice(postHandlerStart, patchHandlerStart)
+      : '';
+    expect(postHandler.length).toBeGreaterThan(0);
+    expect(postHandler).not.toMatch(/reply\.code\(409\)/);
   });
 
   it('PATCH /:id rejects identifier clash with 409', () => {

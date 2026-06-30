@@ -854,13 +854,17 @@ export const projectsApi = {
     publicSlug?: string;
     startDate?: string;
     targetDate?: string;
-  }): Promise<Project> {
+  }): Promise<{ project: Project; identifierChanged?: boolean; requestedIdentifier?: string }> {
     const response = await fetchWithAuth('/projects', {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    const res = await handleResponse<{ project: any }>(response);
-    return transformProject(res.project);
+    const res = await handleResponse<{ project: any; identifierChanged?: boolean; requestedIdentifier?: string }>(response);
+    return {
+      project: transformProject(res.project),
+      identifierChanged: res.identifierChanged,
+      requestedIdentifier: res.requestedIdentifier
+    };
   },
 
   async update(id: string, updates: Partial<Project>): Promise<Project> {
