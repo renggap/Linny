@@ -486,7 +486,17 @@ export const Sidebar: React.FC = () => {
           >
             <UserAvatar name={currentUser.name} size="lg" className="mr-3" />
             <div className="flex-1 min-w-0">
-              <div className="text-[13px] font-medium text-[#E8E8E8] truncate">{currentUser.name}</div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] font-medium text-[#E8E8E8] truncate">{currentUser.name}</span>
+                {isGlobalAdministrator(currentUser) && (
+                  <span
+                    className="flex items-center justify-center w-4 h-4 bg-violet-500/15 border border-violet-400/40 text-violet-300 shrink-0"
+                    title="Global Administrator — system-wide superuser"
+                  >
+                    <Shield className="w-2.5 h-2.5" />
+                  </span>
+                )}
+              </div>
               <div className="text-[10px] text-[#5E6068] font-mono truncate">{currentUser.email}</div>
             </div>
             <button
