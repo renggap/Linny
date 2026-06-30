@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Globe,
   Circle,
-  HelpCircle,
   Layout,
   List,
   MoreHorizontal,

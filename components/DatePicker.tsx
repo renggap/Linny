@@ -64,8 +64,16 @@ export const DatePicker: React.FC<DatePickerProps> = ({ value, onChange, placeho
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
             updateCoords();
+            // Reposition on scroll/resize so the calendar tracks its trigger
+            // (PrioritySelect and UserSelect already do this).
+            window.addEventListener('resize', updateCoords);
+            window.addEventListener('scroll', updateCoords, true);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('resize', updateCoords);
+            window.removeEventListener('scroll', updateCoords, true);
+        };
     }, [isOpen]);
 
     const handlePrevMonth = (e: React.MouseEvent) => {

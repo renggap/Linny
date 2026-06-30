@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { X, Users, UserPlus, Check, X as XIcon, Clock, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useJoinRequests } from '../hooks/useJoinRequests';
@@ -37,19 +37,27 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
 
   const pendingRequests = joinRequests.filter(req => req.status === 'pending');
 
+  const [loadingRequestId, setLoadingRequestId] = useState<string | null>(null);
+
   const handleApprove = async (requestId: string) => {
+    setLoadingRequestId(requestId);
     try {
       await approveMutation.mutateAsync(requestId);
     } catch (error: any) {
       alert(error.message || 'Failed to approve request');
+    } finally {
+      setLoadingRequestId(null);
     }
   };
 
   const handleReject = async (requestId: string) => {
+    setLoadingRequestId(requestId);
     try {
       await rejectMutation.mutateAsync(requestId);
     } catch (error: any) {
       alert(error.message || 'Failed to reject request');
+    } finally {
+      setLoadingRequestId(null);
     }
   };
 
@@ -145,7 +153,7 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
                     <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleReject(request.id)}
-                        disabled={rejectMutation.isPending}
+                        disabled={loadingRequestId === request.id}
                         className="p-2.5 text-[#5E6068] hover:text-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50"
                         title="Reject"
                       >
@@ -153,7 +161,7 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
                       </button>
                       <button
                         onClick={() => handleApprove(request.id)}
-                        disabled={approveMutation.isPending}
+                        disabled={loadingRequestId === request.id}
                         className="px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-xs font-bold flex items-center transition-all disabled:opacity-50"
                       >
                         <Check className="w-4 h-4 mr-2" />

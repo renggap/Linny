@@ -72,10 +72,10 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
         <div className="absolute inset-0 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity duration-500">
             <motion.div
                 className="absolute -top-12 -right-12 w-32 h-32 rounded-full blur-3xl"
-                style={{ background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
-                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
-                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
-                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)') }}
+                style={{ background:
+                    color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                    color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                    color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)' }}
                 animate={{
                     scale: [1, 1.2, 1],
                     rotate: [0, 90, 0],
@@ -88,10 +88,10 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
             />
             <motion.div
                 className="absolute -bottom-8 -left-8 w-24 h-24 rounded-full blur-2xl"
-                style={{ background: color?.replace('text-', 'rgb(').replace('500', '').replace('400', '') ??
-                    (color?.includes('amber') ? 'rgb(245, 158, 11)' :
-                     color?.includes('emerald') ? 'rgb(16, 185, 129)' :
-                     color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)') }}
+                style={{ background:
+                    color?.includes('amber') ? 'rgb(245, 158, 11)' :
+                    color?.includes('emerald') ? 'rgb(16, 185, 129)' :
+                    color?.includes('indigo') ? 'rgb(129, 140, 248)' : 'rgb(94, 106, 210)' }}
                 animate={{
                     scale: [1.2, 1, 1.2],
                     rotate: [90, 0, 90],
@@ -602,7 +602,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         {/* Recent Activity Feed */}
                         <motion.section variants={itemVariants} className="space-y-4">
                             <h3 className="text-[13px] font-medium text-[#8A8F98] uppercase tracking-wider">Recent Activity</h3>
-                            <div className="bg-[#14151A] border border-[#26272F] p-4 max-h-[400px overflow-y-auto no-scrollbar">
+                            <div className="bg-[#14151A] border border-[#26272F] p-4 max-h-[400px] overflow-y-auto no-scrollbar">
                                 <ActivityFeed users={users} />
                             </div>
                         </motion.section>

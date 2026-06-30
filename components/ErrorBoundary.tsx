@@ -44,13 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReset = (): void => {
-    this.setState({
-      hasError: false,
-      error: null,
-      errorInfo: null
-    });
-
-    // Reload the page to clear any corrupted state
+    // Reload clears all state anyway — the setState above was redundant.
     window.location.reload();
   };
 

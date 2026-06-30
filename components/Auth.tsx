@@ -4,6 +4,7 @@ import { Terminal, Shield, Cpu, Activity, ArrowRight, Lock, Mail, User as UserIc
 import { useAuth } from '../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { PasswordResetModal } from './PasswordResetModal';
+import { api } from '../services/api';
 
 export const Auth: React.FC = () => {
   const { login, register, isLoading, error, clearError } = useAuth();
@@ -49,21 +50,20 @@ export const Auth: React.FC = () => {
       try {
         await register(name, email, password);
 
-        // If this is an invitation flow, accept the invitation after registration
+        // If this is an invitation flow, accept the invitation after registration.
+        // Use api.invitations.acceptInvite (fetchWithAuth) instead of raw fetch —
+        // the new user now has an access token from the register() call above,
+        // and the backend requires authentication to record who accepted.
         if (inviteToken) {
           try {
-            await fetch(`${(import.meta as any).env?.VITE_API_URL || ''}/api/v1/invitations/accept`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: inviteToken })
-            });
+            await api.invitations.acceptInvite(inviteToken);
           } catch (err) {
             console.error('Failed to accept invitation:', err);
             // Don't fail registration if invitation acceptance fails
           }
         }
       } catch (err) {
-        setLocalError(error || 'Registration sequence interrupted');
+        setLocalError(err instanceof Error ? err.message : 'Registration failed');
       }
     }
   };

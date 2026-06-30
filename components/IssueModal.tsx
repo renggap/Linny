@@ -76,6 +76,10 @@ export const IssueModal: React.FC<IssueModalProps> = ({
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
     const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+    // Clear any pending saveStatus reset on unmount so we don't call
+    // setSaveStatus on a torn-down component.
+    useEffect(() => () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); }, []);
+
     // Track if we've already initialized state for this issue or new issue form
     const initializedIssueIdRef = useRef<string | null>(null);
     const initializedNewIssueRef = useRef(false);

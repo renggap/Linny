@@ -102,9 +102,9 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
         u.email.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handleDirectInvite = async (email: string) => {
+    const handleDirectInvite = async (userId: string, email: string) => {
         if (!currentTeam) return;
-        setDirectInviteLoadingId(email);
+        setDirectInviteLoadingId(userId);
         try {
             const result = await api.invitations.sendInvite(email, currentTeam.id, UserRole.Member);
             if ('user' in result) {
@@ -351,7 +351,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                                                     </div>
                                                     {canManage ? (
                                                         <button
-                                                            onClick={() => handleDirectInvite(user.email)}
+                                                            onClick={() => handleDirectInvite(user.id, user.email)}
                                                             disabled={directInviteLoadingId === user.id}
                                                             className="px-4 py-2 bg-accent hover:bg-accent-hover disabled:opacity-50 text-white text-[10px] font-bold uppercase tracking-[0.2em] transition-all"
                                                         >

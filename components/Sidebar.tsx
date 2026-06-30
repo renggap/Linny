@@ -98,8 +98,9 @@ export const Sidebar: React.FC = () => {
   const currentTeam = teams.find(t => t.id === ui.currentTeamId);
   const teamUsers = useWorkspaceMembers(currentTeam, users);
 
-  // Sort team users by role: Administrator > TeamLead > Member > Guest, then by name
-  const sortedTeamUsers = teamUsers.sort((a, b) => {
+  // Sort team users by role: Administrator > TeamLead > Member > Guest, then by name.
+  // Slice first to avoid mutating the memoized array returned by useWorkspaceMembers.
+  const sortedTeamUsers = [...teamUsers].sort((a, b) => {
     const roleA = getTeamRole(a, currentTeam);
     const roleB = getTeamRole(b, currentTeam);
 

@@ -122,10 +122,13 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                         Resource Links
                                     </div>
                                     <div className="flex flex-wrap gap-3">
-                                        {project.links.map((link) => (
+                                        {project.links.map((link) => {
+                                            // Only allow http/https URLs to prevent javascript:/data: XSS.
+                                            const safeUrl = /^https?:\/\//i.test(link.url) ? link.url : '#';
+                                            return (
                                             <a
                                                 key={link.id}
-                                                href={link.url}
+                                                href={safeUrl}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
                                                 className="inline-flex items-center space-x-2 px-4 py-2 bg-[#14151A] hover:bg-[#1A1C23] border border-[#22242A] hover:border-accent/30 transition-all group/link"
@@ -133,7 +136,8 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                                                 <ExternalLink className="w-3.5 h-3.5 text-[#5E6068] group-hover/link:text-accent" />
                                                 <span className="text-[11px] font-medium text-[#C0C4CC]">{link.title}</span>
                                             </a>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
                             )}
