@@ -29,15 +29,15 @@ export const JoinRequestManagementModal: React.FC<JoinRequestManagementModalProp
   });
 
   useEffect(() => {
-    console.log('[JoinRequestManagementModal] isOpen changed, refetching...');
     refetch();
   }, [isOpen, refetch]);
+
+  // MUST be called before any early return — Rules of Hooks.
+  const [loadingRequestId, setLoadingRequestId] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
   const pendingRequests = joinRequests.filter(req => req.status === 'pending');
-
-  const [loadingRequestId, setLoadingRequestId] = useState<string | null>(null);
 
   const handleApprove = async (requestId: string) => {
     setLoadingRequestId(requestId);
