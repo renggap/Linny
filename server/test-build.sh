@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # =====================================================
-# Neo Linear - Build Test Script
+# Linny - Build Test Script
 # =====================================================
 # This script tests the build process locally before Docker
 
-echo "🔍 Neo Linear Server Build Test"
+echo "🔍 Linny Server Build Test"
 echo "================================"
 
 # Check if we're in the server directory

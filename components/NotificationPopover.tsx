@@ -99,7 +99,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
     return (
       <div ref={popoverRef} className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 p-10 flex flex-col items-center justify-center animate-in fade-in zoom-in-95 duration-200">
         <Bell className="w-10 h-10 mb-4 text-gray-800" />
-        <span className="text-[11px] font-bold text-gray-600 uppercase tracking-[0.2em]">Signal Clear</span>
+        <span className="text-[11px] font-bold text-gray-600 uppercase tracking-[0.2em]">No new notifications</span>
         <p className="text-[10px] text-gray-700 mt-2 uppercase tracking-widest">No pending notifications</p>
       </div>
     );
@@ -109,7 +109,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
     <div ref={popoverRef} className="absolute top-12 right-0 w-[420px] bg-[#1A1B1F] border border-[#363840]/60 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] z-50 flex flex-col max-h-[540px] animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
       {/* Header */}
       <div className="px-6 h-14 border-b border-[#363840]/30 flex items-center justify-between shrink-0">
-        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notification Registry</h3>
+        <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">Notifications</h3>
         <div className="flex items-center gap-2">
           <span className="text-[10px] bg-[#25262B] px-1.5 py-0.5 rounded text-accent font-mono font-bold">{unreadNotifications.length}</span>
           {unreadNotifications.length > 0 && (

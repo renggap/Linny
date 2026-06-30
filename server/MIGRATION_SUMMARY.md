@@ -1,7 +1,7 @@
 # Express to Fastify Migration Summary
 
 ## Overview
-This document summarizes the completed migration from Express.js to Fastify for the Neo Linear backend.
+This document summarizes the completed migration from Express.js to Fastify for the Linny backend.
 
 ## Migration Date
 January 22, 2026

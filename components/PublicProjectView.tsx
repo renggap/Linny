@@ -41,12 +41,12 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                         <Lock className="w-8 h-8 text-accent" />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-2 uppercase tracking-widest leading-none">Access Restricted</h1>
-                    <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-[0.3em] mb-10">Object not found in public registry</p>
+                    <p className="text-[11px] text-[#5E6068] font-bold uppercase tracking-[0.3em] mb-10">This project is not available</p>
                     <Link
                         to="/"
                         className="inline-flex items-center space-x-3 px-8 py-3.5 bg-accent hover:bg-accent-hover text-white text-[11px] font-bold transition-all uppercase tracking-[0.2em] shadow-xl shadow-accent/20 group"
                     >
-                        <span>Return to Terminal</span>
+                        <span>Back to Home</span>
                         <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                     </Link>
                 </motion.div>
@@ -68,9 +68,9 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                         <div>
                             <h1 className="text-sm font-bold text-[#E8E8E8] tracking-tight">{project.name}</h1>
                             <div className="flex items-center space-x-2 mt-0.5">
-                                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Public Registry</span>
+                                <span className="text-[9px] font-black text-accent uppercase tracking-widest">Public Project</span>
                                 <div className="w-1 h-1 rounded-full bg-[#3A3C46]" />
-                                <span className="text-[9px] font-bold text-[#3A3C46] uppercase tracking-widest">Read Only Access</span>
+                                <span className="text-[9px] font-bold text-[#3A3C46] uppercase tracking-widest">Read Only</span>
                             </div>
                         </div>
                     </div>
@@ -231,7 +231,7 @@ export const PublicProjectView: React.FC<PublicProjectViewProps> = ({
                 <div className="flex items-center space-x-2">
                     <Heart className="w-3 h-3 text-red-500 fill-red-500" />
                     <p className="text-[9px] text-[#5E6068] font-bold uppercase tracking-widest">
-                        Made with Love by Neo Digital
+                        Made with love by Linny Team
                     </p>
                 </div>
                 <div className="flex items-center space-x-4">

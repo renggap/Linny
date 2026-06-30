@@ -1,6 +1,6 @@
-# GEMINI.md - Neo Linear Project Context
+# GEMINI.md - Linny Project Context
 
-This document provides a comprehensive overview of the Neo Linear project to serve as instructional context for AI agents.
+This document provides a comprehensive overview of the Linny project to serve as instructional context for AI agents.
 
 ## Project Overview
 A modern, full-stack project management application mimicking Linear. Features include issue tracking (List, Board, Timeline views), team/project management, real-time notifications, and multi-user collaboration.

@@ -1,8 +1,8 @@
-# 🐳 Docker Deployment Guide - Neo Linear Server
+# 🐳 Docker Deployment Guide - Linny Server
 
 ## Overview
 
-This guide covers deploying the Neo Linear backend server using Docker.
+This guide covers deploying the Linny backend server using Docker.
 
 ## Prerequisites
 

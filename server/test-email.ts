@@ -45,12 +45,12 @@ async function sendTestEmail() {
     <body>
       <div class="container">
         <div class="header">
-          <h1>🧪 Neo Linear - Test Email</h1>
+          <h1>🧪 Linny - Test Email</h1>
         </div>
         <div class="content">
-          <h2>Halo Kak! 👋</h2>
-          <p>Ini adalah email test dari Neo Linear buat ngecek SMTP configuration udah bener atau belum.</p>
-          <p>Kalau kakak terima email ini, berarti konfigurasi SMTP udah berhasil dan siap dipakai! 🎉</p>
+          <h2>Hello! 👋</h2>
+          <p>This is a test email from Linny to verify SMTP configuration.</p>
+          <p>If you received this email, your SMTP configuration is working correctly. 🎉</p>
           <p><strong>Detail Konfigurasi:</strong></p>
           <ul>
             <li>SMTP Host: ${process.env.EMAIL_HOST}</li>
@@ -60,7 +60,7 @@ async function sendTestEmail() {
           <p>Semoga harinya menyenangkan ya kak! 😊</p>
         </div>
         <div class="footer">
-          <p>Neo Linear - Project Management Tool</p>
+          <p>Linny - Project Management Tool</p>
         </div>
       </div>
     </body>
@@ -85,9 +85,9 @@ async function sendTestEmail() {
         const info = await transporter.sendMail({
             from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
             to: 'renggaworkspace@gmail.com',
-            subject: '🧪 Test Email dari Neo Linear',
+            subject: '🧪 Test Email from Linny',
             html: testEmailHTML,
-            text: 'Halo Kak! Ini adalah email test dari Neo Linear buat ngecek SMTP configuration udah bener atau belum.',
+            text: 'Hello! This is a test email from Linny to verify SMTP configuration.',
         });
 
         console.log('✅ Test email sent successfully!');

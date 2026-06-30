@@ -23,10 +23,11 @@ describe('rate limiting', () => {
 
   it('WebSocket routes bypass rate limit', () => {
     const src = fs.readFileSync('./server/websocket/fastifyWebSocketRoutes.ts', 'utf8');
-    // Each of the 3 ws routes must declare rateLimit: false
+    // Each ws route must declare rateLimit: false.
+    // Count of routes (user, issue, project, join-requests = 4) must equal bypass count.
     const wsRouteCount = (src.match(/fastify\.get\('\/ws\//g) || []).length;
-    expect(wsRouteCount).toBe(3);
     const bypassCount = (src.match(/rateLimit:\s*false/g) || []).length;
-    expect(bypassCount).toBe(3);
+    expect(bypassCount).toBe(wsRouteCount);
+    expect(wsRouteCount).toBeGreaterThanOrEqual(4);
   });
 });

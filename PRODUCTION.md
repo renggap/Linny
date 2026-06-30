@@ -1,6 +1,6 @@
-# Neo Linear Production Setup
+# Linny Production Setup
 
-This document contains information about the production deployment of Neo Linear at https://linear.neodigital.co.id
+This document contains information about the production deployment of Linny at https://linear.neodigital.co.id
 
 ## 🚀 Production URL
 

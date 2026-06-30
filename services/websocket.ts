@@ -25,12 +25,13 @@ export class WebSocketService {
             throw new Error('No access token available for WebSocket connection');
         }
 
-        // Extract room type and ID from roomId (e.g., "issue:123" -> "/ws/issue/123")
+        // Extract room type and optional ID from roomId (e.g., "issue:123" -> "/ws/issue/123")
         const [roomType, roomParam] = roomId.split(':');
 
-        // User notifications route is /ws/user (userId comes from JWT token, not URL)
-        if (roomType === 'user') {
-            return `${this.baseUrl}/ws/user?token=${token}`;
+        // Routes that take no path param (room is implicit per authenticated user)
+        const noParamRooms = new Set(['user', 'join-requests']);
+        if (noParamRooms.has(roomType)) {
+            return `${this.baseUrl}/ws/${roomType}?token=${token}`;
         }
 
         return `${this.baseUrl}/ws/${roomType}/${roomParam}?token=${token}`;
@@ -86,10 +87,22 @@ export class WebSocketService {
 
     private disconnectFromRoom(roomId: string): void {
         const ws = this.connections.get(roomId);
-        if (ws) {
+        if (!ws) return;
+
+        // Suppress browser "closed before established" warning when the
+        // subscribe/unsubscribe cycle outpaces the WS handshake (e.g., user
+        // opens and quickly closes an issue modal). If still CONNECTING,
+        // defer the close until after open completes.
+        if (ws.readyState === WebSocket.CONNECTING) {
+            ws.onopen = () => {
+                try { ws.close(1000, 'Client disconnecting'); } catch { /* already closed */ }
+            };
+        } else if (ws.readyState === WebSocket.OPEN) {
             ws.close(1000, 'Client disconnecting');
-            this.connections.delete(roomId);
         }
+        // CLOSING / CLOSED — nothing to do; browser will fire onclose eventually.
+
+        this.connections.delete(roomId);
     }
 
     private handleMessage(message: WebSocketMessage): void {

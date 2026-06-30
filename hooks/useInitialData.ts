@@ -27,7 +27,7 @@ export function useInitialData() {
       }
 
       // Only set default team if URL doesn't specify one
-      const userTeam = teams.find(team => team.members.includes(currentUser.id));
+      const userTeam = teams.find(team => (team.members || []).includes(currentUser.id));
       if (userTeam) {
         ui.setCurrentTeamId(userTeam.id);
       } else {

@@ -343,7 +343,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
         const activeMembers = users
             .filter(user => teamMemberIds.includes(user.id) && user.role !== UserRole.Guest)
             .map(user => {
-                const userIssues = teamIssues.filter(i => i.assigneeIds.includes(user.id));
+                const userIssues = teamIssues.filter(i => i.assigneeIds?.includes(user.id));
                 // Exclude Backlog and Canceled from user completion calculation
                 const userActiveIssues = userIssues.filter(i => activeStatuses.includes(i.status));
                 const done = userActiveIssues.filter(i => i.status === Status.Done).length;

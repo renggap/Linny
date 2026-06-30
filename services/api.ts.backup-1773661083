@@ -1,5 +1,5 @@
 /**
- * API Client for Linny Backend
+ * API Client for Neo Linear Backend
  *
  * Handles all HTTP requests to the Express server with JWT authentication.
  *
@@ -116,61 +116,16 @@ interface TokenResponse {
   refreshToken: string;
 }
 
-// Access token lives in memory + localStorage mirror for reload persistence.
-// XSS tradeoff accepted by design — see audit/access-token-persistence.test.ts.
-// httpOnly refresh-cookie stays the long-lived credential.
-const TOKEN_STORAGE_KEY = 'neo_linear_access_token';
-const LEGACY_TOKEN_STORAGE_KEYS = ['linear_clone_access_token']; // pre-rebrand orphans
+// Access token is stored in memory only for security (XSS prevention)
+// The httpOnly refresh token cookie handles persistence across page reloads
+const TOKEN_STORAGE_KEY = 'linear_clone_access_token'; // Kept for migration purposes only
 
-function readTokenFromStorage(): string | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
-
-function writeTokenToStorage(token: string): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
-    return true;
-  } catch (e) {
-    // Quota exceeded / private mode / disabled storage — memory-only fallback.
-    console.warn('[api] localStorage.setItem failed; falling back to memory-only token:', e);
-    return false;
-  }
-}
-
-function removeTokenFromStorage(): void {
-  if (typeof window === 'undefined') return;
-  for (const key of [TOKEN_STORAGE_KEY, ...LEGACY_TOKEN_STORAGE_KEYS]) {
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-      // no-op — storage may be disabled
-    }
-  }
-}
-
-let accessToken: string | null = readTokenFromStorage();
+let accessToken: string | null = null;
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
 // Global auth failure callbacks - triggered when refresh completely fails
 let authFailureCallbacks: Array<() => void> = [];
-
-// Cross-tab logout sync: when another tab removes the token, clear ours too.
-// Without this, logout in tab A leaves tab B's in-memory token alive until 401.
-if (typeof window !== 'undefined') {
-  window.addEventListener('storage', (event) => {
-    if (event.key === TOKEN_STORAGE_KEY && event.newValue === null && accessToken) {
-      console.log('[api] storage event: token cleared in another tab, clearing local');
-      accessToken = null;
-    }
-  });
-}
 
 /**
  * Register a callback to be invoked when authentication completely fails
@@ -179,15 +134,18 @@ if (typeof window !== 'undefined') {
  */
 export function onAuthFailure(callback: () => void): () => void {
   authFailureCallbacks.push(callback);
+  // Return unsubscribe function
   return () => {
     authFailureCallbacks = authFailureCallbacks.filter(cb => cb !== callback);
   };
 }
 
+/**
+ * Trigger all registered auth failure callbacks.
+ * Called when token refresh completely fails.
+ */
 function triggerAuthFailure(): void {
-  // Refresh truly failed — clear tokens so the next request doesn't loop
-  // sending a known-bad bearer and retriggering the failed refresh.
-  clearTokens();
+  console.log('[api] Authentication failed, triggering callbacks');
   authFailureCallbacks.forEach(cb => {
     try {
       cb();
@@ -198,17 +156,21 @@ function triggerAuthFailure(): void {
 }
 
 export function getAccessToken(): string | null {
+  // Access token is stored in memory only for security (XSS prevention)
+  // On page refresh, a new token is obtained via the httpOnly refresh token cookie
   return accessToken;
 }
 
 function setAccessToken(token: string): void {
   accessToken = token;
-  writeTokenToStorage(token);
+  // NO LONGER storing in localStorage to prevent XSS attacks
+  // Token is kept in memory only; refresh token cookie handles page reloads
 }
 
 function clearTokens(): void {
   accessToken = null;
-  removeTokenFromStorage();
+  // NO LONGER clearing from localStorage (not stored there)
+  // Cookie will be cleared by server on logout
 }
 
 /**
@@ -216,10 +178,12 @@ function clearTokens(): void {
  */
 function handleOffline(): void {
   isOnline = false;
+  console.log('📴 Going offline - requests will be queued');
 }
 
 function handleOnline(): void {
   isOnline = true;
+  console.log('📶 Back online - syncing queued requests');
   syncQueuedRequests();
 }
 
@@ -241,6 +205,7 @@ function queueRequest(method: string, url: string, options?: RequestInit): void 
     timestamp: Date.now()
   };
   requestQueue.push(request);
+  console.log(`📦 Queued request: ${method} ${url} (queue size: ${requestQueue.length})`);
 }
 
 async function syncQueuedRequests(): Promise<void> {
@@ -248,6 +213,7 @@ async function syncQueuedRequests(): Promise<void> {
 
   isSyncing = true;
 
+  console.log(`🔄 Syncing ${requestQueue.length} queued requests...`);
 
   // Filter out expired requests
   const now = Date.now();
@@ -255,6 +221,7 @@ async function syncQueuedRequests(): Promise<void> {
   const expiredCount = requestQueue.length - validRequests.length;
 
   if (expiredCount > 0) {
+    console.log(`🗑️ Removed ${expiredCount} expired requests`);
   }
   requestQueue = validRequests;
 
@@ -273,6 +240,7 @@ async function syncQueuedRequests(): Promise<void> {
           ...request.options,
           credentials: 'include'
         });
+        console.log(`✅ Synced: ${request.method} ${request.url}`);
         return { success: true, request };
       } catch (error) {
         console.error(`❌ Failed to sync: ${request.method} ${request.url}`, error);
@@ -287,9 +255,11 @@ async function syncQueuedRequests(): Promise<void> {
 
   const failed = results.filter(r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success));
   if (failed.length > 0) {
+    console.log(`⚠️ ${failed.length} requests failed to sync`);
   }
 
   if (requestQueue.length > 0) {
+    console.log(`⚠️ ${requestQueue.length} requests still queued`);
   }
 
   isSyncing = false;
@@ -362,9 +332,11 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
   if (stateChangingMethods.includes(method)) {
     // Ensure CSRF token is present before state-changing requests
     if (!csrfToken) {
+      console.log('No CSRF token, fetching one...');
       await fetchCsrfToken();
     }
     headers['X-CSRF-Token'] = csrfToken || '';
+    console.log(`Making ${method} request to ${url} with CSRF token: ${csrfToken?.substring(0, 10)}...`);
   }
 
   try {
@@ -382,6 +354,7 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
 
     // Handle 401 Unauthorized - try to refresh token (only retry once)
     if (response.status === 401 && !url.includes('/auth/refresh') && retryCount === 0) {
+      console.log(`Got 401 for ${url}, attempting to refresh token...`);
       const refreshed = await refreshAccessToken();
       if (refreshed) {
         // Retry original request with new token (only once)
@@ -395,8 +368,10 @@ async function fetchWithAuth(url: string, options?: RequestInit, retryCount = 0)
 
     // Handle 403 Forbidden - might be invalid CSRF token
     if (response.status === 403 && stateChangingMethods.includes(method)) {
+      console.log(`Got 403 for ${url}, checking if CSRF token issue...`);
       const error = await response.json().catch(() => ({ error: 'Forbidden' }));
       if (error.error?.toLowerCase().includes('csrf')) {
+        console.log(`CSRF token invalid, refreshing and retrying...`);
         // Fetch new CSRF token and retry
         await fetchCsrfToken();
         // Get current access token for the retry
@@ -483,13 +458,16 @@ async function refreshAccessToken(): Promise<boolean> {
         const data: TokenResponse = await response.json();
         setAccessToken(data.accessToken);
         // Refresh token is already set by server as httpOnly cookie
+        console.log('[api] Token refreshed successfully');
         return true;
       } else {
         // Handle 401/403 from refresh endpoint - token is truly invalid
+        console.log('[api] Refresh failed:', response.status);
         return false;
       }
     } catch (error) {
       // Network error or other failure
+      console.log('[api] Refresh error:', error);
       return false;
     } finally {
       // Clear the refresh lock AFTER the promise completes
@@ -854,17 +832,13 @@ export const projectsApi = {
     publicSlug?: string;
     startDate?: string;
     targetDate?: string;
-  }): Promise<{ project: Project; identifierChanged?: boolean; requestedIdentifier?: string }> {
+  }): Promise<Project> {
     const response = await fetchWithAuth('/projects', {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    const res = await handleResponse<{ project: any; identifierChanged?: boolean; requestedIdentifier?: string }>(response);
-    return {
-      project: transformProject(res.project),
-      identifierChanged: res.identifierChanged,
-      requestedIdentifier: res.requestedIdentifier
-    };
+    const res = await handleResponse<{ project: any }>(response);
+    return transformProject(res.project);
   },
 
   async update(id: string, updates: Partial<Project>): Promise<Project> {
@@ -1014,12 +988,15 @@ export const issuesApi = {
   },
 
   async updateStatus(id: string, status: Status): Promise<Issue> {
+    console.log('[api.issues.updateStatus] Sending request:', { id, status });
     const response = await fetchWithAuth(`/issues/${id}/status`, {
       method: 'POST',
       body: JSON.stringify({ status })
     });
+    console.log('[api.issues.updateStatus] Response status:', response.status);
     const data = await handleResponse<{ issue: any }>(response);
     const transformed = transformIssue(data.issue);
+    console.log('[api.issues.updateStatus] Transformed issue:', transformed);
     return transformed;
   },
 
@@ -1250,4 +1227,5 @@ export function getOfflineStatus(): { isOnline: boolean; queuedRequests: number 
 
 export function clearRequestQueue(): void {
   requestQueue = [];
+  console.log('🗑️ Request queue cleared');
 }

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { User, UserRole } from '../types';
 import { UserAvatar } from './UserAvatar';
@@ -39,6 +39,31 @@ export const UserSelect: React.FC<UserSelectProps> = ({
     // Guests cannot be assigned to issues
     const assignableUsers = filteredUsers || users.filter(u => u.role !== UserRole.Guest);
 
+    // Compute dropdown position synchronously before paint to avoid flicker.
+    // Uses position:fixed with viewport-relative coords (no scrollY/scrollX math).
+    // Flips above the trigger if there's no room below.
+    const updatePosition = React.useCallback(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const DROPDOWN_HEIGHT_ESTIMATE = 240;
+        const MARGIN = 4;
+        const viewportH = window.innerHeight;
+        const spaceBelow = viewportH - rect.bottom;
+        const openAbove = spaceBelow < DROPDOWN_HEIGHT_ESTIMATE && rect.top > DROPDOWN_HEIGHT_ESTIMATE;
+        setDropdownStyle({
+            position: 'fixed',
+            top: openAbove ? Math.max(MARGIN, rect.top - DROPDOWN_HEIGHT_ESTIMATE - MARGIN) : rect.bottom + MARGIN,
+            left: rect.left,
+            width: rect.width,
+            minWidth: 200
+        });
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!isOpen) return;
+        updatePosition();
+    }, [isOpen, updatePosition]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -53,42 +78,15 @@ export const UserSelect: React.FC<UserSelectProps> = ({
 
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
-            // Calculate position
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setDropdownStyle({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: rect.left + window.scrollX,
-                    width: rect.width,
-                    minWidth: '200px' // Ensure it's not too narrow
-                });
-            }
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen]);
-
-    // Update position on scroll/resize if open (optional but good for robustness)
-    useEffect(() => {
-        if (!isOpen) return;
-        const updatePosition = () => {
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setDropdownStyle({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: rect.left + window.scrollX,
-                    width: rect.width,
-                    minWidth: '200px'
-                });
-            }
-        };
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true); // Capture scroll
-
         return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
             window.removeEventListener('resize', updatePosition);
             window.removeEventListener('scroll', updatePosition, true);
         };
-    }, [isOpen]);
+    }, [isOpen, updatePosition]);
 
     return (
         <div className={`relative ${className}`} ref={containerRef}>
@@ -132,8 +130,8 @@ export const UserSelect: React.FC<UserSelectProps> = ({
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className="absolute z-[9999] bg-[#25262B] border border-[#363840] shadow-xl py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
-                    style={{ ...dropdownStyle, position: 'absolute' }}
+                    className="fixed z-[9999] bg-[#25262B] border border-[#363840] shadow-xl py-1 max-h-60 overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
+                    style={dropdownStyle}
                 >
                     {assignableUsers.map(user => (
                         <div
@@ -142,16 +140,13 @@ export const UserSelect: React.FC<UserSelectProps> = ({
                             onClick={(e) => {
                                 e.stopPropagation();
                                 onSelect(user.id);
-                                // For multi-select, we might not want to close immediately,
-                                // but for now let's keep it behaving like a toggle or single for compatibility if needed.
-                                // Actually, in IssueModal we do toggle logic in its handler.
                             }}
                         >
                             <UserAvatar name={user.name} size="sm" className="mr-2" />
-                            <span className={`flex-1 ${selectedUserIds.includes(user.id) ? 'font-medium' : ''}`}>
+                            <span className={`flex-1 ${(selectedUserIds || []).includes(user.id) ? 'font-medium' : ''}`}>
                                 {user.name}
                             </span>
-                            {selectedUserIds.includes(user.id) && (
+                            {(selectedUserIds || []).includes(user.id) && (
                                 <Check className="w-3.5 h-3.5" />
                             )}
                         </div>

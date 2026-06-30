@@ -1,7 +1,7 @@
 /**
  * Entity Types
  *
- * Core domain entities for the Neo Linear application.
+ * Core domain entities for the Linny application.
  *
  * @module entities
  */

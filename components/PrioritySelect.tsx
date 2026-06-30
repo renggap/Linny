@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Priority } from '../types';
 import { PriorityIcon } from './Icons';
@@ -28,6 +28,31 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
         Priority.Low,
     ];
 
+    // Compute dropdown position synchronously before paint to avoid flicker.
+    // Uses position:fixed with viewport-relative coords (no scrollY/scrollX math).
+    // Flips above the trigger if there's no room below.
+    const updatePosition = React.useCallback(() => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const DROPDOWN_HEIGHT_ESTIMATE = 200;
+        const MARGIN = 4;
+        const viewportH = window.innerHeight;
+        const spaceBelow = viewportH - rect.bottom;
+        const openAbove = spaceBelow < DROPDOWN_HEIGHT_ESTIMATE && rect.top > DROPDOWN_HEIGHT_ESTIMATE;
+        setDropdownStyle({
+            position: 'fixed',
+            top: openAbove ? Math.max(MARGIN, rect.top - DROPDOWN_HEIGHT_ESTIMATE - MARGIN) : rect.bottom + MARGIN,
+            left: rect.left,
+            width: rect.width,
+            minWidth: 160
+        });
+    }, []);
+
+    useLayoutEffect(() => {
+        if (!isOpen) return;
+        updatePosition();
+    }, [isOpen, updatePosition]);
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
@@ -39,44 +64,17 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
                 setIsOpen(false);
             }
         };
-
         if (isOpen) {
             document.addEventListener('mousedown', handleClickOutside);
-            // Calculate position
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setDropdownStyle({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: rect.left + window.scrollX,
-                    width: rect.width,
-                    minWidth: '160px'
-                });
-            }
+            window.addEventListener('resize', updatePosition);
+            window.addEventListener('scroll', updatePosition, true);
         }
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [isOpen]);
-
-    // Update position on scroll/resize
-    useEffect(() => {
-        if (!isOpen) return;
-        const updatePosition = () => {
-            if (containerRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                setDropdownStyle({
-                    top: rect.bottom + window.scrollY + 4,
-                    left: rect.left + window.scrollX,
-                    width: rect.width,
-                    minWidth: '160px'
-                });
-            }
-        };
-        window.addEventListener('resize', updatePosition);
-        window.addEventListener('scroll', updatePosition, true);
         return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
             window.removeEventListener('resize', updatePosition);
             window.removeEventListener('scroll', updatePosition, true);
         };
-    }, [isOpen]);
+    }, [isOpen, updatePosition]);
 
 
     return (
@@ -95,8 +93,8 @@ export const PrioritySelect: React.FC<PrioritySelectProps> = ({
             {isOpen && createPortal(
                 <div
                     ref={dropdownRef}
-                    className="absolute z-[9999] bg-[#25262B] border border-[#363840] shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
-                    style={{ ...dropdownStyle, position: 'absolute' }}
+                    className="fixed z-[9999] bg-[#25262B] border border-[#363840] shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
+                    style={dropdownStyle}
                 >
                     {priorities.map(priority => (
                         <div

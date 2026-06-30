@@ -1,7 +1,7 @@
 {
   "name": "neo-linear-server",
   "version": "1.0.0",
-  "description": "Neo Linear backend server with PostgreSQL",
+  "description": "Linny backend server with PostgreSQL",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {

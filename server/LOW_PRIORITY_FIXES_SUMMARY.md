@@ -1,7 +1,7 @@
 # Low-Priority Fixes Summary
 
 ## Overview
-This document summarizes all 20 low-priority issues that were fixed in Phase 4 of the Neo Linear project.
+This document summarizes all 20 low-priority issues that were fixed in Phase 4 of the Linny project.
 
 ## Backend Fixes (Issues 1-11)
 

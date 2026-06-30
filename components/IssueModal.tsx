@@ -7,6 +7,7 @@ import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { PrioritySelect } from './PrioritySelect';
 import { MentionInput } from './MentionInput';
+import { UserAvatar } from './UserAvatar';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { renderMentionsWithBadges } from '../services/mentionUtils';
@@ -283,7 +284,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 >
                                     <div className={cn("w-1 h-1 rounded-full", saveStatus === 'saving' ? "bg-accent animate-pulse" : "bg-green-500")} />
-                                    <span>{saveStatus === 'saving' ? 'Syncing' : 'Synced'}</span>
+                                    <span>{saveStatus === 'saving' ? 'Saving' : 'Saved'}</span>
                                 </motion.div>
                             )}
                             <button onClick={onClose} className="p-1.5 hover:bg-[#1C1D24] text-[#5E6068] hover:text-[#E8E8E8] transition-all">
@@ -343,44 +344,43 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                     )}
                                 </AnimatePresence>
 
-                                {!(existingIssue as Issue | PartialIssue)?.parentId && (
+                                {hasExistingIssueId && (
                                     <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
                                         {/* Subtasks Section - Only shown for parent issues, not subtasks */}
-                                        <section className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
-                                                    <GitMerge className="w-3.5 h-3.5 mr-2" /> Sub-objectives
-                                                </h4>
-                                                <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
-                                                    {subtasks.length} ENTRIES
-                                                </span>
-                                            </div>
-                                            <div className="grid gap-2">
-                                                {subtasks.map(s => (
-                                                    <motion.div
-                                                        key={s.id}
-                                                        whileHover={{ x: 4 }}
-                                                        onClick={() => onOpenIssue?.(s.id)}
-                                                        className="flex items-center justify-between px-4 py-3 bg-[#14151A]/30 border border-[#1A1C23] hover:border-[#2C2D35] transition-all cursor-pointer group"
-                                                    >
-                                                        <div className="flex items-center space-x-4">
-                                                            <div className="p-1 rounded bg-[#0F1014] border border-[#1A1C23]">
-                                                                <StatusIcon status={s.status} className="w-3 h-3" />
+                                        {!(existingIssue as Issue | PartialIssue)?.parentId && (
+                                            <section className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
+                                                        <GitMerge className="w-3.5 h-3.5 mr-2" /> Subtasks
+                                                    </h4>
+                                                    <span className="text-[9px] font-mono text-[#3A3C46] tracking-tighter bg-[#14151A] px-2 py-0.5 rounded border border-[#22242A]">
+                                                        {subtasks.length} ENTRIES
+                                                    </span>
+                                                </div>
+                                                <div className="grid gap-2">
+                                                    {subtasks.map(s => (
+                                                        <motion.div
+                                                            key={s.id}
+                                                            whileHover={{ x: 4 }}
+                                                            onClick={() => onOpenIssue?.(s.id)}
+                                                            className="flex items-center justify-between px-4 py-3 bg-[#14151A]/30 border border-[#1A1C23] hover:border-[#2C2D35] transition-all cursor-pointer group"
+                                                        >
+                                                            <div className="flex items-center space-x-4">
+                                                                <div className="p-1 rounded bg-[#0F1014] border border-[#1A1C23]">
+                                                                    <StatusIcon status={s.status} className="w-3 h-3" />
+                                                                </div>
+                                                                <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
+                                                                <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
                                                             </div>
-                                                            <span className="text-[10px] text-[#5E6068] font-mono tracking-widest uppercase">{s.identifier}</span>
-                                                            <span className="text-[13px] text-[#C0C4CC] font-medium group-hover:text-white transition-colors">{s.title}</span>
-                                                        </div>
-                                                        <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-accent transition-colors" />
-                                                    </motion.div>
-                                                ))}
-                                                {hasExistingIssueId ? (
-                                                    // Existing issue: show the input
-                                                    canEdit && (
+                                                            <ArrowUpRight className="w-3.5 h-3.5 text-[#2C2D35] group-hover:text-accent transition-colors" />
+                                                        </motion.div>
+                                                    ))}
+                                                    {canEdit && (
                                                         <div className="flex items-center space-x-3 px-4 py-2 border border-dashed border-[#1A1C23] hover:border-[#2C2D35] transition-colors">
                                                             <Plus className="w-4 h-4 text-[#3A3C46]" />
                                                             <input
                                                                 type="text"
-                                                                placeholder="Add sub-objective..."
+                                                                placeholder="Add subtask..."
                                                                 className="flex-1 bg-transparent text-[13px] text-[#8A8F98] placeholder-[#3A3C46] focus:outline-none"
                                                                 value={newSubtaskTitle}
                                                                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
@@ -392,22 +392,15 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                                 }}
                                                             />
                                                         </div>
-                                                    )
-                                                ) : (
-                                                    // New issue: show a message
-                                                    <div className="px-4 py-3 border border-dashed border-[#1A1C23]">
-                                                        <p className="text-[11px] text-[#3A3C46] italic text-center">
-                                                            Sub-objectives can be added after creating this issue
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </section>
+                                                    )}
+                                                </div>
+                                            </section>
+                                        )}
 
-                                        {/* Activity/Comments Section */}
+                                        {/* Activity/Comments Section — visible for all existing issues (parent or sub) */}
                                         <section className="space-y-6">
                                             <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">
-                                                <MessageSquare className="w-3.5 h-3.5 mr-2" /> Communications
+                                                <MessageSquare className="w-3.5 h-3.5 mr-2" /> Comments
                                             </h4>
                                             <div className="space-y-8 pl-1 relative">
                                                 <div className="absolute left-[3px] top-2 bottom-2 w-px bg-[#1A1C23]" />
@@ -419,15 +412,22 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                                             initial={{ opacity: 0, x: -10 }}
                                                             animate={{ opacity: 1, x: 0 }}
                                                             transition={{ delay: idx * 0.05 }}
-                                                            className="relative pl-8"
+                                                            className="relative pl-10"
                                                         >
-                                                            <div className="absolute left-[-2px] top-1.5 w-2.5 h-2.5 rounded-full bg-[#14151A] border-2 border-accent shadow-[0_0_8px_rgba(94,106,210,0.4)]" />
+                                                            <div className="absolute left-[-10px] top-1">
+                                                                <UserAvatar
+                                                                    name={u?.name || 'Unknown'}
+                                                                    avatarUrl={u?.avatarUrl}
+                                                                    size="md"
+                                                                    className="ring-2 ring-[#0F1014]"
+                                                                />
+                                                            </div>
                                                             <div className="flex items-center justify-between mb-2">
                                                                 <span className="text-[11px] font-bold text-[#E8E8E8]">{u?.name || 'Unknown User'}</span>
                                                                 <span className="text-[9px] font-bold text-[#5E6068] uppercase tracking-tighter">{new Date(c.createdAt).toLocaleString()}</span>
                                                             </div>
                                                             <div className="bg-[#14151A]/40 border border-[#1A1C23] p-3.5">
-                                                                <p className="text-[13px] text-[#C0C4CC] leading-relaxed">
+                                                                <p className="text-[15px] text-[#C0C4CC] leading-relaxed">
                                                                     {renderMentionsWithBadges(c.content, users)}
                                                                 </p>
                                                             </div>
@@ -495,7 +495,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
                             <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
-                                    <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Criticality
+                                    <PriorityIcon priority={priority} className="w-3 h-3 mr-2" /> Priority
                                 </label>
                                 <div className="bg-[#0F1014] border border-[#22242A] p-0.5">
                                     <PrioritySelect
@@ -507,7 +507,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
 
                             <div className={`space-y-4 ${!canEdit ? 'pointer-events-none opacity-60' : ''}`}>
                                 <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-[0.2em] flex items-center">
-                                    <UserIcon className="w-3 h-3 mr-2" /> Personnel
+                                    <UserIcon className="w-3 h-3 mr-2" /> Assignees
                                 </label>
                                 <div className="bg-[#0F1014] border border-[#22242A] p-0.5">
                                     <UserSelect

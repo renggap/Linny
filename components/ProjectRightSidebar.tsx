@@ -79,7 +79,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
             // Exclude Backlog and Canceled from member progress
             if (!ACTIVE_STATUSES.includes(issue.status)) return;
 
-            issue.assigneeIds.forEach(assigneeId => {
+            issue.assigneeIds?.forEach(assigneeId => {
                 const user = users.find(u => u.id === assigneeId);
                 // Only include team members (excludes guests and non-team users)
                 if (!user || !teamMemberIds.has(user.id)) return;

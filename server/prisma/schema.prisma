@@ -1,4 +1,4 @@
-// Prisma Schema for Neo Linear
+// Prisma Schema for Linny
 
 generator client {
   provider = "prisma-client-js"
@@ -123,6 +123,7 @@ model Project {
   activities   Activity[]
 
   @@map("projects")
+  @@unique([teamId, identifier])
   @@index([teamId])
   @@index([publicSlug])
 }

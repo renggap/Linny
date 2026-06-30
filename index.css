@@ -58,6 +58,62 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* Force inputs/textareas to inherit theme colors even when the browser
+ * applies autofill / default form styling. Without this, browsers paint a
+ * white (or pale yellow) background on autofilled fields, producing the
+ * 'white blip' visible on focus/click in dark-themed inputs.
+ *
+ * Caret/selection colors are hardcoded to light values because the app is
+ * dark-themed in practice — components use Tailwind bg-[#0F1014] etc.
+ * directly, and the html element doesn't get a .dark class, so the CSS
+ * variable --text-primary falls back to its light-mode value (#0E0F12)
+ * which would be invisible on the dark inputs. */
+input,
+textarea,
+select {
+  caret-color: #F5F6F8;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  outline: none;
+}
+
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+button:focus-visible,
+a:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* textarea still needs the resize handle bar visible, but appearance:none
+ * removes default inner shadow that some browsers paint. Restore base. */
+textarea {
+  resize: vertical;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus {
+  -webkit-text-fill-color: #F5F6F8;
+  -webkit-box-shadow: 0 0 0px 1000px #16181D inset;
+  transition: background-color 9999s ease-in-out 0s;
+  caret-color: #F5F6F8;
+}
+
+/* Text selection matches theme accent instead of default pale blue. */
+::selection {
+  background: rgba(0, 102, 255, 0.25);
+  color: #F5F6F8;
+}
+
 /* Custom Scrollbar for that native feel */
 ::-webkit-scrollbar {
   width: 8px;

@@ -228,6 +228,90 @@ export function registerWebSocketRoutes(fastify: FastifyInstance): void {
         console.log(`✅ WebSocket connected to ${roomId}: ${ws.userEmail}`);
     });
 
+    // Join-requests room WebSocket route
+    // Used by team admins/leads to receive real-time join_request.created / .updated events.
+    // DEFENSE IN DEPTH: frontend also gates subscription on isGlobalAdministrator.
+    fastify.get('/ws/join-requests', {
+        websocket: true,
+        logLevel: 'warn',
+        config: { rateLimit: false }
+    }, (connection: WebSocket, req: any) => {
+        const ws = connection as AuthenticatedWebSocket;
+
+        // Authenticate and set user data
+        const authResult = authenticateWebSocket(req);
+        if (!authResult.success) {
+            console.warn(`❌ WebSocket authentication failed: ${authResult.message}`);
+            ws.close(1008, authResult.message);
+            return;
+        }
+
+        ws.userId = authResult.userId!;
+        ws.userEmail = authResult.userEmail!;
+        ws.userRole = authResult.userRole!;
+
+        // Authorization: only global admins may join the broadcast room.
+        // Team-lead real-time push is intentionally not supported yet —
+        // team leads refetch on view via TanStack Query.
+        if (ws.userRole !== 'Administrator') {
+            console.warn(`⛔ /ws/join-requests rejected non-admin: ${ws.userEmail} (role=${ws.userRole})`);
+            ws.close(1008, 'Forbidden: administrator role required');
+            return;
+        }
+
+        // Track user connection
+        if (!trackUserConnection(ws.userId, ws)) {
+            ws.close(1008, 'Too many connections');
+            return;
+        }
+
+        const roomId = 'join-requests';
+
+        // Add to room
+        addToRoom(roomId, ws);
+
+        // Setup event handlers
+        ws.on('message', (data: Buffer) => {
+            try {
+                const message: WebSocketMessage = JSON.parse(data.toString());
+                if (message.type === 'ping') {
+                    ws.send(JSON.stringify({ type: 'pong' }));
+                }
+            } catch (error) {
+                console.error('WebSocket message parsing error:', error);
+            }
+        });
+
+        ws.on('close', (code, _reason) => {
+            console.log(`🔌 WebSocket disconnected from ${roomId}: ${ws.userEmail} (code: ${code})`);
+            removeFromRoom(roomId, ws);
+            if (ws.userId) {
+                cleanupUserConnection(ws.userId, ws);
+            }
+        });
+
+        ws.on('error', (error: Error) => {
+            console.error(`WebSocket error in ${roomId} for ${ws.userEmail}:`, error);
+            removeFromRoom(roomId, ws);
+            if (ws.userId) {
+                cleanupUserConnection(ws.userId, ws);
+            }
+        });
+
+        // Send welcome message
+        ws.send(JSON.stringify({
+            type: 'connected',
+            data: {
+                roomId,
+                userId: ws.userId,
+                userEmail: ws.userEmail,
+                timestamp: new Date().toISOString()
+            }
+        }));
+
+        console.log(`✅ WebSocket connected to ${roomId}: ${ws.userEmail}`);
+    });
+
     // Issue room WebSocket route
     fastify.get('/ws/issue/:issueId', {
         websocket: true,

@@ -69,7 +69,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
           {!success ? (
             <>
               <div className="text-center mb-8">
-                <h2 className="text-xl font-bold text-white mb-2">Lupa Password?</h2>
+                <h2 className="text-xl font-bold text-white mb-2">Forgot password?</h2>
                 <p className="text-[11px] text-[#5E6068]">
                   Masukin email kakak, kami kirim link reset ya
                 </p>
@@ -87,7 +87,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
-                      placeholder="address@nodex.network"
+                      placeholder="you@example.com"
                       disabled={isLoading}
                       required
                     />
@@ -127,7 +127,7 @@ export const PasswordResetModal: React.FC<PasswordResetModalProps> = ({
               className="text-center py-8"
             >
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-white mb-2">Cek Email Kakak!</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Check Your Email!</h3>
               <p className="text-[11px] text-[#5E6068]">
                 Link reset password udah dikirim ke {email}
               </p>

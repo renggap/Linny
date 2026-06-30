@@ -105,11 +105,11 @@ export const Auth: React.FC = () => {
               <div className="absolute inset-0 bg-accent/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </motion.div>
 
-            <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linear</h1>
+            <h1 className="text-2xl font-bold text-white tracking-widest uppercase mb-2">Linny</h1>
             <div className="flex items-center space-x-2">
               <div className="h-px w-4 bg-[#2C2D35]" />
               <span className="text-[10px] text-[#5E6068] font-black uppercase tracking-[0.3em]">
-                {isLoginMode ? 'Access Restricted' : 'Secure Initializing'}
+                {isLoginMode ? 'Sign In' : 'Create Account'}
               </span>
               <div className="h-px w-4 bg-[#2C2D35]" />
             </div>
@@ -124,7 +124,7 @@ export const Auth: React.FC = () => {
                   exit={{ opacity: 0, height: 0 }}
                   className="space-y-2 overflow-hidden"
                 >
-                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Identity Name</label>
+                  <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Full Name</label>
                   <div className="relative group">
                     <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                     <input
@@ -132,7 +132,7 @@ export const Auth: React.FC = () => {
                       value={name}
                       onChange={e => setName(e.target.value)}
                       className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35]"
-                      placeholder="Specify identity..."
+                      placeholder="Enter your full name"
                       disabled={isLoading}
                     />
                   </div>
@@ -141,7 +141,7 @@ export const Auth: React.FC = () => {
             </AnimatePresence>
 
             <div className="space-y-2 text-left">
-              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Access Email</label>
+              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Email</label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
@@ -150,13 +150,13 @@ export const Auth: React.FC = () => {
                   onChange={e => setEmail(e.target.value)}
                   disabled={isLoading || inviteMode}
                   className="w-full bg-[#14151A] border border-[#22242A] pl-12 pr-4 py-3.5 text-sm text-[#E8E8E8] focus:outline-none focus:border-accent/50 focus:ring-4 focus:ring-accent/5 transition-all placeholder:text-[#2C2D35] disabled:opacity-40"
-                  placeholder="address@nodex.network"
+                  placeholder="you@example.com"
                 />
               </div>
             </div>
 
             <div className="space-y-2 text-left">
-              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Pass-Key</label>
+              <label className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest ml-1">Password</label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#3A3C46] group-focus-within:text-accent transition-colors" />
                 <input
@@ -175,7 +175,7 @@ export const Auth: React.FC = () => {
                     onClick={() => setShowForgotPassword(true)}
                     className="text-[10px] text-accent hover:text-[#7c7bf4] transition-colors font-medium"
                   >
-                    Lupa Password?
+                    Forgot password?
                   </button>
                 </div>
               )}
@@ -232,7 +232,7 @@ export const Auth: React.FC = () => {
 
         <p className="mt-8 text-center text-[#3A3C46] text-[10px] font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2">
           <Heart className="w-4 h-4 text-red-500 fill-red-500" />
-          Made with love by Neo DEV Team
+          Made with love by Linny Team
         </p>
       </motion.div>
 
