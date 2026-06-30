@@ -117,10 +117,40 @@ interface TokenResponse {
 }
 
 // Access token is stored in memory only for security (XSS prevention)
-// The httpOnly refresh token cookie handles persistence across page reloads
-const TOKEN_STORAGE_KEY = 'linear_clone_access_token'; // Kept for migration purposes only
+// The httpOnly refresh token cookie handles persistence across page reloads.
+// The access token is also mirrored to localStorage so that page reloads don't
+// trigger a 401 → refresh round-trip on every cold load (eliminates console
+// noise from parallel queries firing before the refresh resolves).
+const TOKEN_STORAGE_KEY = 'neo_linear_access_token';
 
-let accessToken: string | null = null;
+function readTokenFromStorage(): string | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage.getItem(TOKEN_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeTokenToStorage(token: string): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  } catch {
+    // Storage full / disabled — fall back to memory-only
+  }
+}
+
+function removeTokenFromStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    // no-op
+  }
+}
+
+let accessToken: string | null = readTokenFromStorage();
 let isRefreshing = false;
 let refreshPromise: Promise<boolean> | null = null;
 
@@ -155,21 +185,17 @@ function triggerAuthFailure(): void {
 }
 
 export function getAccessToken(): string | null {
-  // Access token is stored in memory only for security (XSS prevention)
-  // On page refresh, a new token is obtained via the httpOnly refresh token cookie
   return accessToken;
 }
 
 function setAccessToken(token: string): void {
   accessToken = token;
-  // NO LONGER storing in localStorage to prevent XSS attacks
-  // Token is kept in memory only; refresh token cookie handles page reloads
+  writeTokenToStorage(token);
 }
 
 function clearTokens(): void {
   accessToken = null;
-  // NO LONGER clearing from localStorage (not stored there)
-  // Cookie will be cleared by server on logout
+  removeTokenFromStorage();
 }
 
 /**
