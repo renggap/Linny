@@ -376,7 +376,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
                             </div>
                         </>
                     ) : (
-                        <div className="flex flex-col h-full">
+                        <div className="flex-1 flex flex-col overflow-hidden">
                             {!inviteStatus ? (
                                 <>
                                     {/* Tabs */}

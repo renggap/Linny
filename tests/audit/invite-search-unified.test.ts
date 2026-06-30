@@ -45,6 +45,16 @@ describe('unified user search in UserManagementModal', () => {
     // the submit button below the scrollable area, making it unreachable.
     expect(src).not.toMatch(/p-10 flex flex-col justify-center/);
   });
+
+  it('invite view uses flex-1 (not h-full) so it does not overflow the modal', () => {
+    // Bug: <div className="flex flex-col h-full"> for the invite view made
+    // it 100% of modal height — ignoring the 80px header above. Total
+    // height (80px + 85vh) overflowed the modal's overflow-hidden, and
+    // the submit button at the bottom of the email tab got clipped.
+    // flex-1 fills only the remaining space after the header.
+    expect(src).not.toMatch(/flex flex-col h-full/);
+    expect(src).toMatch(/flex-1 flex flex-col overflow-hidden/);
+  });
 });
 
 describe('team cache refresh after invite', () => {
