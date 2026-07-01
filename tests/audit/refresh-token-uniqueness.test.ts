@@ -1,4 +1,6 @@
+// @ts-nocheck — jsonwebtoken types live in server/node_modules only
 import { describe, it, expect } from 'vitest';
+// @ts-nocheck
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Issue, Project, User, Status } from '../types';
+import { Issue, Project, User } from '../types';
 import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
 import { Link } from '@tanstack/react-router';

@@ -19,7 +19,7 @@ interface BoardViewProps {
   onEdit: (issue: Issue) => void;
   onDelete: (issueId: string) => void;
   onStatusChange: (issueId: string, status: Status) => void;
-  onCreateIssue?: (status: Status) => void;
+  onCreateIssue?: (_status: Status) => void;
   isPublicView?: boolean;
   canEdit?: boolean;
   statusFilter?: Status | null;
@@ -164,7 +164,7 @@ export const BoardView: React.FC<BoardViewProps> = ({ issues, users, onEdit, onD
     }
   };
 
-  const handleDragLeave = (e: React.DragEvent, status: Status) => {
+  const handleDragLeave = (e: React.DragEvent, _status: Status) => {
     if (!canInteract) return;
     // Only clear dragOverColumn if leaving the column itself, not entering a child element
     if (e.currentTarget === e.target) {

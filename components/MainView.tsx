@@ -2,9 +2,9 @@ import React from 'react';
 import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../contexts/AuthContext';
 import { useIssues, useUpdateIssueStatus } from '../hooks/useIssues';
-import { useProjects, useProjectsWithLinks, useUpdateProject } from '../hooks/useProjects';
 import { useTeams } from '../hooks/useTeams';
 import { useUsers } from '../hooks/useUsers';
+import { useProjectsWithLinks, useUpdateProject } from "../hooks/useProjects";
 import { TeamDashboard } from './TeamDashboard';
 import { IssueList } from './IssueList';
 import { BoardView } from './BoardView';
@@ -12,7 +12,7 @@ import { TimelineView } from './TimelineView';
 // ProjectOverviewHeader was moved to Header.tsx (topbar popover) to avoid
 // eating vertical space in the main content area.
 import { ProjectRightSidebar } from './ProjectRightSidebar';
-import { Status, Activity } from '../types';
+import { Activity } from '../types';
 import { api } from '../services/api';
 import { canCreateContent } from '../lib/roleUtils';
 
@@ -26,7 +26,7 @@ export const MainView: React.FC<MainViewProps> = ({ activities }) => {
 
   const { data: users = [] } = useUsers();
   const { data: teams = [] } = useTeams(); // Assuming we need teams for dashboard
-  const { data: projects = [] } = useProjectsWithLinks(ui.currentTeamId);
+  const { data: projects = [] } = useProjectsWithLinks();
   const { data: issues = [] } = useIssues({
     teamId: ui.currentTeamId,
     projectId: ui.selectedProjectId,

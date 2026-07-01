@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { Issue, Status } from '../types';
+import { Issue, Status, IssueFilters } from '../types';
 import { useUIStore } from '../stores/uiStore';
 import { issueKeys, activityKeys } from '../services/queryKeys';
 
@@ -26,7 +26,7 @@ export function useIssues(filters: {
   const currentTeamId = useUIStore((state) => state.currentTeamId);
 
   // Always include teamId in filters for scoping (from store, not filters)
-  const scopedFilters = {
+  const scopedFilters: IssueFilters = {
     teamId: currentTeamId,
     projectId: filters.projectId,
     status: filters.status,
@@ -36,7 +36,7 @@ export function useIssues(filters: {
 
   return useQuery({
     // Use scoped query key
-    queryKey: issueKeys.filtered(currentTeamId, scopedFilters),
+    queryKey: issueKeys.filtered(currentTeamId, scopedFilters as any),
     queryFn: async () => api.issues.getAll(scopedFilters),
     // Only enable query if we have a teamId
     enabled: !!currentTeamId,
@@ -110,7 +110,7 @@ export function useUpdateIssue() {
 
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: any }) => api.issues.update(id, updates),
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       console.log('[useUpdateIssue] Issue updated successfully:', data);
 
       // Update only the current workspace's issue queries
@@ -149,7 +149,7 @@ export function useUpdateIssueStatus() {
       console.log('[useUpdateIssueStatus] Updating issue status:', { id, status });
       return api.issues.updateStatus(id, status);
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (data) => {
       console.log('[useUpdateIssueStatus] Status updated successfully:', data);
 
       // Update only the current workspace's issue queries

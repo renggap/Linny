@@ -7,7 +7,7 @@ export function useJoinRequests() {
     queryKey: ['join-requests'],
     queryFn: async () => {
       const response = await api.joinRequests.getAll();
-      return response as JoinRequest[];
+      return response as unknown as JoinRequest[];
     },
     staleTime: 0, // Always refetch on mount — covers the "fresh data on open" case.
     // Removed refetchOnMount: 'always' (redundant with staleTime: 0) and
@@ -21,7 +21,7 @@ export function useMyJoinRequests() {
     queryKey: ['join-requests', 'my'],
     queryFn: async () => {
       const response = await api.joinRequests.getMyRequests();
-      return response as JoinRequest[];
+      return response as unknown as JoinRequest[];
     }
   });
 }

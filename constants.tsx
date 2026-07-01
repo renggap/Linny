@@ -2,9 +2,9 @@
 import { Issue, Priority, Project, Status, Team, User, UserRole, Comment, Notification, NotificationType } from './types';
 
 export const MOCK_USERS: User[] = [
-  { id: 'u1', name: 'Alex Rivera', email: 'alex@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=1', password: 'password', role: UserRole.Administrator },
-  { id: 'u2', name: 'Sarah Chen', email: 'sarah@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=2', password: 'password', role: UserRole.Member },
-  { id: 'u3', name: 'Jordan Smith', email: 'jordan@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=3', password: 'password', role: UserRole.Guest },
+  { id: 'u1', name: 'Alex Rivera', email: 'alex@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=1',  role: UserRole.Administrator },
+  { id: 'u2', name: 'Sarah Chen', email: 'sarah@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=2',  role: UserRole.Member },
+  { id: 'u3', name: 'Jordan Smith', email: 'jordan@acme.com', avatarUrl: 'https://picsum.photos/32/32?random=3',  role: UserRole.Guest },
 ];
 
 export const MOCK_TEAMS: Team[] = [
@@ -50,7 +50,6 @@ export const INITIAL_ISSUES: Issue[] = [
     projectId: 'p1',
     startDate: tomorrow,
     dueDate: new Date(new Date().setDate(today.getDate() + 3)),
-    blockedBy: ['1'], // Blocked by auth flow
     createdAt: new Date(),
     updatedAt: new Date(),
   },
@@ -108,7 +107,6 @@ export const INITIAL_ISSUES: Issue[] = [
     parentId: '1', // Child of LIN-101
     startDate: new Date(new Date().setDate(today.getDate() + 2)),
     dueDate: new Date(new Date().setDate(today.getDate() + 5)),
-    blockedBy: ['5'], // Blocked by Setup OAuth
     createdAt: new Date(),
     updatedAt: new Date(),
   }

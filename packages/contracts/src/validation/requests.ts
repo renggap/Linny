@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { workspaceScopeSchema, projectScopeSchema } from '../scope/index.js';
 import { issueFiltersSchema } from '../filters/index.js';
 import {
-  userRoleEnumSchema,
+  
   issueStatusEnumSchema,
   issuePriorityEnumSchema,
-  notificationTypeEnumSchema
+  
 } from '../entities/index.js';
 
 // ============================================================================

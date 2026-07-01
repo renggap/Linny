@@ -5,7 +5,7 @@ import { queryClient } from './queryClient';
 import { websocketService } from './websocket';
 import { useUIStore } from '../stores/uiStore';
 import { Comment, Notification, Issue, JoinRequest } from '../types';
-import { issueKeys, commentKeys, isScopeKey, activityKeys } from './queryKeys';
+import { issueKeys, commentKeys, activityKeys } from './queryKeys';
 
 /**
  * WebSocket to TanStack Query Cache Integration (SCOPED)

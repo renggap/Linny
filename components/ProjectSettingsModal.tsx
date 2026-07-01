@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Globe, Lock, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Layout, Trash2, AlertTriangle } from 'lucide-react';
+import { X, Globe, Copy, Check, ExternalLink, FileText, Settings, Activity, ArrowRight, Trash2, AlertTriangle } from 'lucide-react';
 import { Project, User, UserRole } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -31,7 +31,7 @@ export const ProjectSettingsModal: React.FC<ProjectSettingsModalProps> = ({
     const [publicSlug, setPublicSlug] = useState('');
     const [copied, setCopied] = useState(false);
     const [localDescription, setLocalDescription] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
+    
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 

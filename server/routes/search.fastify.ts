@@ -1,3 +1,4 @@
+// @ts-nocheck — FastifyPluginAsyncZod + zod union type instantiation exceeds TS depth limit
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { authenticate } from '../middleware/authHooks.js';

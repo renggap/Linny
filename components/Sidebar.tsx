@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+
 import {
   Layers,
   Search,
@@ -18,7 +18,7 @@ import {
   Shield
 } from 'lucide-react';
 import { StatusIcon } from './Icons';
-import { Team, User, UserRole, Status } from '../types';
+import { Team, UserRole, Status } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { UserAvatar } from './UserAvatar';
@@ -83,11 +83,10 @@ const SidebarItem = ({
 );
 
 export const Sidebar: React.FC = () => {
-  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const ui = useUIStore();
   const { data: teams = [] } = useTeams();
-  const { data: projects = [] } = useProjects(ui.currentTeamId);
+  const { data: projects = [] } = useProjects();
   const { data: users = [] } = useUsers();
   const { data: joinRequests = [] } = useMyJoinRequests();
 
@@ -118,12 +117,6 @@ export const Sidebar: React.FC = () => {
   // Helper to check if user has a pending join request for a team
   const hasPendingJoinRequest = (teamId: string) => {
     return joinRequests.some(req => req.teamId === teamId && req.status === 'pending');
-  };
-
-  const getTeamSpecificRole = (user: User, team: Team | undefined): UserRole | null => {
-    if (!team?.membersWithRoles) return null;
-    const memberWithRole = team.membersWithRoles.find(m => m.id === user.id);
-    return memberWithRole?.role ?? null;
   };
 
   const visibleUsers = sortedTeamUsers;
@@ -187,7 +180,7 @@ export const Sidebar: React.FC = () => {
               {currentTeam?.name || 'Select Team'}
             </span>
             {currentTeam?.isStealth && (
-              <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-1" title="Stealth workspace - only visible to members" />
+              <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-1" />
             )}
             <ChevronDown className={cn("w-3.5 h-3.5 text-[#5E6068] transition-transform duration-200", isTeamMenuOpen && "rotate-180")} />
           </div>
@@ -247,7 +240,7 @@ export const Sidebar: React.FC = () => {
                             {team.name}
                           </span>
                           {team.isStealth && (
-                            <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-2" title="Stealth workspace - only visible to members" />
+                            <EyeOff className="w-3.5 h-3.5 text-[#5E6068] mr-2" />
                           )}
                           {!isMember && (
                             <div className="flex items-center gap-2">

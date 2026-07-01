@@ -1,10 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, Users, UserPlus, Check, X as XIcon, Clock, User } from 'lucide-react';
+import { X, Users, Check, X as XIcon, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useJoinRequests } from '../hooks/useJoinRequests';
-import { useApproveJoinRequest, useRejectJoinRequest } from '../hooks/useJoinRequests';
-import { JoinRequest } from '../types';
 import { UserAvatar } from './UserAvatar';
+import { useJoinRequests, useApproveJoinRequest, useRejectJoinRequest } from "../hooks/useJoinRequests";
 
 interface JoinRequestManagementModalProps {
   isOpen: boolean;

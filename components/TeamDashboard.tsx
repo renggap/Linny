@@ -2,7 +2,6 @@ import React, { useMemo } from 'react';
 import { Issue, Status, User, Project, Team, Priority, UserRole } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
 import { UserAvatar } from './UserAvatar';
-import { useUIStore } from '../stores/uiStore';
 import { useNavigate } from '@tanstack/react-router';
 import {
     Target,
@@ -292,7 +291,7 @@ const StatCard = ({ label, value, icon: Icon, trend, color }: {
 );
 
 export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, users, projects }) => {
-    const ui = useUIStore();
+    
     const navigate = useNavigate();
 
     // Helper function to create team slug (lowercase with hyphens)
@@ -390,7 +389,7 @@ export const TeamDashboard: React.FC<TeamDashboardProps> = ({ team, issues, user
                         <div className="flex items-center gap-2">
                             <h1 className="text-2xl font-semibold tracking-tight text-white mb-0.5">{team.name}</h1>
                             {team.isStealth && (
-                                <EyeOff className="w-5 h-5 text-[#5E6068]" title="Stealth workspace - only visible to members" />
+                                <EyeOff className="w-5 h-5 text-[#5E6068]" />
                             )}
                         </div>
                     </div>

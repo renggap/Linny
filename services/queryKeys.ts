@@ -12,14 +12,6 @@
 
 import type { IssueFilters } from '../types';
 
-type WorkspaceScope = {
-  teamId: string;
-  userId: string;
-};
-
-type ProjectScope = WorkspaceScope & {
-  projectId: string;
-};
 
 // ============================================================================
 // ISSUE QUERY KEYS

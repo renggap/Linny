@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from '@tanstack/react-router';
-import { router } from './router';
+
 import { useAuth } from './contexts/AuthContext';
 import { useUIStore } from './stores/uiStore';
 import { Sidebar } from './components/Sidebar';
@@ -17,7 +17,7 @@ import { useWebSocket } from './hooks/useWebSocket';
 import { useURLSync } from './hooks/useURLSync';
 import { useTeams, useCreateTeam } from './hooks/useTeams';
 import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from './hooks/useProjects';
-import { useIssues, useCreateIssue, useUpdateIssue, useUpdateIssueStatus, useCreateSubtask } from './hooks/useIssues';
+import { useIssues, useCreateIssue, useUpdateIssue, useCreateSubtask } from './hooks/useIssues';
 import { useUsers } from './hooks/useUsers';
 import { useActivities } from './hooks/useActivities';
 import { useCreateComment, useComments } from './hooks/useComments';
@@ -33,7 +33,7 @@ const App: React.FC = () => {
 
   // Core Data
   const { data: teams = [] } = useTeams();
-  const { data: projects = [] } = useProjects(ui.currentTeamId);
+  const { data: projects = [] } = useProjects();
   const { data: issues = [] } = useIssues({
     teamId: ui.currentTeamId,
     projectId: ui.selectedProjectId,
@@ -209,7 +209,7 @@ const App: React.FC = () => {
             throw error;
           }
         }}
-        handleInviteUser={(email, role) => {
+        handleInviteUser={() => {
           // Invalidate teams + members so the new invitee shows up in
           // the team list, TeamDashboard velocity, and sidebar immediately.
           queryClient.invalidateQueries({ queryKey: ['teams'] });

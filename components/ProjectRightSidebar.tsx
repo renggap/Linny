@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
-import { Project, Issue, User, Status, Activity, Priority, UserRole, Team } from '../types';
-import { Clock, Users, BarChart3, Target, Calendar } from 'lucide-react';
+import { Project, Issue, User, Status, Activity, Team } from '../types';
+import { Clock, Users, BarChart3, Target } from 'lucide-react';
 import { DatePicker } from './DatePicker';
 import { UserSelect } from './UserSelect';
 import { UserAvatar } from './UserAvatar';
@@ -132,7 +132,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                     filteredUsers={teamMembers}
                                     selectedUserIds={project.leadId ? [project.leadId] : []}
                                     onSelect={(id) => {
-                                        onUpdate({ id: project.id, leadId: id } as Project);
+                                        onUpdate({ id: project.id, leadId: id } as unknown as Project);
                                     }}
                                     placeholder="Assign lead..."
                                 />
@@ -146,7 +146,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                     value={project.startDate}
                                     onChange={(date) => {
                                         const dateStr = date.toISOString().split('T')[0];
-                                        onUpdate({ id: project.id, startDate: dateStr } as Project);
+                                        onUpdate({ id: project.id, startDate: dateStr } as unknown as Project);
                                     }}
                                     placeholder="Set date"
                                 />
@@ -157,7 +157,7 @@ export const ProjectRightSidebar: React.FC<ProjectRightSidebarProps> = ({
                                     value={project.targetDate}
                                     onChange={(date) => {
                                         const dateStr = date.toISOString().split('T')[0];
-                                        onUpdate({ id: project.id, targetDate: dateStr } as Project);
+                                        onUpdate({ id: project.id, targetDate: dateStr } as unknown as Project);
                                     }}
                                     placeholder="Set date"
                                 />

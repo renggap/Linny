@@ -8,7 +8,7 @@ import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../contexts/AuthContext';
 import { useJoinRequests } from '../hooks/useJoinRequests';
 import { useUnreadNotificationCount } from '../hooks/useNotifications';
-import { Team, User, Project, Status } from '../types';
+import { Team, User, Project } from '../types';
 import { canManageTeam } from '../lib/roleUtils';
 
 interface HeaderProps {

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from '@tanstack/react-router';
 import { useUIStore } from '../stores/uiStore';
 import { useAuth } from '../contexts/AuthContext';
-import { Team, Project, Issue, UserRole } from '../types';
+import { Team, Project, Issue } from '../types';
 
 export function useURLSync(teams: Team[], projects: Project[], issues: Issue[]) {
   const location = useLocation();
@@ -42,7 +42,7 @@ export function useURLSync(teams: Team[], projects: Project[], issues: Issue[]) 
     const projectMatch = path.match(/^\/team\/[^/]+\/project\/([^/]+)/);
     const issueMatch = path.match(/^\/team\/[^/]+\/project\/[^/]+\/issue\/([^/]+)/);
 
-    let stateChanged = false;
+    
 
     // Sync team
     if (teamMatch) {
@@ -52,7 +52,7 @@ export function useURLSync(teams: Team[], projects: Project[], issues: Issue[]) 
         ui.setCurrentTeamId(team.id);
         isSyncingStateRef.current = true;
         lastSyncedStateRef.current.teamId = team.id;
-        stateChanged = true;
+        
       }
     }
 
@@ -66,18 +66,18 @@ export function useURLSync(teams: Team[], projects: Project[], issues: Issue[]) 
         ui.setSelectedProjectId(project.id);
         isSyncingStateRef.current = true;
         lastSyncedStateRef.current.projectId = project.id;
-        stateChanged = true;
+        
       } else if (!project && ui.selectedProjectId !== null && projects.length > 0) {
         ui.setSelectedProjectId(null);
         isSyncingStateRef.current = true;
         lastSyncedStateRef.current.projectId = null;
-        stateChanged = true;
+        
       }
     } else if (ui.selectedProjectId !== null && projects.length > 0 && !projectMatch) {
       ui.setSelectedProjectId(null);
       isSyncingStateRef.current = true;
       lastSyncedStateRef.current.projectId = null;
-      stateChanged = true;
+      
     }
 
     // Sync issue

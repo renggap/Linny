@@ -95,6 +95,14 @@ export interface Issue {
  */
 export type PartialIssue = Partial<Pick<Issue, 'status' | 'priority' | 'projectId'>>;
 
+export interface IssueFilters {
+  teamId?: string;
+  projectId?: string | null;
+  status?: Status | null;
+  assigneeId?: string | null;
+  search?: string;
+}
+
 export interface Comment {
   id: string;
   content: string;

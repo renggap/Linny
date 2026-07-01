@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Users, Command, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Users, Command, ArrowRight, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface TeamModalProps {

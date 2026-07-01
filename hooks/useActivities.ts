@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../services/api';
-import { Activity } from '../types';
 import { useUIStore } from '../stores/uiStore';
 import { activityKeys } from '../services/queryKeys';
 

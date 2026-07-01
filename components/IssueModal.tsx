@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, Eye, Trash2, Calendar, User as UserIcon, Activity, UserCircle } from 'lucide-react';
+import { X, Send, MessageSquare, GitMerge, Plus, ArrowUpRight, Clock, Hash, Layout, User as UserIcon, Activity, UserCircle } from 'lucide-react';
 import { Issue, Priority, Status, User, Project, Comment, PartialIssue, UserRole } from '../types';
 import { StatusIcon, PriorityIcon } from './Icons';
 import { DatePicker } from './DatePicker';
@@ -133,7 +133,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
         setSaveStatus('saving');
         if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
         try {
-            const result = await onSave({ id: (existingIssue as Issue).id, [field]: value });
+            await onSave({ id: (existingIssue as Issue).id, [field]: value });
 
             // Update local state immediately to reflect changes
             if (field === 'priority') {
@@ -351,7 +351,7 @@ export const IssueModal: React.FC<IssueModalProps> = ({
                                 {hasExistingIssueId && (
                                     <div className="space-y-12 pt-10 border-t border-[#1A1C23]">
                                         {/* Subtasks Section - Only shown for parent issues, not subtasks */}
-                                        {!(existingIssue as Issue | PartialIssue)?.parentId && (
+                                        {!((existingIssue as any)?.parentId) && (
                                             <section className="space-y-4">
                                                 <div className="flex items-center justify-between">
                                                     <h4 className="text-[10px] font-bold text-[#5E6068] uppercase tracking-widest flex items-center">

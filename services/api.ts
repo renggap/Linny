@@ -18,7 +18,7 @@
  * - Provides offline indicator to UI
  */
 
-import { User, UserRole, Team, Project, Status, Priority, Issue, Activity, Comment, Notification } from '../types';
+import { User, UserRole, Team, Project, Status, Priority, Issue, Activity, Comment, Notification, IssueFilters } from '../types';
 
 // Use VITE_API_URL if available (for development), otherwise use relative URL
 // In development, Vite proxies /api to the backend server
@@ -262,7 +262,6 @@ async function syncQueuedRequests(): Promise<void> {
   requestQueue = [];
 
   // Process requests in parallel with concurrency limit of 5
-  const CONCURRENCY_LIMIT = 5;
   const results = await Promise.allSettled(
     queue.map(async (request) => {
       try {
@@ -944,13 +943,6 @@ export const projectsApi = {
 
 // ===== ISSUES API =====
 
-export interface IssueFilters {
-  teamId?: string;
-  projectId?: string;
-  status?: Status;
-  assigneeId?: string;
-  search?: string;
-}
 
 export const issuesApi = {
   async getAll(filters?: IssueFilters): Promise<Issue[]> {

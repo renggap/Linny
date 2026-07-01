@@ -73,7 +73,7 @@ export function useCreateComment() {
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     },
 
-    onError: (error, variables, context: any) => {
+    onError: (_error, variables, context: any) => {
       // Roll back optimistic comment.
       queryClient.setQueryData(
         commentKeys.forIssue(currentTeamId, variables.issueId),

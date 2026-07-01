@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Project, ResourceLink, User } from '../types';
+import { Project, User } from '../types';
 import {
     Link2,
     Trash2,
@@ -10,7 +10,7 @@ import {
     ChevronDown,
     Plus,
     Layout,
-    User as UserIcon
+    
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';

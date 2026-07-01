@@ -60,7 +60,7 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
       return { previous };
     },
 
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       // Revert on error
       queryClient.setQueryData(['notifications'], context?.previous);
     },

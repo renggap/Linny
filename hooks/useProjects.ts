@@ -15,7 +15,7 @@ import { projectKeys, activityKeys } from '../services/queryKeys';
  *
  * BACKWARDS COMPATIBLE: Accepts teamId parameter but uses store value internally
  */
-export function useProjects(teamId?: string) {
+export function useProjects() {
   // Get current teamId from UI store (uses store value, not parameter)
   const currentTeamId = useUIStore((state) => state.currentTeamId);
 
@@ -40,7 +40,7 @@ export function useProjects(teamId?: string) {
  * so this hook is equivalent to useProjects but with a separate query key
  * for more granular cache invalidation when links change.
  */
-export function useProjectsWithLinks(teamId?: string) {
+export function useProjectsWithLinks() {
   const currentTeamId = useUIStore((state) => state.currentTeamId);
 
   return useQuery({

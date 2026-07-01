@@ -20,7 +20,7 @@ interface ModalsContainerProps {
   workspaceUsers: User[];
   teamProjects: Project[];
   comments: Comment[];
-  handleSaveIssue: (data: any) => Promise<void>;
+  handleSaveIssue: (data: any) => Promise<any>;
   handleAddComment: (issueId: string, content: string) => Promise<void>;
   handleCreateSubtask: (parentId: string, title: string) => Promise<void>;
   handleCreateProject: (name: string, identifier: string, icon: string, teamId: string) => Promise<void>;
