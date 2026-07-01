@@ -39,38 +39,46 @@ export function useCreateComment() {
   const currentTeamId = useUIStore((state) => state.currentTeamId);
 
   return useMutation({
-    mutationFn: ({ content, issueId }: { content: string; issueId: string }) => {
-      console.log('[useCreateComment] mutationFn start', { issueId, contentLength: content.length, currentTeamId });
-      return api.comments.create(content, issueId);
-    },
-    onSuccess: (data, variables) => {
-      console.log('[useCreateComment] Comment created successfully:', data);
-      console.log('[useCreateComment] cache key being updated:', commentKeys.forIssue(currentTeamId, variables.issueId));
+    mutationFn: ({ content, issueId }: { content: string; issueId: string }) =>
+      api.comments.create(content, issueId),
 
-      // Add the new comment to the scoped comments query cache
-      queryClient.setQueriesData(
-        { queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) },
-        (oldData: any) => {
-          console.log('[useCreateComment] setQueriesData callback', { hasOldData: !!oldData, oldCount: Array.isArray(oldData) ? oldData.length : 'n/a' });
-          if (!oldData) return [data.comment];
-          if (!Array.isArray(oldData)) return oldData;
-          // Add the new comment to the array
-          return [...oldData, data.comment];
+    onMutate: async (variables) => {
+      await queryClient.cancelQueries({ queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) });
+      const previous = queryClient.getQueryData(commentKeys.forIssue(currentTeamId, variables.issueId));
+      // Optimistic placeholder — will be replaced by server response in onSuccess.
+      const tempComment = {
+        id: `temp-${Date.now()}`,
+        content: variables.content,
+        issueId: variables.issueId,
+        userId: '',
+        createdAt: new Date().toISOString(),
+      } as any;
+      queryClient.setQueryData(
+        commentKeys.forIssue(currentTeamId, variables.issueId),
+        (old: any) => (Array.isArray(old) ? [...old, tempComment] : [tempComment])
+      );
+      return { previous };
+    },
+
+    onSuccess: (data, variables) => {
+      // Replace the optimistic placeholder with the real server response.
+      queryClient.setQueryData(
+        commentKeys.forIssue(currentTeamId, variables.issueId),
+        (old: any) => {
+          if (!Array.isArray(old)) return [data.comment];
+          // Drop temp comments then append the real one.
+          return [...old.filter((c: any) => !c.id?.startsWith('temp-')), data.comment];
         }
       );
-
-      // Refetch to ensure consistency
-      queryClient.refetchQueries({ queryKey: commentKeys.forIssue(currentTeamId, variables.issueId) })
-        .then(() => {
-          const updated = queryClient.getQueryData(commentKeys.forIssue(currentTeamId, variables.issueId));
-          console.log('[useCreateComment] refetch done, current cache count:', Array.isArray(updated) ? updated.length : 'n/a');
-        });
-
-      // Invalidate scoped activity queries
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     },
-    onError: (error, variables) => {
-      console.error('[useCreateComment] Mutation failed:', error, { issueId: variables.issueId, currentTeamId });
+
+    onError: (error, variables, context: any) => {
+      // Roll back optimistic comment.
+      queryClient.setQueryData(
+        commentKeys.forIssue(currentTeamId, variables.issueId),
+        context?.previous
+      );
     }
   });
 }

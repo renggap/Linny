@@ -42,15 +42,17 @@ export function useWebSocket() {
     };
   }, [selectedProjectId]);
 
-  // Subscribe to issue-specific room when issue modal is open
+  // Subscribe to issue-specific room when issue modal is open.
+  // Capture the issueId at effect setup so the cleanup unsubscribes from
+  // the SAME room we subscribed to (not whatever editingIssue points to at
+  // cleanup time — React closures capture the render-time value).
   useEffect(() => {
     if (isIssueModalOpen && editingIssue && 'id' in editingIssue) {
-      websocketService.subscribe(`issue:${editingIssue.id}`);
+      const issueId = editingIssue.id;
+      websocketService.subscribe(`issue:${issueId}`);
+      return () => {
+        websocketService.unsubscribe(`issue:${issueId}`);
+      };
     }
-    return () => {
-      if (editingIssue && 'id' in editingIssue) {
-        websocketService.unsubscribe(`issue:${editingIssue.id}`);
-      }
-    };
   }, [isIssueModalOpen, editingIssue]);
 }

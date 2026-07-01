@@ -75,9 +75,6 @@ export function useProject(id: string | null) {
 
 /**
  * CREATE PROJECT MUTATION
- *
- * Uses scoped cache updates. The new project will be added to the
- * current workspace's cache only.
  */
 export function useCreateProject() {
   const queryClient = useQueryClient();
@@ -86,10 +83,9 @@ export function useCreateProject() {
   return useMutation({
     mutationFn: (data: any) => api.projects.create(data),
     onSuccess: () => {
-      // Invalidate only the current workspace's project queries
-      queryClient.invalidateQueries({ queryKey: projectKeys.all(currentTeamId) });
-      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects', 'with-links'] });
-      // Invalidate activities to refresh activity feed
+      // Single prefix-match invalidation covers both 'projects' and
+      // 'projects/with-links' query keys.
+      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects'] });
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     }
   });
@@ -97,8 +93,6 @@ export function useCreateProject() {
 
 /**
  * UPDATE PROJECT MUTATION
- *
- * Uses scoped cache updates. Only the current workspace's cache is affected.
  */
 export function useUpdateProject() {
   const queryClient = useQueryClient();
@@ -107,10 +101,7 @@ export function useUpdateProject() {
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: any }) => api.projects.update(id, updates),
     onSuccess: () => {
-      // Invalidate only the current workspace's project queries
-      queryClient.invalidateQueries({ queryKey: projectKeys.all(currentTeamId) });
-      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects', 'with-links'] });
-      // Invalidate activities to refresh activity feed
+      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects'] });
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     }
   });
@@ -118,8 +109,6 @@ export function useUpdateProject() {
 
 /**
  * DELETE PROJECT MUTATION
- *
- * Uses scoped cache updates. Only the current workspace's cache is affected.
  */
 export function useDeleteProject() {
   const queryClient = useQueryClient();
@@ -128,10 +117,7 @@ export function useDeleteProject() {
   return useMutation({
     mutationFn: (id: string) => api.projects.delete(id),
     onSuccess: () => {
-      // Invalidate only the current workspace's project queries
-      queryClient.invalidateQueries({ queryKey: projectKeys.all(currentTeamId) });
-      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects', 'with-links'] });
-      // Invalidate activities to refresh activity feed
+      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects'] });
       queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     }
   });
@@ -139,8 +125,6 @@ export function useDeleteProject() {
 
 /**
  * ADD PROJECT LINK MUTATION
- *
- * Uses scoped cache updates.
  */
 export function useAddProjectLink() {
   const queryClient = useQueryClient();
@@ -150,10 +134,7 @@ export function useAddProjectLink() {
     mutationFn: ({ projectId, title, url }: { projectId: string; title: string; url: string }) =>
       api.projects.addLink(projectId, title, url),
     onSuccess: (_, variables) => {
-      // Invalidate scoped project queries including with-links
       queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects'] });
-      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects', 'with-links'] });
-      // Also invalidate the specific project detail query
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(currentTeamId, variables.projectId) });
     }
   });
@@ -161,8 +142,6 @@ export function useAddProjectLink() {
 
 /**
  * DELETE PROJECT LINK MUTATION
- *
- * Uses scoped cache updates.
  */
 export function useDeleteProjectLink() {
   const queryClient = useQueryClient();
@@ -172,9 +151,7 @@ export function useDeleteProjectLink() {
     mutationFn: ({ projectId, linkId }: { projectId: string; linkId: string }) =>
       api.projects.deleteLink(projectId, linkId),
     onSuccess: (_, variables) => {
-      // Invalidate scoped project queries including with-links
       queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects'] });
-      queryClient.invalidateQueries({ queryKey: ['scope', currentTeamId, 'projects', 'with-links'] });
       queryClient.invalidateQueries({ queryKey: projectKeys.detail(currentTeamId, variables.projectId) });
     }
   });

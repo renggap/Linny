@@ -40,9 +40,10 @@ export function useIssues(filters: {
     queryFn: async () => api.issues.getAll(scopedFilters),
     // Only enable query if we have a teamId
     enabled: !!currentTeamId,
-    // Always fetch when switching teams (ignore stale cache)
-    staleTime: 0, // Data is immediately stale, forcing refetch on team change
-    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes but don't use stale data
+    // 30s stale time balances freshness vs network efficiency.
+    // Team switches still trigger refetch via query key change.
+    staleTime: 1000 * 30,
+    gcTime: 1000 * 60 * 5,
   });
 }
 
@@ -128,7 +129,8 @@ export function useUpdateIssue() {
       // Also set the specific issue query data for current workspace
       queryClient.setQueryData(issueKeys.detail(currentTeamId, data.id), data);
 
-      // No refetch - we've already updated the cache directly
+      // Invalidate activities so feed reflects the title/status/priority change.
+      queryClient.invalidateQueries({ queryKey: activityKeys.all(currentTeamId) });
     }
   });
 }

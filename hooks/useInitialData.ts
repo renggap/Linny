@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { useLocation } from '@tanstack/react-router';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../contexts/AuthContext';
 import { useUIStore } from '../stores/uiStore';
 import { useTeams } from './useTeams';
@@ -9,6 +10,7 @@ export function useInitialData() {
   const { isAuthenticated, user: currentUser } = useAuth();
   const ui = useUIStore();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { data: teams = [], isLoading } = useTeams();
 
   useEffect(() => {
@@ -31,10 +33,16 @@ export function useInitialData() {
       if (userTeam) {
         ui.setCurrentTeamId(userTeam.id);
       } else {
-        // Create default team
+        // No team membership — create a default workspace. Surface errors
+        // instead of silently stranding the user with no currentTeamId.
         api.teams.create(`${currentUser.name}'s Workspace`, currentUser.name.charAt(0).toUpperCase())
           .then(newTeam => {
             ui.setCurrentTeamId(newTeam.id);
+            // Invalidate teams so the new team appears in the sidebar list.
+            queryClient.invalidateQueries({ queryKey: ['teams'] });
+          })
+          .catch(error => {
+            console.error('[useInitialData] Failed to create default workspace:', error);
           });
       }
     }

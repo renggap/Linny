@@ -6,14 +6,13 @@ export function useJoinRequests() {
   return useQuery({
     queryKey: ['join-requests'],
     queryFn: async () => {
-      console.log('[useJoinRequests] Fetching join requests from API...');
       const response = await api.joinRequests.getAll();
-      console.log('[useJoinRequests] Response:', response);
       return response as JoinRequest[];
     },
-    staleTime: 0, // Always consider data stale, refetch on every mount/window focus
-    refetchOnMount: 'always', // Always refetch when component mounts
-    refetchOnWindowFocus: true
+    staleTime: 0, // Always refetch on mount — covers the "fresh data on open" case.
+    // Removed refetchOnMount: 'always' (redundant with staleTime: 0) and
+    // refetchOnWindowFocus: true (wastes bandwidth on tab switches; admins
+    // get push updates via the /ws/join-requests room anyway).
   });
 }
 

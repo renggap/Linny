@@ -20,36 +20,40 @@ export function useCreateTeam() {
   return useMutation({
     mutationFn: (data: { name: string; icon: string }) => api.teams.create(data.name, data.icon),
     onMutate: async (variables) => {
-      // Cancel any in-flight refetches
       await queryClient.cancelQueries({ queryKey: ['teams'] });
-
-      // Snapshot previous value
       const previousTeams = queryClient.getQueryData(['teams']) as Team[] | undefined;
-
-      // Optimistically add the new team to the cache
       const tempId = `temp-${Date.now()}`;
       const optimisticTeam: Team = {
         id: tempId,
         name: variables.name,
         icon: variables.icon || variables.name.charAt(0).toUpperCase(),
-        members: [currentUser?.id || ''] // Creator will be a member
+        members: [currentUser?.id || '']
       };
-
       queryClient.setQueryData(['teams'], (old: Team[] = []) => [...old, optimisticTeam]);
-
-      // Return context with the temp ID
       return { previousTeams, tempId };
     },
-    onSuccess: (newTeam, variables, context) => {
-      // Replace the optimistic team with the actual server response
+    onSuccess: (newTeam, _variables, context) => {
+      // Replace the optimistic team with the actual server response.
+      // If the temp team is missing (cache was cleared between onMutate and
+      // onSuccess), just append the real team.
       queryClient.setQueryData(['teams'], (old: Team[] | undefined) => {
-        if (!old) return [newTeam];
-        return old.map(t => t.id === (context as any).tempId ? newTeam : t);
+        const ctx = context as { tempId: string } | undefined;
+        if (!old || !ctx) return [newTeam];
+        const hasTemp = old.some(t => t.id === ctx.tempId);
+        return hasTemp
+          ? old.map(t => t.id === ctx.tempId ? newTeam : t)
+          : [...old, newTeam];
       });
     },
-    onError: (error, variables, context) => {
-      // Revert to previous value on error
-      queryClient.setQueryData(['teams'], (context as any).previousTeams);
+    onError: (_error, _variables, context) => {
+      const ctx = context as { previousTeams?: Team[] } | undefined;
+      queryClient.setQueryData(['teams'], ctx?.previousTeams);
+    },
+    onSettled: () => {
+      // Safety net: invalidate to refetch the real list. Catches the case
+      // where the component unmounts between onMutate and onSuccess/onError,
+      // which would orphan the temp team.
+      queryClient.invalidateQueries({ queryKey: ['teams'] });
     }
   });
 }

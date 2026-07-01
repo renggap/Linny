@@ -156,7 +156,9 @@ export function useURLSync(teams: Team[], projects: Project[], issues: Issue[]) 
       lastSyncedStateRef.current.teamId = ui.currentTeamId;
       lastSyncedStateRef.current.projectId = ui.selectedProjectId;
 
-      navigate({ to: newPath, replace: true }).finally(() => {
+      // Use push (not replace) so browser back button works for team/project
+      // navigation. The replace-everything approach broke the back button.
+      navigate({ to: newPath }).finally(() => {
         isNavigatingRef.current = false;
       });
     }
